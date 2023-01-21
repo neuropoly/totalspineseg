@@ -20,9 +20,8 @@ def main():
 
     # Description and arguments
     parser = argparse.ArgumentParser(
-        prog="Extract signal statistics",
         description=textwrap.dedent(f'''
-        This script extract signal statistics (mean + std) for each segmentation class, for each subject, and save it to scv file. The data assumed to follow the BIDS structure:
+        This script extract signal statistics (mean + std) for each mask, for each subject, and save it to scv file. The data assumed to follow the BIDS structure:
 
         ├── derivatives
         │   └── manual_masks
@@ -80,6 +79,10 @@ def main():
         '--mask-suffix', type= str, default='.nii.gz',
         help='Mask suffix Subject prefix, defaults to ".nii.gz".'
     )
+    parser.add_argument(
+        '--verbosity', '-v', type= int, default=1, choices=[0, 1],
+        help='Verbosity. 0: Display only errors/warnings, 1: Errors/warnings + info messages (default: 1)'
+    )
 
     try:
         args = parser.parse_args()
@@ -92,15 +95,30 @@ def main():
     subject_prefix = args.subject_prefix
     image_suffix = args.image_suffix
     mask_suffix = args.mask_suffix
+    verbosity = args.verbosity
 
-    # manual_masks directorie
+    if verbosity:
+        print(textwrap.dedent(f''' 
+            Running with the following arguments:
+            data_dir = "{data_dir}"
+            output_csv = "{output_csv.name}"
+            subject_prefix = "{subject_prefix}"
+            image_suffix = "{image_suffix}"
+            mask_suffix = "{mask_suffix}"
+            verbosity = {verbosity}
+        '''))
+
+    # manual_masks directory
     manual_masks_dir = data_dir / 'derivatives' / 'manual_masks'
 
     # Initialize an Array to store results for each subject
     subjects_stats = []
 
     # Loop across BIDS structure (sub-*)
+    if verbosity: print(f'Looking for subjects in "{data_dir}"')
     for subject_dir in data_dir.glob(f'{subject_prefix}*'):
+
+        if verbosity: print(f'Working on "{subject_dir.name}":')
 
         # Init dict for subject statistics
         subject_stats = {}
@@ -112,15 +130,26 @@ def main():
         # Get image path
         img_path = subject_dir / 'anat' / f'{subject}{image_suffix}'
 
+        # Check if image exist. If not, go to next subject (all values for this subject row will be empty)
         if not img_path.exists():
+            if verbosity: print(f'Image not found: "{img_path}"')
             next
+
+        if verbosity: print(f'Extracting masks signal statistics for "{img_path.name}"')
 
         # For each subject (sub-xxx), open the image with nibabel
         img = nib.load(img_path)
         img_data = img.get_fdata()
 
+        subject_manual_masks_dir = manual_masks_dir / subject / 'anat'
+
+        if verbosity: print(f'Looking for masks in "{subject_manual_masks_dir}"')
+
         # Loop across the masks under derivatives/manual_masks/sub-xxx/anat/*
-        for mask_path in sorted((manual_masks_dir / subject / 'anat').glob(f'*{mask_suffix}')):
+        for mask_path in sorted((subject_manual_masks_dir).glob(f'*{mask_suffix}')):
+            
+            if verbosity: print(f'Extracting signal statistics for "{mask_path.name}"')
+
             # Get mask name without suffix
             mask_name = mask_path.name.replace(mask_suffix, '')
             # Open mask
@@ -135,6 +164,7 @@ def main():
     df = pd.DataFrame(subjects_stats)
 
     # Save dataframe as CSV.
+    if verbosity: print(f'Saving output to "{output_csv.name}"')
     df.to_csv(output_csv, index=False, sep=',', lineterminator='\n')
 
 if __name__ == '__main__':
