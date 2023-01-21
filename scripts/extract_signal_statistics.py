@@ -21,7 +21,7 @@ def main():
     # Description and arguments
     parser = argparse.ArgumentParser(
         description=textwrap.dedent(f'''
-        This script extract signal statistics (mean + std) for each mask, for each subject, and save it to scv file. The data assumed to follow the BIDS structure:
+        This script extracts signal statistics (mean + std) for each mask, for each subject, and saves it to a CSV file. The data is assumed to follow the BIDS structure:
 
         ├── derivatives
         │   └── manual_masks
