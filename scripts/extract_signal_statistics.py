@@ -156,9 +156,10 @@ def main():
             mask = nib.load(mask_path)
             mask_data = mask.get_fdata()
 
-            # For each mask, compute the mean and STD and update the dataframe
-            subject_stats[f'{mask_name}_mean'] = np.mean(img_data[np.where(mask_data)])
-            subject_stats[f'{mask_name}_std'] = np.std(img_data[np.where(mask_data)])
+            # For each mask, compute the mean and STD and update the dataframe (nan on empty mask)
+            mask_img_values = img_data[np.where(mask_data)]
+            subject_stats[f'{mask_name}_mean'] = np.mean(mask_img_values) if mask_img_values.size > 0 else np.nan
+            subject_stats[f'{mask_name}_std'] = np.std(mask_img_values) if mask_img_values.size > 0 else np.nan
 
     # Initialize a pandas dataframe (row: subject, column: mask)
     df = pd.DataFrame(subjects_stats)
