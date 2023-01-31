@@ -39,7 +39,7 @@ Code for the TotalSegmentator MRI project.
 
 1. Combine all MPRAGE 'blob' masks for each subject into a single segmentation file:
     ```
-    python totalsegmentator-mri/scripts/combine_masks.py -d TotalSegmentatorMRI_SynthSeg/data/derivatives/manual_masks -o TotalSegmentatorMRI_SynthSeg/output/MP-RAGE_Masks_Combined -m TotalSegmentatorMRI_SynthSeg/code/resources/classes.json
+    python totalsegmentator-mri/scripts/combine_masks.py -d TotalSegmentatorMRI_SynthSeg/data/derivatives/manual_masks -o TotalSegmentatorMRI_SynthSeg/output/MP-RAGE_Masks_Combined -m totalsegmentator-mri/resources/classes.json
     ```
 
 1. Calculate signal statistics (mean + std) for each masks:
@@ -49,7 +49,7 @@ Code for the TotalSegmentator MRI project.
 
 1. Combine all TotalSegmentator masks for each subject into a single segmentation file:
     ```
-    python totalsegmentator-mri/scripts/combine_masks.py -d TotalSegmentatorMRI_SynthSeg/Totalsegmentator_dataset -o TotalSegmentatorMRI_SynthSeg/output/TotalSegmentator_Masks_Combined -m TotalSegmentatorMRI_SynthSeg/code/resources/classes.json --subject-prefix s --subject-subdir segmentations --seg-suffix _ct_seg
+    python totalsegmentator-mri/scripts/combine_masks.py -d TotalSegmentatorMRI_SynthSeg/Totalsegmentator_dataset -o TotalSegmentatorMRI_SynthSeg/output/TotalSegmentator_Masks_Combined -m totalsegmentator-mri/resources/classes.json --subject-prefix s --subject-subdir segmentations --seg-suffix _ct_seg
     ```
 
 1. Create a synthetic image using TotalSegmentator segmentation and the calculated MPRAGE signal statistics:
