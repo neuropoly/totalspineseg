@@ -133,7 +133,7 @@ def main():
         # Check if image exist. If not, go to next subject (all values for this subject row will be empty)
         if not img_path.exists():
             if verbosity: print(f'Image not found: "{img_path}"')
-            next
+            continue
 
         if verbosity: print(f'Extracting masks signal statistics for "{img_path.name}"')
 
