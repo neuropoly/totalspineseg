@@ -10,9 +10,10 @@ def main():
     # Description and arguments
     parser = argparse.ArgumentParser(
         description=textwrap.dedent(f'''
-        This script combine multiple masks and save the result as a single segmentation file, for each subject.
-        The script sould be provided with a dictionary contained mapping of each mask to its value in the result
-        segmentation. The data is assumed to follow the BIDS structure (or similar):
+        This script combine multiple masks and save the result as a single segmentation file, for each subject. '''
+        '''The script sould be provided with a dictionary contained mapping of each mask to its value in the result '''
+        '''segmentation.
+        The data is assumed to follow the BIDS structure (or similar):
 
         masks
         ├── sub-errsm37
