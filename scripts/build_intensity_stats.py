@@ -119,30 +119,38 @@ def main():
             verbose = {verbose}
         '''))
 
-    # Get labels and class from masks unique values json file 
+    # Get labels from masks-ids json file
     estimation_labels =  None
     if masks_ids_file:
+        
         masks_ids = json.load(masks_ids_file)
         masks_ids_file.close()
+        
+        # Make estimation_labels unique and sorted
         estimation_labels = np.array(list(set(masks_ids.values())))
 
+    # Get class from masks-class-ids json file
     estimation_classes = None
     if masks_class_ids_file:
+
         masks_class_ids = json.load(masks_class_ids_file)
         masks_class_ids_file.close()
         
         # Ensure all masks are in masks_class_ids
         if masks_ids is None or estimation_labels is None or not all(m in masks_class_ids for m in masks_ids.keys()):
-            print(f'masks-ids must be the same length as masks-class-ids')
+            print(f'Not all masks from {masks_ids_file.name} are in {masks_class_ids.name}')
             sys.exit()
         
         # Create mapping from mask id to mask class id
         masks_ids_class_ids_map = {mask_id: masks_class_ids[mask] for mask, mask_id in masks_ids.items()}
+
         # Create list of masks class ids matching to estimation_labels
         estimation_labels_classes = [masks_ids_class_ids_map[mask_id] for mask_id in estimation_labels.tolist()]
-        # Generate a map to a new unique sequential classes
+
+        # Generate a map to a new unique and sequential id for each class
         seq_estimation_labels_classes_map = {c: i for i, c in enumerate(set(estimation_labels_classes))}
-        # Get list of unique
+
+        # Get list of unique and sequential class ids for each label in estimation_labels
         estimation_classes = np.array([seq_estimation_labels_classes_map[c] for c in estimation_labels_classes])
 
     # Init lists for images and segmantations directories.
