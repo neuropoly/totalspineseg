@@ -37,6 +37,9 @@ Code for the TotalSegmentator MRI project.
 
 ## To run scripsts
 
+`resources/labels.json` - Contain mapping of each mask to unique number.
+`resources/classes.json` - Contain mapping of each mask to class of masks with similar statistics.
+
 ### Option 1 - Run script for all TotalSegmentator labels
 
 1. Combine all MPRAGE 'blob' masks for each subject into a single segmentation file:
@@ -44,7 +47,7 @@ Code for the TotalSegmentator MRI project.
     python totalsegmentator-mri/scripts/combine_masks.py -d TotalSegmentatorMRI_SynthSeg/data/derivatives/manual_masks -o TotalSegmentatorMRI_SynthSeg/output/MP-RAGE_Masks_Combined -m totalsegmentator-mri/resources/labels.json
     ```
 
-1. Calculate signal statistics (mean + std) for each masks:
+1. Calculate signal statistics (mean + std) for each masks (group masks into classes of similar statistics):
     ```
     python totalsegmentator-mri/scripts/build_intensity_stats.py -d TotalSegmentatorMRI_SynthSeg/data -s TotalSegmentatorMRI_SynthSeg/output/MP-RAGE_Masks_Combined -o TotalSegmentatorMRI_SynthSeg/output/MP-RAGE_priors -m totalsegmentator-mri/resources/labels.json -c totalsegmentator-mri/resources/classes.json
     ```
@@ -59,7 +62,7 @@ Code for the TotalSegmentator MRI project.
     python totalsegmentator-mri/scripts/generate_image.py -s /content/TotalSegmentatorMRI_SynthSeg/output/TotalSegmentator_Masks_Combined/sub-0287/anat/sub-0287_ct_seg.nii.gz -p TotalSegmentatorMRI_SynthSeg/output/MP-RAGE_priors -o TotalSegmentatorMRI_SynthSeg/output/MP-RAGE_Synthetic/test1
     ```
 
-### Option 2 - Run script with TotalSegmentator labels reduced to 15 labels
+### Option 2 - Run script with TotalSegmentator labels reduced to 15 labels (using `resources/classes.json`)
 
 1. Combine all MPRAGE 'blob' masks for each subject into a single segmentation file:
     ```
