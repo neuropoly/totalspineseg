@@ -1,5 +1,5 @@
 
-import os, sys, argparse, textwrap
+import os, sys, argparse, textwrap, json
 from pathlib import Path
 import numpy as np
 from ext.lab2im import utils
@@ -11,7 +11,8 @@ def main():
     # Description and arguments
     parser = argparse.ArgumentParser(
         description=textwrap.dedent(f'''
-        This script uses SynthSeg.brain_generator to generate image from calculated prior signal statistics (mean + std), and saves the rsults `image.nii.gz` and `labels.nii.gz` to output dir.
+        This script uses SynthSeg.brain_generator to generate image from calculated prior signal '''
+        '''statistics (mean + std), and saves the rsults `image.nii.gz` and `labels.nii.gz` to output dir.
         '''),
         epilog=textwrap.dedent('''
         Example:
@@ -26,7 +27,8 @@ def main():
     )
     parser.add_argument(
         '--prior-dir', '-p', type= DirPath(), required=True,
-        help='The folder where calculated prior signal statistics (`prior_means.npy` and `prior_stds.npy`) are located for each subject.'
+        help='The folder where calculated prior signal statistics (`prior_means.npy` ,`prior_stds.npy` '
+        ' ,`labels.npy` and `classes.npy`) are located.'
     )
     parser.add_argument(
         '--output-dir', '-o', type= DirPath(True), required=True,
@@ -48,7 +50,7 @@ def main():
     output_path = args.output_dir
     verbose = args.verbose
 
-    # Close segmentation file
+    # Close files
     args.seg.close()
 
     if verbose:
@@ -59,16 +61,35 @@ def main():
             output_dir = "{output_path}"
             verbose = {verbose}
         '''))
-    
+
+    # Get priors paths
+    prior_means_path = prior_path / 'prior_means.npy'
+    prior_stds_path = prior_path / 'prior_stds.npy'
+    generation_labels_path = prior_path / 'labels.npy'
+    generation_classes_path = prior_path / 'classes.npy'
+
     # Ensure priors exists
-    if not all([(prior_path/'prior_means.npy').exists(), (prior_path/'prior_stds.npy').exists()]):
-        print(f'`prior_means.npy` or `prior_stds.npy` not found in {prior_path}')
+    if not all([prior_means_path.exists(), prior_stds_path.exists()]):
+        print(f'`prior_means.npy` or `prior_stds.npy` was not found in {prior_path}')
         sys.exit()
+    
+    # Get priors values
+    prior_means = f'{prior_means_path}'
+    prior_stds = f'{prior_stds_path}'
+    generation_labels = f'{generation_labels_path}' if generation_labels_path.exists() else None
+    generation_classes = f'{generation_classes_path}' if generation_classes_path.exists() else None
+    
+    if verbose and not generation_labels_path.exists():
+        print(f'{generation_labels} was not found')
+    
+    if verbose and not generation_classes_path.exists():
+        print(f'{generation_classes} was not found')
 
     # Create synthetic image
     brain_generator = BrainGenerator(
         f'{seg_file}',
-        generation_labels=None,
+        # generation_labels=None,
+        generation_labels=generation_labels,
         n_neutral_labels=None,
         output_labels=None,
         subjects_prob=None,
@@ -78,12 +99,13 @@ def main():
         target_res=np.array([1., 1., 1.]),
         output_shape=None,
         output_div_by_n=None,
-        prior_distributions='uniform',
-        generation_classes=None,
+        prior_distributions='normal',
+        # generation_classes=None,
+        generation_classes=generation_classes,
         # prior_means=None,
-        prior_means = f"{prior_path / 'prior_means.npy'}",
+        prior_means = prior_means,
         # prior_stds=None,
-        prior_stds = f"{prior_path / 'prior_stds.npy'}",
+        prior_stds = prior_stds,
         use_specific_stats_for_channel=False,
         mix_prior_and_random=False,
         # flipping=True,
