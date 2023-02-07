@@ -38,7 +38,8 @@ Code for the TotalSegmentator MRI project.
 ## To run scripsts
 
 `resources/labels.json` - Contain mapping of each mask to unique number.
-`resources/classes.json` - Contain mapping of each mask to class of masks with similar statistics.
+
+`resources/classes.json` - Contain mapping of each mask to class of masks with similar statistics (total 15 classes).
 
 ### Option 1 - Run script for all TotalSegmentator labels
 
@@ -62,7 +63,9 @@ Code for the TotalSegmentator MRI project.
     python totalsegmentator-mri/scripts/generate_image.py -s /content/TotalSegmentatorMRI_SynthSeg/output/TotalSegmentator_Masks_Combined/sub-0287/anat/sub-0287_ct_seg.nii.gz -p TotalSegmentatorMRI_SynthSeg/output/MP-RAGE_priors -o TotalSegmentatorMRI_SynthSeg/output/MP-RAGE_Synthetic/test1
     ```
 
-### Option 2 - Run script with TotalSegmentator labels reduced to 15 labels (using `resources/classes.json`)
+### Option 2 - Run script with TotalSegmentator labels reduced to 15 labels
+
+To reduce number of labels and group all vertebrae, we use `resources/classes.json` as the main masks mapping when combining masks with combine_masks. This way all masks of the same classes will be mapped to the same label.
 
 1. Combine all MPRAGE 'blob' masks for each subject into a single segmentation file:
     ```
