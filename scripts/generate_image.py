@@ -94,7 +94,7 @@ def main():
         output_labels=None,
         subjects_prob=None,
         batchsize=1,
-        n_channels=3,
+        n_channels=1,
         # target_res=None,
         target_res=np.array([1., 1., 1.]),
         output_shape=160,
