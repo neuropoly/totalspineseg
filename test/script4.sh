@@ -1,4 +1,4 @@
-command="python /opt/totalsegmentator-mri/scripts/generate_image.py -s /opt/TotalSegmentatorMRI_SynthSeg/output/TotalSegmentator_Masks_Combined/sub-0287/anat/sub-0287_ct_seg.nii.gz -p /opt/TotalSegmentatorMRI_SynthSeg/output/MP-RAGE_priors -o /opt/TotalSegmentatorMRI_SynthSeg/output/MP-RAGE_Synthetic/test2"
+command="python /opt/totalsegmentator-mri/scripts/generate_image.py -s /opt/TotalSegmentatorMRI_SynthSeg/output/TotalSegmentator_Masks_Combined/sub-0287/anat/sub-0287_ct_seg.nii.gz -p /opt/TotalSegmentatorMRI_SynthSeg/output/MP-RAGE_priors -o /opt/TotalSegmentatorMRI_SynthSeg/output/MP-RAGE_Synthetic/test3"
 
 #run on docker
 
