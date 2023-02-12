@@ -1,4 +1,5 @@
 {
+    "background": 0,
     "spleen": 1,
     "kidney_right": 2,
     "kidney_left": 2,
@@ -86,8 +87,8 @@
     "scapula_right": 10,
     "clavicula_left": 10,
     "clavicula_right": 10,
-    "femur_left": 10,
-    "femur_right": 10,
+    "femur_left": 0,
+    "femur_right": 0,
     "hip_left": 10,
     "hip_right": 10,
     "sacrum": 10,

@@ -22,20 +22,24 @@ def main():
     )
 
     parser.add_argument(
-        '--seg', '-s', type= argparse.FileType('rb'), required=True,
-        help='The folder where segmentations are located.'
+        '--seg', '-s', type=Path, required=True,
+        help='The folder where segmentations are located or a segmentation file.'
     )
     parser.add_argument(
-        '--prior-dir', '-p', type= DirPath(), required=True,
+        '--prior-dir', '-p', type=DirPath(), required=True,
         help='The folder where calculated prior signal statistics (`prior_means.npy` ,`prior_stds.npy` '
         ' ,`labels.npy` and `classes.npy`) are located.'
     )
     parser.add_argument(
-        '--output-dir', '-o', type= DirPath(True), required=True,
+        '--output-dir', '-o', type=DirPath(True), required=True,
         help='The folder where output files (`image.nii.gz` and `labels.nii.gz`) will be saved to'
     )
     parser.add_argument(
-        '--verbose', '-v', type= int, default=1, choices=[0, 1],
+        '--n-images', '-n', type=int, default=1,
+        help='The number of images to generate (default 1).'
+    )
+    parser.add_argument(
+        '--verbose', '-v', type=int, default=1, choices=[0, 1],
         help='verbose. 0: Display only errors/warnings, 1: Errors/warnings + info messages (default: 1)'
     )
 
@@ -45,20 +49,19 @@ def main():
         sys.exit()
 
     # Get args
-    seg_file = args.seg.name
+    seg_path = args.seg
     prior_path = args.prior_dir
     output_path = args.output_dir
+    n_images = args.n_images
     verbose = args.verbose
-
-    # Close files
-    args.seg.close()
 
     if verbose:
         print(textwrap.dedent(f''' 
             Running with the following arguments:
-            seg = "{seg_file}"
+            seg = "{seg_path}"
             prior_dir = "{prior_path}"
             output_dir = "{output_path}"
+            n_images = "{n_images}"
             verbose = {verbose}
         '''))
 
@@ -87,9 +90,11 @@ def main():
 
     # Create synthetic image
     brain_generator = BrainGenerator(
-        f'{seg_file}',
-        # generation_labels=None,
+        labels_dir=f'{seg_path}',
         generation_labels=generation_labels,
+        generation_classes=generation_classes,
+        prior_means = prior_means,
+        prior_stds = prior_stds,
         n_neutral_labels=None,
         output_labels=None,
         subjects_prob=None,
@@ -100,15 +105,8 @@ def main():
         output_shape=200,
         output_div_by_n=None,
         prior_distributions='uniform',
-        # generation_classes=None,
-        generation_classes=generation_classes,
-        # prior_means=None,
-        prior_means = prior_means,
-        # prior_stds=None,
-        prior_stds = prior_stds,
         use_specific_stats_for_channel=False,
         mix_prior_and_random=False,
-        # flipping=True,
         flipping=False,
         # scaling_bounds=.2,
         scaling_bounds=0.15,
@@ -123,7 +121,7 @@ def main():
         #randomise_res=False,
         max_res_iso=4.,
         max_res_aniso=8.,
-         data_res=None,
+        data_res=None,
         #data_res=np.array([1., 1., 1.]),
         thickness=None,
         #thickness=np.array([1., 1., 1.]),
@@ -133,18 +131,20 @@ def main():
         return_gradients=False
     )
 
-    im, lab = brain_generator.generate_brain()
+    for n in range(n_images):
 
-    # save output image and label map
+        # generate new image and corresponding labels
+        im, lab = brain_generator.generate_brain()
 
-    utils.save_volume(
-        im, brain_generator.aff, brain_generator.header,
-        f"{output_path / 'image.nii.gz'}"
-    )
-    utils.save_volume(
-        lab, brain_generator.aff, brain_generator.header,
-        f"{output_path / 'labels.nii.gz'}"
-    )
+        # save output image and label map
+        utils.save_volume(
+            im, brain_generator.aff, brain_generator.header,
+            f"{output_path / f'image_{n}.nii.gz'}"
+        )
+        utils.save_volume(
+            lab, brain_generator.aff, brain_generator.header,
+            f"{output_path / f'labels_{n}.nii.gz'}"
+        )
 
 
 class DirPath(object):

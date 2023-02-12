@@ -1,5 +1,5 @@
 
-import os, sys, argparse, textwrap, json
+import os, sys, argparse, textwrap, json, re
 from pathlib import Path
 import numpy as np
 from SynthSeg.estimate_priors import build_intensity_stats
@@ -67,6 +67,11 @@ def main():
             'classes of similar intensity statistics. for example: {"vertebrae_L3": 2, "vertebrae_L4": 2}'
     )
     parser.add_argument(
+        '--default-stats', type=int, default=(0, 0, 0, 0), metavar=('mean mean', 'mean std', 'std mean', 'std std'), nargs=4,
+        help='Default mean (mean+std) and std (mean+std) to use if the calculated value was 0 '
+        '(the label is empty). default values is 0.'
+    )
+    parser.add_argument(
         '--subject-prefix', type= str, default='sub-',
         help='Subject prefix, defaults to "sub-" which is the prefix used for BIDS directories.'
     )
@@ -98,6 +103,7 @@ def main():
     output_path = args.output_dir
     masks_ids_file = args.masks_ids
     masks_class_ids_file = args.masks_class_ids
+    default_stats = args.default_stats
     subject_prefix = args.subject_prefix
     subject_subdir = args.subject_subdir
     img_suffix = args.img_suffix
@@ -112,6 +118,7 @@ def main():
             output_dir = "{output_path}"
             masks_ids = "{masks_ids_file.name if masks_ids_file else ''}"
             masks_class_ids = "{masks_class_ids_file.name if masks_class_ids_file else ''}"
+            default_stats = "{default_stats}"
             subject_prefix = "{subject_prefix}"
             subject_subdir = "{subject_subdir}"
             seg_suffix = "{seg_suffix}"
@@ -126,8 +133,17 @@ def main():
         masks_ids = json.load(masks_ids_file)
         masks_ids_file.close()
         
-        # Make estimation_labels unique and sorted
-        estimation_labels = np.array(list(set(masks_ids.values())))
+        # Make estimation_labels unique and sorted as follow: background, non-sided, left, right
+        background_labels = [masks_ids[k] for k in ['background']]
+        left_labels = [masks_ids[k] for k in masks_ids if re.match(r'^.*_left(_\d+)?$', k)]
+        right_labels = [masks_ids[k] for k in masks_ids if re.match(r'^.*_right(_\d+)?$', k)]
+        non_sided_labels = [v for v in masks_ids.values() if v not in background_labels + left_labels + right_labels]
+        # Make estimation_labels
+        estimation_labels = np.array(
+            background_labels + non_sided_labels + left_labels + right_labels
+        )
+        # Ensure estimation_labels not containing duplicates
+        estimation_labels = estimation_labels[np.sort(np.unique(estimation_labels, return_index=True)[1])]
 
     # Get class from masks-class-ids json file
     estimation_classes = None
@@ -158,7 +174,7 @@ def main():
     imgs = []
 
     # Loop over all subjects and look for images and sgmentations files
-    for sub_path in segs_path.glob(f'{subject_prefix}*'):
+    for sub_path in imgs_path.glob(f'{subject_prefix}*'):
 
         # Get subject name
         subject_name = sub_path.name
@@ -166,6 +182,11 @@ def main():
 
         # Look for segmentation file and ensure its existance
         seg_path = segs_path / subject_name / subject_subdir / f'{subject_name}{seg_suffix}.nii.gz'
+
+        # If segmentation not fount try to find it directly in segs_path (not in subdir)
+        if not seg_path.exists():
+            seg_path = segs_path / f'{subject_name}{seg_suffix}.nii.gz'
+
         if not seg_path.exists():
             print(f'No segmentation found for {subject_name}')
             continue
@@ -189,6 +210,18 @@ def main():
         result_dir=f'{output_path}',
         rescale=True
     )
+
+    # Update default stats from input argument
+    if default_stats != (0, 0, 0, 0):
+        for name, vals in zip(('mean', 'std'), np.split(np.array(default_stats), 2)):
+            fname = f"{output_path / f'prior_{name}s.npy'}"
+            # Load output file (means or stds)
+            arr = np.load(fname)
+            # Update from input argument where the value is 0
+            for i, v in enumerate(vals):
+                arr[i][arr[i]==0] = v
+            # Save the file
+            np.save(fname, arr)
     
     # Save labels and class to file
     if estimation_labels is not None:
