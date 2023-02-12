@@ -25,7 +25,7 @@ def main():
                 ├── organ_spleen.nii.gz
                 └── vertebrae_L3.nii.gz
                 
-        The output segmentations for this structure will be:
+        The output segmentations for this structure will be one of this (depends on the output-bids argument):
 
         segmentations
         ├── sub-errsm37
@@ -34,6 +34,10 @@ def main():
         └── sub-errsm38
             └── anat
                 └── sub-errsm38_seg.nii.gz
+
+        segmentations
+        ├── sub-errsm37_seg.nii.gz
+        └── sub-errsm38_seg.nii.gz
 
         '''),
         epilog=textwrap.dedent('''
@@ -68,6 +72,10 @@ def main():
         help='The suffix for the output segmentation, defaults to "_T1w_seg".'
     )
     parser.add_argument(
+        '--output-bids', type= int, default=1, choices=[0, 1],
+        help='output-bids. 0: Save output directly in output folder, 1: Save output in BIDS structure (default: 1)'
+    )
+    parser.add_argument(
         '--verbose', '-v', type= int, default=1, choices=[0, 1],
         help='verbose. 0: Display only errors/warnings, 1: Errors/warnings + info messages (default: 1)'
     )
@@ -84,6 +92,7 @@ def main():
     subject_prefix = args.subject_prefix
     subject_subdir = args.subject_subdir
     seg_suffix = args.seg_suffix
+    output_bids = args.output_bids
     verbose = args.verbose
 
     if verbose:
@@ -95,6 +104,7 @@ def main():
             subject_prefix = "{subject_prefix}"
             subject_subdir = "{subject_subdir}"
             seg_suffix = "{seg_suffix}"
+            output_bids = {output_bids}
             verbose = {verbose}
         '''))
 
@@ -111,12 +121,15 @@ def main():
         
         # Get subject name
         subject_name = sub_path.name
-        # Make output subject name follow the BIDS.
-        output_subject_name = re.sub(f'^{re.escape(subject_prefix)}', 'sub-', subject_name)
         
         # Combine masks
         masks_path = sub_path / subject_subdir
-        output_file_path = output_path / output_subject_name / 'anat' / f'{output_subject_name}{seg_suffix}.nii.gz'
+        output_file_path = output_path / f'{subject_name}{seg_suffix}.nii.gz'
+        if output_bids:
+            # Make output subject name follow the BIDS.
+            output_subject_name = re.sub(f'^{re.escape(subject_prefix)}', 'sub-', subject_name)
+            output_file_path = output_path / output_subject_name / 'anat' / f'{output_subject_name}{seg_suffix}.nii.gz'
+            
         if masks_path.exists():
             combine_masks(masks_path, output_file_path, masks_ids)
 
