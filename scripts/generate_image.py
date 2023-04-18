@@ -31,6 +31,16 @@ def main():
         ' ,`labels.npy` and `classes.npy`) are located.'
     )
     parser.add_argument(
+        '--seg-masks-ids', '-m', type=argparse.FileType('r',encoding='utf-8'), default=None,
+        help='json file contaning mapping of each mask to the segmentation unique number. for example: '
+            '{"vertebrae_L3": 2, "organ_spleen": 15}'
+    )
+    parser.add_argument(
+        '--output-masks-ids', '-c', type=argparse.FileType('r',encoding='utf-8'), default=None,
+        help='json file contaning mapping of each mask to the output segmentattion unique number. enables cange the input label.'
+            'for example: {"vertebrae_L3": 2, "vertebrae_L4": 2}'
+    )
+    parser.add_argument(
         '--output-dir', '-o', type=DirPath(True), required=True,
         help='The folder where output files (`image.nii.gz` and `labels.nii.gz`) will be saved to'
     )
@@ -52,6 +62,8 @@ def main():
     seg_path = args.seg
     prior_path = args.prior_dir
     output_path = args.output_dir
+    seg_masks_ids_file = args.seg_masks_ids
+    output_masks_ids_file = args.output_masks_ids
     n_images = args.n_images
     verbose = args.verbose
 
@@ -61,6 +73,8 @@ def main():
             seg = "{seg_path}"
             prior_dir = "{prior_path}"
             output_dir = "{output_path}"
+            seg_masks_ids = "{seg_masks_ids_file.name if seg_masks_ids_file else ''}"
+            output_masks_ids = "{output_masks_ids_file.name if output_masks_ids_file else ''}"
             n_images = "{n_images}"
             verbose = {verbose}
         '''))
@@ -70,6 +84,7 @@ def main():
     prior_stds_path = prior_path / 'prior_stds.npy'
     generation_labels_path = prior_path / 'labels.npy'
     generation_classes_path = prior_path / 'classes.npy'
+    n_neutral_labels_path = prior_path / 'n_neutral_labels.npy'
 
     # Ensure priors exists
     if not all([prior_means_path.exists(), prior_stds_path.exists()]):
@@ -77,16 +92,38 @@ def main():
         sys.exit()
     
     # Get priors values
-    prior_means = f'{prior_means_path}'
-    prior_stds = f'{prior_stds_path}'
-    generation_labels = f'{generation_labels_path}' if generation_labels_path.exists() else None
-    generation_classes = f'{generation_classes_path}' if generation_classes_path.exists() else None
+    prior_means = np.load(f'{prior_means_path}')
+    prior_stds = np.load(f'{prior_stds_path}')
+    generation_labels = np.load(f'{generation_labels_path}') if generation_labels_path.exists() else None
+    generation_classes = np.load(f'{generation_classes_path}') if generation_classes_path.exists() else None
+    n_neutral_labels = int(np.load(f'{n_neutral_labels_path}')) if n_neutral_labels_path.exists() else None
     
     if verbose and not generation_labels_path.exists():
-        print(f'{generation_labels} was not found')
+        print(f'{generation_labels_path} was not found')
     
     if verbose and not generation_classes_path.exists():
-        print(f'{generation_classes} was not found')
+        print(f'{generation_classes_path} was not found')
+    
+    if verbose and not n_neutral_labels_path.exists():
+        print(f'{n_neutral_labels_path} was not found')
+    
+    # Get output_masks_ids to remap segmentation labels
+    output_labels = None
+    if output_masks_ids_file:
+        
+        output_masks_ids = json.load(output_masks_ids_file)
+        output_masks_ids_file.close()
+        
+        if not seg_masks_ids_file:
+            print("You must specify the --seg-masks-ids argument when specifing --output-masks-ids")
+            sys.exit()
+        
+        seg_masks_ids = json.load(seg_masks_ids_file)
+        seg_masks_ids_file.close()
+
+        seg_output_label_map = {i: output_masks_ids[m] for m, i in seg_masks_ids.items()}
+        output_labels = [seg_output_label_map[i] for i in generation_labels]
+
 
     # Create synthetic image
     brain_generator = BrainGenerator(
@@ -95,8 +132,8 @@ def main():
         generation_classes=generation_classes,
         prior_means = prior_means,
         prior_stds = prior_stds,
-        n_neutral_labels=None,
-        output_labels=None,
+        n_neutral_labels=n_neutral_labels,
+        output_labels=output_labels,
         subjects_prob=None,
         batchsize=1,
         n_channels=1,

@@ -126,6 +126,8 @@ def main():
             verbose = {verbose}
         '''))
 
+    # Number of non sided labels
+    n_neutral_labels = None
     # Get labels from masks-ids json file
     estimation_labels =  None
     if masks_ids_file:
@@ -144,6 +146,8 @@ def main():
         )
         # Ensure estimation_labels not containing duplicates
         estimation_labels = estimation_labels[np.sort(np.unique(estimation_labels, return_index=True)[1])]
+        # Get number of non sided labels
+        n_neutral_labels = len(background_labels + non_sided_labels)
 
     # Get class from masks-class-ids json file
     estimation_classes = None
@@ -228,6 +232,8 @@ def main():
         np.save(output_path / 'labels.npy', estimation_labels)
     if estimation_classes is not None:
         np.save(output_path / 'classes.npy', estimation_classes)
+    if n_neutral_labels:
+        np.save(output_path / 'n_neutral_labels.npy', n_neutral_labels)
 
 
 class DirPath(object):
