@@ -297,39 +297,17 @@ for SUBJECT in sub-*; do
                     sct_label_vertebrae -i ${SUBJECT}_${c^^}w.nii.gz -s ${SUBJECT}_${c^^}w_seg.nii.gz -discfile ${SUBJECT}_${c^^}w_labels-disc-manual.nii.gz -c ${c} -v ${VERBOSE}
                 fi
                 # Register to PAM50 template.
-                if [[ ! -f warp_template2anat.nii.gz ]] || [[ ${OVERWRITE} == 1 ]]; then
+                if [[ ! -f ${SUBJECT}_${c^^}w/warp_template2anat.nii.gz ]] || [[ ${OVERWRITE} == 1 ]]; then
                     sct_register_to_template -i ${SUBJECT}_${c^^}w.nii.gz -s ${SUBJECT}_${c^^}w_seg.nii.gz -ldisc ${SUBJECT}_${c^^}w_seg_labeled_discs.nii.gz -ofolder ${SUBJECT}_${c^^}w -c ${c} -qc ${OUTPUT_DIR}/qc
                 fi
                 # Move PAM50 segmentation file into the image space.
                 sct_apply_transfo -i ${PAM50_SEG} -d ${SUBJECT}_${c^^}w.nii.gz -w ${SUBJECT}_${c^^}w/warp_template2anat.nii.gz -x nn -o ${SUBJECT}_${c^^}w_PAM50_seg.nii.gz
             fi
-            # # Register to PAM50 template and create PAM50 segmentation file if it does not exist or if the OVERWRITE option is enabled.
-            # if [[ ! -f ${SUBJECT}_${c^^}w_PAM50_seg.nii.gz ]] || [[ ${OVERWRITE} == 1 ]]; then
-            #     # crop the segmentation in the z direction if the cropped spinal cord segmentation file does not exist or if the OVERWRITE option is enabled.
-            #     if [[ ! -f ${SUBJECT}_${c^^}w_seg_cropz.nii.gz ]] || [[ ${OVERWRITE} == 1 ]]; then
-            #         # Determine the first and last labels in the manual disk labels file, and their corresponding z-coordinates.
-            #         FIRST_LABEL=$(sct_label_utils -i ${SUBJECT}_${c^^}w_labels-disc-manual.nii.gz -display | grep -oP " \-\- Value= \K(\d*)" | sort -n | head -1)
-            #         LAST_LABEL=$(sct_label_utils -i ${SUBJECT}_${c^^}w_labels-disc-manual.nii.gz -display | grep -oP " \-\- Value= \K(\d*)" | sort -n | tail -n1)
-            #         FIRST_LABEL_Z=$(sct_label_utils -i ${SUBJECT}_${c^^}w_labels-disc-manual.nii.gz -display | grep -oP "Position=\(\d+,\d+,\K\d+(?=\) \-\- Value= ${FIRST_LABEL}(?:[^\d]|$))")
-            #         LAST_LABEL_Z=$(sct_label_utils -i ${SUBJECT}_${c^^}w_labels-disc-manual.nii.gz -display | grep -oP "Position=\(\d+,\d+,\K\d+(?=\) \-\- Value= ${LAST_LABEL}(?:[^\d]|$))")
-            #         # Crop the spinal cord segmentation in the z direction between the first and the last vertebrae label.
-            #         sct_crop_image -i ${SUBJECT}_${c^^}w_seg.nii.gz -zmax ${FIRST_LABEL_Z} -zmin ${LAST_LABEL_Z} -o ${SUBJECT}_${c^^}w_seg_cropz.nii.gz
-            #     fi
-            #     # Recreate the disks labels in the middle of the spinal cord if the labeled discs file does not exist or the OVERWRITE option is enabled.
-            #     if [[ ! -f ${SUBJECT}_${c^^}w_seg_cropz_labeled_discs.nii.gz ]] || [[ ${OVERWRITE} == 1 ]]; then
-            #         sct_label_vertebrae -i ${SUBJECT}_${c^^}w.nii.gz -s ${SUBJECT}_${c^^}w_seg_cropz.nii.gz -discfile ${SUBJECT}_${c^^}w_labels-disc-manual.nii.gz -c ${c} -v ${VERBOSE}
-            #     fi
-            #     # Register to PAM50 template.
-            #     if [[ ! -f warp_template2anat.nii.gz ]] || [[ ${OVERWRITE} == 1 ]]; then
-            #         sct_register_to_template -i ${SUBJECT}_${c^^}w.nii.gz -s ${SUBJECT}_${c^^}w_seg_cropz.nii.gz -ldisc ${SUBJECT}_${c^^}w_seg_cropz_labeled_discs.nii.gz -c ${c} -qc ${OUTPUT_DIR}/qc
-            #     fi
-            #     # Move PAM50 segmentation file into the image space.
-            #     sct_apply_transfo -i ${PAM50_SEG} -d ${SUBJECT}_${c^^}w.nii.gz -w warp_template2anat.nii.gz -x nn -o ${SUBJECT}_${c^^}w_PAM50_seg.nii.gz
-            # fi
         fi
     done
     # Cleanup - Remove all files except the necessary segmentation and label files.
     if [[ ${CLEANUP} == 1 ]]; then
         find . -type f -not -regex "\./${SUBJECT}_[^_]+w_\(seg\|labels-disc-manual\|PAM50_seg\)\.nii\.gz" -exec rm -f {} \;
+        find . -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} \;
     fi
 done
