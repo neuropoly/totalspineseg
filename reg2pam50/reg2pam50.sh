@@ -195,14 +195,14 @@ cd ${DATA_DIR}
 # Iterate over all subjects in the data directory.
 for SUBJECT in sub-*; do
     # Copy the source data to the output data folder.
-    cp -r -n ${DATA_DIR}/${SUBJECT} ${OUTPUT_DIR}
+    cp -r -u ${DATA_DIR}/${SUBJECT} ${OUTPUT_DIR}
     # If there is no anat folder in the subject folder, skip to the next subject.
     if [[ ! -d ${OUTPUT_DIR}/${SUBJECT}/anat ]]; then
         continue
     fi
     # Copy manual labels to the output folder, if available.
     if [[ -d ${DATA_DIR}/derivatives/labels/${SUBJECT} ]]; then
-        cp -r -n ${DATA_DIR}/derivatives/labels/${SUBJECT} ${OUTPUT_DIR}
+        cp -r -u ${DATA_DIR}/derivatives/labels/${SUBJECT} ${OUTPUT_DIR}
     fi
     # Change the working directory to the output subject folder.
     cd ${OUTPUT_DIR}/${SUBJECT}/anat
@@ -293,7 +293,7 @@ for SUBJECT in sub-*; do
             # Register to PAM50 template and create PAM50 segmentation file if it does not exist or if the OVERWRITE option is enabled.
             if [[ ! -f ${SUBJECT}_${c^^}w_PAM50_seg.nii.gz ]] || [[ ${OVERWRITE} == 1 ]]; then
                 # Recreate labels from new manual disks labels if the manual labels file is newer than the existing labeled file or if the OVERWRITE option is enabled.
-                if [[ ${SUBJECT}_${c^^}w_labels-disc-manual.nii.gz -nt ${SUBJECT}_${c^^}w_seg_labeled_discs.nii.gz ]] || [[ ${OVERWRITE} == 1 ]]; then
+                if [[ ! -f ${SUBJECT}_${c^^}w/warp_template2anat.nii.gz && ${SUBJECT}_${c^^}w_labels-disc-manual.nii.gz -nt ${SUBJECT}_${c^^}w_seg_labeled_discs.nii.gz ]] || [[ ${OVERWRITE} == 1 ]]; then
                     sct_label_vertebrae -i ${SUBJECT}_${c^^}w.nii.gz -s ${SUBJECT}_${c^^}w_seg.nii.gz -discfile ${SUBJECT}_${c^^}w_labels-disc-manual.nii.gz -c ${c} -v ${VERBOSE}
                 fi
                 # Register to PAM50 template.
