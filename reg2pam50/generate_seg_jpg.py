@@ -91,7 +91,7 @@ def main():
             continue
         for image_path in (subject_dir / 'anat').glob('*.nii.gz'):
             image_name = image_path.name.replace('.nii.gz', '')
-            segs_suffix_output = segs_suffix if len(segs_suffix) == 0 or segs_suffix[0] == "_" else segs_suffix[1:]
+            segs_suffix_output = segs_suffix if len(segs_suffix) == 0 or segs_suffix[0] == "_" else f'_{segs_suffix}'
             output_jpg_path = output_path / f'{image_name}{segs_suffix_output}_{orient}_{sliceloc}.jpeg'
             
             # Check if the output file exists and if the override flag is set to 0
@@ -133,8 +133,11 @@ def create_slice_seg_jpg(nifti_image_path, segmentation_path, jpg_output_path, o
     img = nib.as_closest_canonical(img)
     seg = nib.as_closest_canonical(seg)
 
-    # Resample the segmentation to the same space as the image
-    img = nl_image.resample_to_img(img, seg, interpolation='continuous')
+    # Resample the segmentation to 1X1 mm
+    seg = nl_image.resample_img(seg, np.eye(3), interpolation='nearest')
+
+    # Resample the image to the same space as the segmentation
+    img = nl_image.resample_to_img(img, seg)
 
     # Convert the image and segmentation data into numpy arrays
     img_data = img.get_fdata()
