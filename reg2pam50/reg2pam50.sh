@@ -2,7 +2,7 @@
 
 # Check for -h option
 if [ "$1" = "-h" ]; then
-        
+
     echo " This script is designed to register spinal cord MRI data to the PAM50 template. "
     echo " The data is expected to be organized in the BIDS format. The main steps include:"
     echo ""
@@ -17,6 +17,8 @@ if [ "$1" = "-h" ]; then
     echo " - -s: PAM50 segmentation file (default: "PAM50_seg.nii.gz")."
     echo " - -r: Overwrite existing files (0/1). 0: Do not overwrite, 1: Run again even if files exist (default: 0)."
     echo " - -c: Cleanup (0/1). 0: Do not Cleanup, 1: Remove all files except the necessary segmentation and label files. (default: 1)."
+    echo " - -l: Log folder (default: "output/logs")."
+    echo " - -j: Number of jobs you want to run in parallel. (default: half the number of cores available on the system)."
     echo " - -v: Verbose (0/1). 0: Display only errors/warnings, 1: Errors/warnings + info messages (default: 1)."
     echo ""
     echo " After running the script, a <SUBJECT>_PAM50_seg.nii.gz file will be created in the SUBJECT output folder "
@@ -78,6 +80,8 @@ if [ "$1" = "-h" ]; then
     echo "     [-s <PAM50 segmentation file (default: PAM50_seg.nii.gz).>] \\"
     echo "     [-r <Overwrite (0/1). 0: Do not Overwrite existing files, 1: Run again even if files exist (default: 0).>] \\"
     echo "     [-c <Cleanup (0/1). 0: Do not Cleanup, 1: Remove all files except the necessary segmentation and label files. (default: 1).>] \\"
+    echo "     [-l <Log folder (default: output/logs).>] \\"
+    echo "     [-j <Number of jobs you want to run in parallel. (default: half the number of cores available on the system).>] \\"
     echo "     [-v <Verbose (0/1). 0: Display only errors/warnings, 1: Errors/warnings + info messages (default: 1).>]"
 
     exit 0
@@ -105,11 +109,13 @@ OUTPUT_DIR="output"
 PAM50_SEG="PAM50_seg.nii.gz"
 OVERWRITE=0
 CLEANUP=1
+LOG_DIR="output/logs"
+JOBS=$((($(ps aux | wc -l) + 1) / 2))
 VERBOSE=1
 
 # Get command-line parameters to override default values.
 # ----------------------------------------------------------------------------------------------------------------------
-while getopts d:o:s:r:c:v: flag
+while getopts d:o:s:r:c:l:j:v: flag
 do
   case "${flag}" in
     d) DATA_DIR=${OPTARG};;
@@ -117,28 +123,11 @@ do
     s) PAM50_SEG=${OPTARG};;
     r) OVERWRITE=${OPTARG};;
     c) CLEANUP=${OPTARG};;
+    l) LOG_DIR=${OPTARG};;
+    j) JOBS=${OPTARG};;
     v) VERBOSE=${OPTARG};;
   esac
 done
-
-# Get full path for all parameters.
-DATA_DIR=$(realpath "${DATA_DIR}")
-OUTPUT_DIR=$(realpath "${OUTPUT_DIR}")
-PAM50_SEG=$(realpath "${PAM50_SEG}")
-
-# Print the parameters if VERBOSE is enabled.
-# ----------------------------------------------------------------------------------------------------------------------
-if [[ ${VERBOSE} == 1 ]]; then
-    echo ""
-    echo "Running with the following parameters:"
-    echo "DATA_DIR=${DATA_DIR}"
-    echo "OUTPUT_DIR=${OUTPUT_DIR}"
-    echo "PAM50_SEG=${PAM50_SEG}"
-    echo "OVERWRITE=${OVERWRITE}"
-    echo "CLEANUP=${CLEANUP}"
-    echo "VERBOSE=${VERBOSE}"
-    echo ""
-fi
 
 # Validate the given parameters.
 # ----------------------------------------------------------------------------------------------------------------------
@@ -174,17 +163,57 @@ if [[ ${CLEANUP} != 0 ]] && [[ ${CLEANUP} != 1 ]]; then
     exit 1
 fi
 
+# Ensure the log directory exists, creating it if necessary.
+mkdir -p ${LOG_DIR}
+if [[ ! -d ${LOG_DIR} ]]; then
+    echo "Folder not found ${LOG_DIR}"
+    exit 1
+fi
+
 # Ensure the VERBOSE parameter is either 0 or 1.
 if [[ ${VERBOSE} != 0 ]] && [[ ${VERBOSE} != 1 ]]; then
     echo "Error: -v param must be 0 or 1."
     exit 1
 fi
 
+# Get full path for all parameters.
+# ----------------------------------------------------------------------------------------------------------------------
+
+DATA_DIR=$(realpath "${DATA_DIR}")
+OUTPUT_DIR=$(realpath "${OUTPUT_DIR}")
+PAM50_SEG=$(realpath "${PAM50_SEG}")
+LOG_DIR=$(realpath "${LOG_DIR}")
+
+# Export all parameters.
+# ----------------------------------------------------------------------------------------------------------------------
+
+export DATA_DIR OUTPUT_DIR PAM50_SEG OVERWRITE CLEANUP LOG_DIR JOBS VERBOSE
+
+# Print the parameters if VERBOSE is enabled.
+# ----------------------------------------------------------------------------------------------------------------------
+
+if [[ ${VERBOSE} == 1 ]]; then
+    echo ""
+    echo "Running with the following parameters:"
+    echo "DATA_DIR=${DATA_DIR}"
+    echo "OUTPUT_DIR=${OUTPUT_DIR}"
+    echo "PAM50_SEG=${PAM50_SEG}"
+    echo "OVERWRITE=${OVERWRITE}"
+    echo "CLEANUP=${CLEANUP}"
+    echo "LOG_DIR=${LOG_DIR}"
+    echo "JOBS=${JOBS}"
+    echo "VERBOSE=${VERBOSE}"
+    echo ""
+fi
+
 # SCRIPT STARTS HERE
 # ======================================================================================================================
 
 # Define the contrasts to be processed.
-CONTRASTS=(t1 t2)
+export CONTRASTS="t1 t2"
+
+# Get running start date and  time for log
+export start_date=$(date +%Y%m%d%H%M%S)
 
 # Step 1 - Create spinal cord segmentation and initial automatic vertebrae label.
 # ----------------------------------------------------------------------------------------------------------------------
@@ -192,8 +221,10 @@ CONTRASTS=(t1 t2)
 # Change to the data directory.
 cd ${DATA_DIR}
 
-# Iterate over all subjects in the data directory.
-for SUBJECT in sub-*; do
+seg_sc_and_auto_label_vertebrae () {
+
+    SUBJECT=$1
+
     # Copy the source data to the output data folder.
     cp -r -u ${DATA_DIR}/${SUBJECT} ${OUTPUT_DIR}
     # If there is no anat folder in the subject folder, skip to the next subject.
@@ -236,7 +267,13 @@ for SUBJECT in sub-*; do
             fi
         fi
     done
-done
+
+}
+
+export -f  seg_sc_and_auto_label_vertebrae
+
+# Process all subjects in the data directory in parallel.
+ls -d sub-* | parallel -j ${JOBS} "seg_sc_and_auto_label_vertebrae {} >> ${LOG_DIR}/{}_$start_date.log"
 
 # Step 2 - For each subject, use the GUI to manually correct or confirm the vertebrae labels.
 # ----------------------------------------------------------------------------------------------------------------------
@@ -275,8 +312,10 @@ done
 # Change to the data directory.
 cd ${DATA_DIR}
 
-# Iterate over all subjects in the data directory.
-for SUBJECT in sub-*; do
+register_to_pam50 () {
+
+    SUBJECT=$1
+
     # If there is no anat folder in the subject folder, skip to the next subject.
     if [[ ! -d ${OUTPUT_DIR}/${SUBJECT}/anat ]]; then
         continue
@@ -310,4 +349,10 @@ for SUBJECT in sub-*; do
         find . -type f -not -regex "\./${SUBJECT}_[^_]+w_\(seg\|labels-disc-manual\|PAM50_seg\)\.nii\.gz" -exec rm -f {} \;
         find . -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} \;
     fi
-done
+
+}
+
+export -f  register_to_pam50
+
+# Process all subjects in the data directory in parallel.
+ls -d sub-* | parallel -j ${JOBS} "register_to_pam50 {} >> ${LOG_DIR}/{}_$start_date.log"
