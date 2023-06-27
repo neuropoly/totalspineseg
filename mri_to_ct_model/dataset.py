@@ -1,9 +1,10 @@
 import random
 import numpy as np
 import torch
-import h5py
 from torch.utils.data import Dataset
 from torchvision import transforms
+import glob
+import nibabel as nib
 
 def random_rot(img1,img2):
     k = np.random.randint(0, 3)
@@ -32,34 +33,33 @@ class RandomGenerator(object):
         return sample
 
 
-
 class Train_Data(Dataset):
-    def __init__(self):       
-        path = '/path/to/train_mri_data' # data in hdf5 as an example 
-        f = h5py.File(path,'r')
-        load_data = f['data']
-        self.lr = load_data 
-        path = '/path/to/train_ct_data'
-        f = h5py.File(path,'r')
-        load_data = f['data']
-        self.hr = load_data 
-        c, self.h, self.w = self.lr.shape
+    def __init__(self, train_mri_path, train_ct_path):       
+        self.mri_files = sorted(glob.glob(train_mri_path + '/*.nii.gz'))
+        self.len = len(self.mri_files)
+        array = nib.load(self.mri_files[0]).get_fdata()
+        self.h, self.w = array.shape[0], array.shape[1]
+        self.ct_files = sorted(glob.glob(train_ct_path + '/*.nii.gz'))
+        self.transform = transforms.Compose([RandomGenerator(output_size=[self.h, self.w])])
         
-        self.len = c
-        self.transform=transforms.Compose([RandomGenerator(output_size=[self.h, self.w])])
+    def __getitem__(self, index):
+        mri_file = self.mri_files[index]
+        ct_file = self.ct_files[index]
         
-    def __getitem__(self, index):        
-        x = self.lr[index, :, :]
-        y = self.hr[index, :, :]
+        mri_image = nib.load(mri_file)
+        ct_image = nib.load(ct_file)
         
-        x = self.norm(x)
-        y = self.norm(y)
+        mri_data = mri_image.get_fdata()
+        ct_data = ct_image.get_fdata()
         
-        sample = {'lr': x,'hr': y}
+        x = self.norm(mri_data)
+        y = self.norm(ct_data)
+        
+        sample = {'mri': x, 'ct': y}
         if self.transform:
             sample = self.transform(sample)
             
-        x, y = sample['lr'], sample['hr']
+        x, y = sample['mri'], sample['ct']
 
         xx = np.zeros((1, self.h, self.w))
         yy = np.zeros((1, self.h, self.w))
@@ -82,29 +82,32 @@ class Train_Data(Dataset):
         if np.amax(x) > 0:
             x = (x - np.amin(x)) / (np.amax(x) - np.amin(x))
         return x
- 
-    
+
+
 class Valid_Data(Dataset):
-    def __init__(self):       
-        path = '/path/to/valid_mri_data'
-        f = h5py.File(path,'r')
-        load_data = f['data']
-        self.lr = load_data 
-        path = '/path/to/valid_ct_data'
-        f = h5py.File(path,'r')
-        load_data = f['data']
-        self.hr = load_data 
-        c, self.h, self.w = self.lr.shape
+    def __init__(self, val_mri_path, val_ct_path):       
+        self.mri_files = sorted(glob.glob(val_mri_path + '/*.nii.gz'))
+        self.ct_files = sorted(glob.glob(val_ct_path + '/*.nii.gz'))
+        array = nib.load(self.mri_files[0]).get_fdata()
+        self.h, self.w = array.shape[0], array.shape[1]
+        ####
+        #####
+        self.len = 27 #Will surely need to be changed in the future (but kept same as original value)
+        ######
         
-        self.len = 27
+    def __getitem__(self, index):
+        mri_file = self.mri_files[index * 5]
+        ct_file = self.ct_files[index * 5]
         
-    def __getitem__(self, index):      
-        x = self.lr[index*5, :, :]
-        y = self.hr[index*5, :, :]
-
-        x = self.norm(x)
-        y = self.norm(y)
-
+        mri_image = nib.load(mri_file)
+        ct_image = nib.load(ct_file)
+        
+        mri_data = mri_image.get_fdata()
+        ct_data = ct_image.get_fdata()
+        
+        x = self.norm(mri_data)
+        y = self.norm(ct_data)
+        
         xx = np.zeros((1, self.h, self.w))
         yy = np.zeros((1, self.h, self.w))
         
@@ -118,36 +121,39 @@ class Valid_Data(Dataset):
         yy = yy.type(torch.FloatTensor)
         
         return xx, yy
-    
+
     def __len__(self):
         return self.len
     
     def norm(self, x):
         if np.amax(x) > 0:
             x = (x - np.amin(x)) / (np.amax(x) - np.amin(x))
-        return x 
-    
+        return x
+
+
 class Test_Data(Dataset):
-    def __init__(self):       
-        path = '/path/to/test_mri_data'
-        f = h5py.File(path,'r')
-        load_data = f['data']
-        self.lr = load_data 
-        path = '/path/to/test_ct_data'
-        f = h5py.File(path,'r')
-        load_data = f['data']
-        self.hr = load_data 
-        c, self.h, self.w = self.lr.shape
+    def __init__(self, test_mri_path, test_ct_path):       
+        self.mri_files = sorted(glob.glob(test_mri_path + '/*.nii.gz'))
+        self.ct_files = sorted(glob.glob(test_ct_path + '/*.nii.gz'))
+        array = nib.load(self.mri_files[0]).get_fdata()
+        self.h, self.w = array.shape[0], array.shape[1]
+        self.len = len(self.lr_files)
 
-        self.len = 135
+        self.len = 135 ### SAME AS BEFORE : NEED TO BE CHANGED
         
-    def __getitem__(self, index):       
-        x = self.lr[index, :, :]
-        y = self.hr[index, :, :]
-
-        x = self.norm(x)
-        y = self.norm(y)
-
+    def __getitem__(self, index):
+        mri_file = self.mri_files[index]
+        ct_file = self.ct_files[index]
+        
+        mri_image = nib.load(mri_file)
+        ct_image = nib.load(ct_file)
+        
+        mri_data = mri_image.get_fdata()
+        ct_data = ct_image.get_fdata()
+        
+        x = self.norm(mri_data)
+        y = self.norm(ct_data)
+        
         xx = np.zeros((1, self.h, self.w))
         yy = np.zeros((1, self.h, self.w))
         

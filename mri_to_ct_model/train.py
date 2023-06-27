@@ -6,13 +6,14 @@ from absl import app, flags
 from tqdm import tqdm
 from matplotlib import pyplot as plt
 from matplotlib import gridspec
+import sys
 
 import torch
 from torch.utils.data import DataLoader
 
 from diffusion import GaussianDiffusionTrainer, GaussianDiffusionSampler
 from model import UNet
-from Dataset.dataset import Train_Data, Valid_Data
+from dataset import Train_Data, Valid_Data
 
 
 FLAGS = flags.FLAGS
@@ -48,6 +49,15 @@ flags.DEFINE_integer('max_epoch', 5000, help='frequency of saving checkpoints, 0
 
 device = torch.device('cuda:0')
 
+# Get the command-line arguments
+data_path = sys.argv[1]
+
+train_mri_path = data_path + '/mri_Tr'
+train_ct_path = data_path + '/ct_Tr'
+
+val_mri_path = data_path + '/mri_val'
+val_ct_path = data_path + '/ct_val'
+
 
 def ema(source, target, decay):
     source_dict = source.state_dict()
@@ -58,12 +68,12 @@ def ema(source, target, decay):
             source_dict[key].data * (1 - decay))
 
 
-def train():
+def train(train_mri_path, train_ct_path, val_mri_path, val_ct_path):
     # dataset
-    tr_train = Train_Data()
+    tr_train = Train_Data(train_mri_path,train_ct_path)
     trainloader = DataLoader(tr_train, batch_size=FLAGS.batch_size, num_workers=FLAGS.num_workers, 
                              pin_memory=True, shuffle=True)
-    va_train = Valid_Data()
+    va_train = Valid_Data(val_mri_path, val_ct_path)
     validloader = DataLoader(va_train, batch_size=FLAGS.sample_size, num_workers=FLAGS.num_workers, 
                               pin_memory=True, shuffle=False)
 
@@ -217,7 +227,7 @@ def main(argv):
     # suppress annoying inception_v3 initialization warning
     warnings.simplefilter(action='ignore', category=FutureWarning)
     if FLAGS.train:
-        train()
+        train(train_mri_path, train_ct_path, val_mri_path, val_ct_path)
 
 
 if __name__ == '__main__':
