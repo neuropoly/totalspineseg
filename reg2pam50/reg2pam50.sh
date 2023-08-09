@@ -12,14 +12,14 @@ if [ "$1" = "-h" ]; then
     echo " 3. Register the image to the PAM50 template and bring the PAM50 segmentation file into the image space."
     echo ""
     echo " The script takes several command-line arguments for customization:"
-    echo " - -d: BIDS data folder (default: "data")."
-    echo " - -o: Output folder (default: "output")."
-    echo " - -s: PAM50 segmentation file (default: "PAM50_seg.nii.gz")."
-    echo " - -r: Overwrite existing files (0/1). 0: Do not overwrite, 1: Run again even if files exist (default: 0)."
-    echo " - -c: Cleanup (0/1). 0: Do not Cleanup, 1: Remove all files except the necessary segmentation and label files. (default: 1)."
-    echo " - -l: Log folder (default: "output/logs")."
-    echo " - -j: Number of jobs you want to run in parallel. (default: half the number of cores available on the system)."
-    echo " - -v: Verbose (0/1). 0: Display only errors/warnings, 1: Errors/warnings + info messages (default: 1)."
+    echo "   -d: BIDS data folder (default: "data")."
+    echo "   -o: Output folder (default: "output")."
+    echo "   -s: PAM50 segmentation file (default: "PAM50_seg.nii.gz")."
+    echo "   -r: Overwrite existing files (0/1). 0: Do not overwrite, 1: Run again even if files exist (default: 0)."
+    echo "   -c: Cleanup (0/1). 0: Do not Cleanup, 1: Remove all files except the necessary segmentation and label files. (default: 0)."
+    echo "   -l: Log folder (default: "output/logs")."
+    echo "   -j: Number of jobs you want to run in parallel. (default: half the number of cores available on the system)."
+    echo "   -v: Verbose (0/1). 0: Display only errors/warnings, 1: Errors/warnings + info messages (default: 1)."
     echo ""
     echo " After running the script, a <SUBJECT>_PAM50_seg.nii.gz file will be created in the SUBJECT output folder "
     echo " with the segmentation."
@@ -79,9 +79,9 @@ if [ "$1" = "-h" ]; then
     echo "     [-o <Output folder (default: output).>] \\"
     echo "     [-s <PAM50 segmentation file (default: PAM50_seg.nii.gz).>] \\"
     echo "     [-r <Overwrite (0/1). 0: Do not Overwrite existing files, 1: Run again even if files exist (default: 0).>] \\"
-    echo "     [-c <Cleanup (0/1). 0: Do not Cleanup, 1: Remove all files except the necessary segmentation and label files. (default: 1).>] \\"
+    echo "     [-c <Cleanup (0/1). 0: Do not Cleanup, 1: Remove all files except the necessary segmentation and label files. (default: 0).>] \\"
     echo "     [-l <Log folder (default: output/logs).>] \\"
-    echo "     [-j <Number of jobs you want to run in parallel. (default: half the number of cores available on the system).>] \\"
+    echo "     [-j <Number of jobs you want to run in parallel. (default: The minium between the number of cores available on the system minus one and the RAM divided by 8GB).>] \\"
     echo "     [-v <Verbose (0/1). 0: Display only errors/warnings, 1: Errors/warnings + info messages (default: 1).>]"
 
     exit 0
@@ -108,9 +108,16 @@ DATA_DIR="data"
 OUTPUT_DIR="output"
 PAM50_SEG="PAM50_seg.nii.gz"
 OVERWRITE=0
-CLEANUP=1
+CLEANUP=0
 LOG_DIR="output/logs"
-JOBS=$((($(ps aux | wc -l) + 1) / 2))
+# RAM requirement in GB
+RAM_REQUIREMENT=8
+# Get the number of CPUs, subtract 1, and ensure the value is at least 1
+JOBS_FOR_CPUS=$(( $(($(nproc) - 1 < 1 ? 1 : $(nproc) - 1 )) ))
+# Get the total memory in GB divided by 10, rounded down to nearest integer, and ensure the value is at least 1
+JOBS_FOR_RAMGB=$(( $(awk -v ram_req="$RAM_REQUIREMENT" '/MemTotal/ {print int($2/1024/1024/ram_req < 1 ? 1 : $2/1024/1024/ram_req)}' /proc/meminfo) ))
+# Get the minimum of JOBS_FOR_CPUS and JOBS_FOR_RAMGB
+JOBS=$(( JOBS_FOR_CPUS < JOBS_FOR_RAMGB ? JOBS_FOR_CPUS : JOBS_FOR_RAMGB ))
 VERBOSE=1
 
 # Get command-line parameters to override default values.
@@ -240,9 +247,6 @@ seg_sc_and_auto_label_vertebrae () {
     # If a manual spinal cord segmentation file exists, use it instead of the automatic one.
     for f in sub-*_*w_seg-manual.nii.gz; do
         if [[ -e ${f} ]]; then
-            if [[ ${VERBOSE} == 1 ]]; then
-                echo "Using ${f}"
-            fi
             # Remove '-manual' from segmentation file
             mv ${f} "${f%-manual.nii.gz}.nii.gz" || :
         fi
@@ -328,16 +332,13 @@ register_to_pam50 () {
             # Continue if no manual disk labels file is found.
             if [[ ! -f ${SUBJECT}_${c^^}w_labels-disc-manual.nii.gz ]]; then
                 echo "File not found ${SUBJECT}_${c^^}w_labels-disc-manual.nii.gz"
-            fi
             # Register to PAM50 template and create PAM50 segmentation file if it does not exist or if the OVERWRITE option is enabled.
-            if [[ ! -f ${SUBJECT}_${c^^}w_PAM50_seg.nii.gz ]] || [[ ${OVERWRITE} == 1 ]]; then
-                # Recreate labels from new manual disks labels if the manual labels file is newer than the existing labeled file or if the OVERWRITE option is enabled.
-                if [[ ! -f ${SUBJECT}_${c^^}w/warp_template2anat.nii.gz && ${SUBJECT}_${c^^}w_labels-disc-manual.nii.gz -nt ${SUBJECT}_${c^^}w_seg_labeled_discs.nii.gz ]] || [[ ${OVERWRITE} == 1 ]]; then
-                    sct_label_vertebrae -i ${SUBJECT}_${c^^}w.nii.gz -s ${SUBJECT}_${c^^}w_seg.nii.gz -discfile ${SUBJECT}_${c^^}w_labels-disc-manual.nii.gz -c ${c} -v ${VERBOSE}
-                fi
+            elif [[ ! -f ${SUBJECT}_${c^^}w_PAM50_seg.nii.gz ]] || [[ ${OVERWRITE} == 1 ]]; then
                 # Register to PAM50 template.
                 if [[ ! -f ${SUBJECT}_${c^^}w/warp_template2anat.nii.gz ]] || [[ ${OVERWRITE} == 1 ]]; then
-                    sct_register_to_template -i ${SUBJECT}_${c^^}w.nii.gz -s ${SUBJECT}_${c^^}w_seg.nii.gz -ldisc ${SUBJECT}_${c^^}w_seg_labeled_discs.nii.gz -ofolder ${SUBJECT}_${c^^}w -c ${c} -qc ${OUTPUT_DIR}/qc
+                    # Ensure segmentation in the same space as the image
+                    sct_register_multimodal -i ${SUBJECT}_${c^^}w_seg.nii.gz -d ${SUBJECT}_${c^^}w.nii.gz -identity 1 -x nn
+                    sct_register_to_template -i ${SUBJECT}_${c^^}w.nii.gz -s ${SUBJECT}_${c^^}w_seg_reg.nii.gz -ldisc ${SUBJECT}_${c^^}w_labels-disc-manual.nii.gz -ofolder ${SUBJECT}_${c^^}w -c ${c} -qc ${OUTPUT_DIR}/qc
                 fi
                 # Move PAM50 segmentation file into the image space.
                 sct_apply_transfo -i ${PAM50_SEG} -d ${SUBJECT}_${c^^}w.nii.gz -w ${SUBJECT}_${c^^}w/warp_template2anat.nii.gz -x nn -o ${SUBJECT}_${c^^}w_PAM50_seg.nii.gz
@@ -355,4 +356,4 @@ register_to_pam50 () {
 export -f  register_to_pam50
 
 # Process all subjects in the data directory in parallel.
-ls -d sub-* | parallel -j ${JOBS} "register_to_pam50 {} >> ${LOG_DIR}/{}_$start_date.log"
+ls -d sub-* | parallel -j ${JOBS} "register_to_pam50 {} >> ${LOG_DIR}/{}_$start_date.log 2>&1; if [ ! -s ${LOG_DIR}/{}_$start_date.log ]; then rm ${LOG_DIR}/{}_$start_date.log; fi"
