@@ -2,11 +2,13 @@
 ####################################################################################################
 
 from pathlib import Path
+import time, json
 
 # import nibabel as nib
 # nib.openers.Opener.default_compresslevel = 9
 
 data_path = r'D:/reg2pam50/whole-spine/data'
+name_rater = 'Yehuda Warszawer'
 
 def load_files(base_file_name):
     
@@ -16,6 +18,11 @@ def load_files(base_file_name):
     # Define the paths to the volume and segmentation files
     volume_path = f"{data_path}/{subject_id}/anat/{base_file_name}.nii.gz"
     segmentation_path = f"{data_path}/derivatives/labels/{subject_id}/anat/{base_file_name}_seg.nii.gz"
+    segmentation_manual_path = segmentation_path.replace('_seg.nii.gz', '_seg-manual.nii.gz')
+    
+    # If seg-manual exist open it
+    if Path(segmentation_manual_path).is_file():
+        segmentation_path = segmentation_manual_path
 
     # Close the current scene
     slicer.mrmlScene.Clear(0)
@@ -71,11 +78,30 @@ def save_segmentation_with_original_dtype():
     
     # Save the label map to the file
     segmentation_path = Path(segmentation_node.GetStorageNode().GetFileName())
+    
+    # If file exist rename it to bkp
+    if segmentation_path.is_file():
+        segmentation_path.rename(str(segmentation_path).replace('.nii.gz', '.bkp.nii.gz'))
+    
     slicer.vtkSlicerSegmentationsModuleLogic.ExportSegmentsBinaryLabelmapRepresentationToFiles(str(segmentation_path.parent), segmentation_node, None, "nii.gz", True, volume_node)
 
     # Fix filename if '-' removed
     if not segmentation_path.is_file():
         (segmentation_path.parent / segmentation_path.name.replace('-', '')).rename(segmentation_path)
+    
+    # Create json sidecar with meta information
+    metadata = {'Author': name_rater, 'Date': time.strftime('%Y-%m-%d %H:%M:%S')}
+
+    fname_json = Path(str(segmentation_path).replace('.nii.gz', '.json'))
+    
+    # If file exist rename it to bkp
+    if fname_json.is_file():
+        fname_json.rename(str(fname_json).replace('.json', '.bkp.json'))
+
+    with open(str(fname_json), 'w') as outfile:
+        json.dump(metadata, outfile, indent=4)
+        # Add last newline
+        outfile.write("\n")
 
     # # Load the original and temporary files using nibabel
     # seg_src = nib.load(original_file_name)
