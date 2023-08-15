@@ -10,15 +10,15 @@ import time, json
 data_path = r'D:/reg2pam50/whole-spine/data'
 name_rater = 'Yehuda Warszawer'
 
-def load_files(base_file_name):
+def load_files(base_file_name, seg_fuffix='_seg'):
     
     # Separate the base_file_name into subject_id and scan_type
     subject_id, scan_type = base_file_name.rsplit('_', 1)
 
     # Define the paths to the volume and segmentation files
     volume_path = f"{data_path}/{subject_id}/anat/{base_file_name}.nii.gz"
-    segmentation_path = f"{data_path}/derivatives/labels/{subject_id}/anat/{base_file_name}_seg.nii.gz"
-    segmentation_manual_path = segmentation_path.replace('_seg.nii.gz', '_seg-manual.nii.gz')
+    segmentation_path = f"{data_path}/derivatives/labels/{subject_id}/anat/{base_file_name}{seg_fuffix}.nii.gz"
+    segmentation_manual_path = segmentation_path.replace(f'{seg_fuffix}.nii.gz', f'{seg_fuffix}-manual.nii.gz')
     
     # If seg-manual exist open it
     if Path(segmentation_manual_path).is_file():
@@ -61,11 +61,10 @@ def load_files(base_file_name):
     segmentation_node.SetReferenceImageGeometryParameterFromVolumeNode(volume_node)
 
     # Set segmentation_node name
-    segmentation_node.SetName(f"{base_file_name}_seg-manual")
+    segmentation_node.SetName(f"{base_file_name}{seg_fuffix}-manual")
     # Set segmentation_node file name
     segmentation_node.AddDefaultStorageNode()
-    segmentation_node.GetStorageNode().SetFileName(segmentation_path.replace('seg.nii.gz', 'seg-manual.nii.gz'))
-
+    segmentation_node.GetStorageNode().SetFileName(segmentation_manual_path)
 
 
 def save_segmentation_with_original_dtype():
@@ -83,7 +82,28 @@ def save_segmentation_with_original_dtype():
     if segmentation_path.is_file():
         segmentation_path.rename(str(segmentation_path).replace('.nii.gz', '.bkp.nii.gz'))
     
-    slicer.vtkSlicerSegmentationsModuleLogic.ExportSegmentsBinaryLabelmapRepresentationToFiles(str(segmentation_path.parent), segmentation_node, None, "nii.gz", True, volume_node)
+
+    seg_ids_map = {
+        seg_id: int(seg_id.replace('Segment_', '')) for seg_id in segmentation_node.GetSegmentation().GetSegmentIDs()
+    }
+    color_table_node = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLColorTableNode")
+    color_table_node.SetTypeToUser()
+    color_table_node.SetNumberOfColors(max(seg_ids_map.values()) + 1)
+    color_table_node.NamesInitialisedOn()
+
+    for name, entry in seg_ids_map.items():
+        color_table_node.SetColor(entry, name, 0, 0, 0)
+
+    slicer.vtkSlicerSegmentationsModuleLogic.ExportSegmentsBinaryLabelmapRepresentationToFiles(
+        str(segmentation_path.parent),
+        segmentation_node,
+        None,
+        "nii.gz",
+        True,
+        volume_node,
+        slicer.vtkSegmentation.EXTENT_REFERENCE_GEOMETRY,
+        color_table_node
+    )
 
     # Fix filename if '-' removed
     if not segmentation_path.is_file():
