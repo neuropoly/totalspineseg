@@ -1,6 +1,6 @@
 #!/bin/bash
 
-sudo apt-get install git-annex
+sudo apt-get install git-annex -y
 
 for ds in data-multi-subject data-single-subject; do
     # get data from github
