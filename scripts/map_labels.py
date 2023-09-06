@@ -61,6 +61,10 @@ def main():
         help='Suffix for output segmentation, defaults to "_seg".'
     )
     parser.add_argument(
+        '--output-seg-suffix', type=str, default='_seg',
+        help='Suffix for output segmentation, defaults to "_seg".'
+    )
+    parser.add_argument(
         '--verbose', '-v', type=int, default=1, choices=[0, 1],
         help='Verbosity level. 0: Errors/warnings only, 1: Errors/warnings + info (default: 1)'
     )
@@ -77,6 +81,7 @@ def main():
     subject_prefix = args.subject_prefix
     subject_subdir = args.subject_subdir
     seg_suffix = args.seg_suffix
+    output_seg_suffix = args.output_seg_suffix
     verbose = args.verbose
 
     if verbose:
@@ -88,6 +93,7 @@ def main():
             subject_prefix = "{subject_prefix}"
             subject_subdir = "{subject_subdir}"
             seg_suffix = "{seg_suffix}"
+            output_seg_suffix = "{output_seg_suffix}"
             verbose = {verbose}
         '''))
 
@@ -114,7 +120,7 @@ def main():
         # Process each segmentation file
         for seg_path in (subject_dir / subject_subdir).glob(f'*{seg_suffix}.nii.gz'):
             
-            output_seg_path = output_path / subject / subject_subdir / seg_path.name
+            output_seg_path = output_path / subject / subject_subdir / seg_path.name.replace(f'{seg_suffix}.nii.gz', f'{output_seg_suffix}.nii.gz')
 
             # Load segmentation
             seg = nib.load(seg_path)
