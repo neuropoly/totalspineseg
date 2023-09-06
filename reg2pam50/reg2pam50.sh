@@ -12,9 +12,9 @@ if [ "$1" = "-h" ]; then
     echo " 3. Register the image to the PAM50 template and bring the PAM50 segmentation file into the image space."
     echo ""
     echo " The script takes several command-line arguments for customization:"
-    echo "   -d: BIDS data folder (default: "data")."
+    echo "   -d: BIDS data folder (default: ".")."
     echo "   -o: Output folder (default: "output")."
-    echo "   -s: PAM50 segmentation file (default: "PAM50_seg.nii.gz")."
+    echo "   -s: PAM50 segmentation file (default: "../PAM50_seg.nii.gz")."
     echo "   -r: Overwrite existing files (0/1). 0: Do not overwrite, 1: Run again even if files exist (default: 0)."
     echo "   -c: Cleanup (0/1). 0: Do not Cleanup, 1: Remove all files except the necessary segmentation and label files. (default: 0)."
     echo "   -l: Log folder (default: "output/logs")."
@@ -75,9 +75,9 @@ if [ "$1" = "-h" ]; then
     echo ""
     echo " Usage:"
     echo "   ./reg2pam50.sh"
-    echo "     [-d <BIDS data folder (default: data).>] \\"
+    echo "     [-d <BIDS data folder (default: .).>] \\"
     echo "     [-o <Output folder (default: output).>] \\"
-    echo "     [-s <PAM50 segmentation file (default: PAM50_seg.nii.gz).>] \\"
+    echo "     [-s <PAM50 segmentation file (default: ../PAM50_seg.nii.gz).>] \\"
     echo "     [-r <Overwrite (0/1). 0: Do not Overwrite existing files, 1: Run again even if files exist (default: 0).>] \\"
     echo "     [-c <Cleanup (0/1). 0: Do not Cleanup, 1: Remove all files except the necessary segmentation and label files. (default: 0).>] \\"
     echo "     [-l <Log folder (default: output/logs).>] \\"
@@ -104,9 +104,9 @@ trap "echo Caught Keyboard Interrupt within script. Exiting now.; exit" INT
 
 # Set default values for parameters.
 # ----------------------------------------------------------------------------------------------------------------------
-DATA_DIR="data"
+DATA_DIR="."
 OUTPUT_DIR="output"
-PAM50_SEG="PAM50_seg.nii.gz"
+PAM50_SEG="../PAM50_seg.nii.gz"
 OVERWRITE=0
 CLEANUP=0
 LOG_DIR="output/logs"
