@@ -19,20 +19,20 @@ def main():
         formatter_class=argparse.RawTextHelpFormatter
     )
     parser.add_argument(
-        '--images-dir', '-i', type=DirPath(), default='data',
-        help='The folder where input NIfTI images files are located. Default is "data".'
+        '--images-dir', '-i', type=DirPath(), default='.',
+        help='The folder where input NIfTI images files are located. Default is ".".'
     )
     parser.add_argument(
-        '--segs-dir', '-s', type=DirPath(), default='output',
-        help='The folder where input NIfTI segmentation files are located. Default is "output".'
+        '--segs-dir', '-s', type=DirPath(), default='derivatives/labels',
+        help='The folder where input NIfTI segmentation files are located. Default is "derivatives/labels".'
     )
     parser.add_argument(
         '--segs-suffix', '-f', type=str, default='_PAM50_seg',
         help='The segmentation suffix to add to the image name. Default is "_PAM50_seg".'
     )
     parser.add_argument(
-        '--output-dir', '-o', type=DirPath(True), default='seg_jpeg',
-        help='The folder where output combined JPG images will be saved. Default is "seg_jpeg".'
+        '--output-dir', '-o', type=DirPath(True), default='derivatives/preview',
+        help='The folder where output combined JPG images will be saved. Default is "derivatives/preview".'
     )
     parser.add_argument(
         '--orient', '-t', type=str, choices=['sag', 'ax', 'cor'], default='sag',
