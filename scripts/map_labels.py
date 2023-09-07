@@ -4,9 +4,6 @@ from pathlib import Path
 import numpy as np
 import nibabel as nib
 
-# Set default compression level 
-nib.openers.Opener.default_compresslevel = 9
-
 
 def main():
     
