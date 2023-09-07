@@ -43,13 +43,20 @@ def main():
                 if not seg_path.is_file():
                     print(f'Warning: Segmentation file not found segmentation file for {image_path}')
                     continue
+
+                image_out_path = nnraw_path / 'imagesTr' / f'{dsid}_{image_name.replace("sub-", "")}_0000.nii.gz'
+                seg_out_path = nnraw_path / 'labelsTr' / f'{dsid}_{image_name.replace("sub-", "")}.nii.gz'
+
+                if image_out_path.is_file() and image_out_path.is_file():
+                    continue
+
                 print(f"Processing {image_path.name} and {seg_path.name}...")
 
                 make_nnunt_image_seg(
                     image_path,
                     seg_path,
-                    nnraw_path / 'imagesTr' / f'{dsid}_{image_name.replace("sub-", "")}_0000.nii.gz',
-                    nnraw_path / 'labelsTr' / f'{dsid}_{image_name.replace("sub-", "")}.nii.gz',
+                    image_out_path,
+                    seg_out_path,
                     from_top
                 )
                 print(f"Done")
@@ -86,13 +93,17 @@ def make_nnunt_image_seg(in_img, in_seg, out_img, out_seg, from_top):
             while zmin == -1 or 49 not in data[..., zmin]:
                 zmin = z_indices[(data == last_vert) & (y_indices == y_indices[data == last_vert].max())].min()
                 last_vert -= 1
-            run_command(f'sct_crop_image -i {temp_path}/img.nii.gz -zmin {zmin} -o {out_img}')
-            run_command(f'sct_crop_image -i {temp_path}/seg.nii.gz -zmin {zmin} -o {out_seg}')
+            run_command(f'sct_crop_image -i {temp_path}/img.nii.gz -zmin {zmin} -o {temp_path}/img.nii.gz')
+            run_command(f'sct_crop_image -i {temp_path}/seg.nii.gz -zmin {zmin} -o {temp_path}/seg.nii.gz')
         elif 42 in data:
             # Cut at the lowest voxel of T12-L1 IVD
             zmax = z_indices[data == 42].min()
-            run_command(f'sct_crop_image -i {temp_path}/img.nii.gz -zmax {zmax} -o {out_img}')
-            run_command(f'sct_crop_image -i {temp_path}/seg.nii.gz -zmax {zmax} -o {out_seg}')
+            run_command(f'sct_crop_image -i {temp_path}/img.nii.gz -zmax {zmax} -o {temp_path}/img.nii.gz')
+            run_command(f'sct_crop_image -i {temp_path}/seg.nii.gz -zmax {zmax} -o {temp_path}/seg.nii.gz')
+
+        # Copy files from tmp to output destination
+        (temp_path / 'img.nii.gz').rename(out_img)
+        (temp_path / 'seg.nii.gz').rename(out_seg)
     finally:
         shutil.rmtree(temp_path)
 
