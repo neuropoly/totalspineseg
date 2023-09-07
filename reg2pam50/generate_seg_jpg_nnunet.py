@@ -27,8 +27,8 @@ def main():
         help='The folder where input NIfTI segmentation files are located. Default is "labelsTr".'
     )
     parser.add_argument(
-        '--output-dir', '-o', type=DirPath(True), default='seg_jpeg',
-        help='The folder where output combined JPG images will be saved. Default is "seg_jpeg".'
+        '--output-dir', '-o', type=DirPath(True), default='preview',
+        help='The folder where output combined JPG images will be saved. Default is "preview".'
     )
     parser.add_argument(
         '--orient', '-t', type=str, choices=['sag', 'ax', 'cor'], default='sag',
