@@ -90,7 +90,7 @@ def make_nnunt_image_seg(in_img, in_seg, out_img, out_seg, from_top):
             run_command(f'sct_crop_image -i {temp_path}/seg.nii.gz -zmin {zmin} -o {out_seg}')
         elif 42 in data:
             # Cut at the lowest voxel of T12-L1 IVD
-            zmax = z_indices[data == 207].min()
+            zmax = z_indices[data == 42].min()
             run_command(f'sct_crop_image -i {temp_path}/img.nii.gz -zmax {zmax} -o {out_img}')
             run_command(f'sct_crop_image -i {temp_path}/seg.nii.gz -zmax {zmax} -o {out_seg}')
     finally:
