@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 class Image(object):
     """
-    Compacted version of the https://github.com/spinalcordtoolbox/spinalcordtoolbox/image.py image module
+    Compact version of SCT's Image Class (https://github.com/spinalcordtoolbox/spinalcordtoolbox/blob/master/spinalcordtoolbox/image.py#L245)
     Create an object that behaves similarly to nibabel's image object. Useful additions include: dims, change_orientation and getNonZeroCoordinates.
     """
 
@@ -181,6 +181,15 @@ class Image(object):
 
         return list_coordinates
     
+    def change_type(self, dtype):
+        """
+        Change data type on image.
+
+        Note: the image path is voided.
+        """
+        change_type(self, dtype, self)
+        return self
+    
     def fix_header_dtype(self):
         """
         Change the header dtype to the match the datatype of the array.
@@ -276,6 +285,65 @@ class Image(object):
             self.copy().save(path, dtype, verbose, mutable=True)
         return self
 
+
+class SlicerOneAxis(object):
+    """
+    Image slicer to use when you don't care about the 2D slice orientation,
+    and don't want to specify them.
+    The slicer will just iterate through the right axis that corresponds to
+    its specification.
+
+    Can help getting ranges and slice indices.
+
+    Copied from https://github.com/spinalcordtoolbox/spinalcordtoolbox/image.py
+    """
+
+    def __init__(self, im, axis="IS"):
+        opposite_character = {'L': 'R', 'R': 'L', 'A': 'P', 'P': 'A', 'I': 'S', 'S': 'I'}
+        axis_labels = "LRPAIS"
+        if len(axis) != 2:
+            raise ValueError()
+        if axis[0] not in axis_labels:
+            raise ValueError()
+        if axis[1] not in axis_labels:
+            raise ValueError()
+        if axis[0] != opposite_character[axis[1]]:
+            raise ValueError()
+
+        for idx_axis in range(2):
+            dim_nr = im.orientation.find(axis[idx_axis])
+            if dim_nr != -1:
+                break
+        if dim_nr == -1:
+            raise ValueError()
+
+        # SCT convention
+        from_dir = im.orientation[dim_nr]
+        self.direction = +1 if axis[0] == from_dir else -1
+        self.nb_slices = im.dim[dim_nr]
+        self.im = im
+        self.axis = axis
+        self._slice = lambda idx: tuple([(idx if x in axis else slice(None)) for x in im.orientation])
+
+    def __len__(self):
+        return self.nb_slices
+
+    def __getitem__(self, idx):
+        """
+
+        :return: an image slice, at slicing index idx
+        :param idx: slicing index (according to the slicing direction)
+        """
+        if isinstance(idx, slice):
+            raise NotImplementedError()
+
+        if idx >= self.nb_slices:
+            raise IndexError("I just have {} slices!".format(self.nb_slices))
+
+        if self.direction == -1:
+            idx = self.nb_slices - 1 - idx
+
+        return self.im.data[self._slice(idx)]
 
 def get_dimension(im_file, verbose=1):
     """
@@ -424,3 +492,194 @@ def orientation_string_nib2sct(s):
     """
     opposite_character = {'L': 'R', 'R': 'L', 'A': 'P', 'P': 'A', 'I': 'S', 'S': 'I'}
     return "".join([opposite_character[x] for x in s])
+
+
+def change_type(im_src, dtype, im_dst=None):
+    """
+    Change the voxel type of the image
+
+    :param dtype:    if not set, the image is saved in standard type\
+                    if 'minimize', image space is minimize\
+                    if 'minimize_int', image space is minimize and values are approximated to integers\
+                    (2, 'uint8', np.uint8, "NIFTI_TYPE_UINT8"),\
+                    (4, 'int16', np.int16, "NIFTI_TYPE_INT16"),\
+                    (8, 'int32', np.int32, "NIFTI_TYPE_INT32"),\
+                    (16, 'float32', np.float32, "NIFTI_TYPE_FLOAT32"),\
+                    (32, 'complex64', np.complex64, "NIFTI_TYPE_COMPLEX64"),\
+                    (64, 'float64', np.float64, "NIFTI_TYPE_FLOAT64"),\
+                    (256, 'int8', np.int8, "NIFTI_TYPE_INT8"),\
+                    (512, 'uint16', np.uint16, "NIFTI_TYPE_UINT16"),\
+                    (768, 'uint32', np.uint32, "NIFTI_TYPE_UINT32"),\
+                    (1024,'int64', np.int64, "NIFTI_TYPE_INT64"),\
+                    (1280, 'uint64', np.uint64, "NIFTI_TYPE_UINT64"),\
+                    (1536, 'float128', _float128t, "NIFTI_TYPE_FLOAT128"),\
+                    (1792, 'complex128', np.complex128, "NIFTI_TYPE_COMPLEX128"),\
+                    (2048, 'complex256', _complex256t, "NIFTI_TYPE_COMPLEX256"),
+    :return:
+
+    Copied from https://github.com/spinalcordtoolbox/spinalcordtoolbox/
+    """
+
+    if im_dst is None:
+        im_dst = im_src.copy()
+        im_dst._path = None
+
+    if dtype is None:
+        return im_dst
+
+    # get min/max from input image
+    min_in = np.nanmin(im_src.data)
+    max_in = np.nanmax(im_src.data)
+
+    # find optimum type for the input image
+    if dtype in ('minimize', 'minimize_int'):
+        # warning: does not take intensity resolution into account, neither complex voxels
+
+        # check if voxel values are real or integer
+        isInteger = True
+        if dtype == 'minimize':
+            for vox in im_src.data.flatten():
+                if int(vox) != vox:
+                    isInteger = False
+                    break
+
+        if isInteger:
+            if min_in >= 0:  # unsigned
+                if max_in <= np.iinfo(np.uint8).max:
+                    dtype = np.uint8
+                elif max_in <= np.iinfo(np.uint16):
+                    dtype = np.uint16
+                elif max_in <= np.iinfo(np.uint32).max:
+                    dtype = np.uint32
+                elif max_in <= np.iinfo(np.uint64).max:
+                    dtype = np.uint64
+                else:
+                    raise ValueError("Maximum value of the image is to big to be represented.")
+            else:
+                if max_in <= np.iinfo(np.int8).max and min_in >= np.iinfo(np.int8).min:
+                    dtype = np.int8
+                elif max_in <= np.iinfo(np.int16).max and min_in >= np.iinfo(np.int16).min:
+                    dtype = np.int16
+                elif max_in <= np.iinfo(np.int32).max and min_in >= np.iinfo(np.int32).min:
+                    dtype = np.int32
+                elif max_in <= np.iinfo(np.int64).max and min_in >= np.iinfo(np.int64).min:
+                    dtype = np.int64
+                else:
+                    raise ValueError("Maximum value of the image is to big to be represented.")
+        else:
+            # if max_in <= np.finfo(np.float16).max and min_in >= np.finfo(np.float16).min:
+            #    type = 'np.float16' # not supported by nibabel
+            if max_in <= np.finfo(np.float32).max and min_in >= np.finfo(np.float32).min:
+                dtype = np.float32
+            elif max_in <= np.finfo(np.float64).max and min_in >= np.finfo(np.float64).min:
+                dtype = np.float64
+
+        dtype = to_dtype(dtype)
+    else:
+        dtype = to_dtype(dtype)
+
+        # if output type is int, check if it needs intensity rescaling
+        if "int" in dtype.name:
+            # get min/max from output type
+            min_out = np.iinfo(dtype).min
+            max_out = np.iinfo(dtype).max
+            # before rescaling, check if there would be an intensity overflow
+
+            if (min_in < min_out) or (max_in > max_out):
+                # This condition is important for binary images since we do not want to scale them
+                logger.warning(f"To avoid intensity overflow due to convertion to +{dtype.name}+, intensity will be rescaled to the maximum quantization scale")
+                # rescale intensity
+                data_rescaled = im_src.data * (max_out - min_out) / (max_in - min_in)
+                im_dst.data = data_rescaled - (data_rescaled.min() - min_out)
+
+    # change type of data in both numpy array and nifti header
+    im_dst.data = getattr(np, dtype.name)(im_dst.data)
+    im_dst.hdr.set_data_dtype(dtype)
+    return im_dst
+
+
+def to_dtype(dtype):
+    """
+    Take a dtypeification and return an np.dtype
+
+    :param dtype: dtypeification (string or np.dtype or None are supported for now)
+    :return: dtype or None
+
+    Copied from https://github.com/spinalcordtoolbox/spinalcordtoolbox/
+    """
+    # TODO add more or filter on things supported by nibabel
+
+    if dtype is None:
+        return None
+    if isinstance(dtype, type):
+        if isinstance(dtype(0).dtype, np.dtype):
+            return dtype(0).dtype
+    if isinstance(dtype, np.dtype):
+        return dtype
+    if isinstance(dtype, str):
+        return np.dtype(dtype)
+
+    raise TypeError("data type {}: {} not understood".format(dtype.__class__, dtype))
+
+
+def zeros_like(img, dtype=None):
+    """
+
+    :param img: reference image
+    :param dtype: desired data type (optional)
+    :return: an Image with the same shape and header, filled with zeros
+
+    Similar to numpy.zeros_like(), the goal of the function is to show the developer's
+    intent and avoid doing a copy, which is slower than initialization with a constant.
+
+    Copied from https://github.com/spinalcordtoolbox/spinalcordtoolbox/image.py
+    """
+    zimg = Image(np.zeros_like(img.data), hdr=img.hdr.copy())
+    if dtype is not None:
+        zimg.change_type(dtype)
+    return zimg
+
+
+def empty_like(img, dtype=None):
+    """
+    :param img: reference image
+    :param dtype: desired data type (optional)
+    :return: an Image with the same shape and header, whose data is uninitialized
+
+    Similar to numpy.empty_like(), the goal of the function is to show the developer's
+    intent and avoid touching the allocated memory, because it will be written to
+    afterwards.
+
+    Copied from https://github.com/spinalcordtoolbox/spinalcordtoolbox/image.py
+    """
+    dst = change_type(img, dtype)
+    return dst
+
+
+def find_zmin_zmax(im, threshold=0.1):
+    """
+    Find the min (and max) z-slice index below which (and above which) slices only have voxels below a given threshold.
+
+    :param im: Image object
+    :param threshold: threshold to apply before looking for zmin/zmax, typically corresponding to noise level.
+    :return: [zmin, zmax]
+
+    Copied from https://github.com/spinalcordtoolbox/spinalcordtoolbox/image.py
+    """
+    slicer = SlicerOneAxis(im, axis="IS")
+
+    # Make sure image is not empty
+    if not np.any(slicer):
+        logger.error('Input image is empty')
+
+    # Iterate from bottom to top until we find data
+    for zmin in range(0, len(slicer)):
+        if np.any(slicer[zmin] > threshold):
+            break
+
+    # Conversely from top to bottom
+    for zmax in range(len(slicer) - 1, zmin, -1):
+        if np.any(slicer[zmax] > threshold):
+            break
+
+    return zmin, zmax
