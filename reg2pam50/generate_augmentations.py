@@ -1,21 +1,12 @@
-import os, sys, argparse, textwrap, json
+import sys, argparse, textwrap
 from pathlib import Path
+import multiprocessing as mp
+from functools import partial
+from tqdm.contrib.concurrent import process_map
 import nibabel as nib
 import numpy as np
-from nibabel import freesurfer
-from PIL import Image
-from nilearn import image as nl_image
-import multiprocessing as mp
-from tqdm.contrib.concurrent import process_map
-from functools import partial
-from scipy.interpolate import RectBivariateSpline
-from scipy import ndimage
 import gryds
-from imgaug import augmenters as iaa
-from imgaug.augmentables.segmaps import SegmentationMapsOnImage
-import torch
 import torchio as tio
-from torch.utils.data import DataLoader
 
 
 def main():
@@ -57,16 +48,16 @@ def main():
         help='Subfolder inside subject folder containing masks, defaults to no subfolder.'
     )
     parser.add_argument(
-        '--image-suffix', type=str, default='',
-        help='Image suffix, defaults to "".'
+        '--image-suffix', type=str, default='_0000',
+        help='Image suffix, defaults to "_0000".'
     )
     parser.add_argument(
         '--seg-suffix', type=str, default='',
         help='Segmentation suffix, defaults to "".'
     )
     parser.add_argument(
-        '--output-image-suffix', type=str, default='',
-        help='Image suffix for output, defaults to "".'
+        '--output-image-suffix', type=str, default='_0000',
+        help='Image suffix for output, defaults to "_0000".'
     )
     parser.add_argument(
         '--output-seg-suffix', type=str, default='',
@@ -372,7 +363,7 @@ def aug_blur(img, seg):
     return subject.image.data.squeeze().numpy(), subject.seg.data.squeeze().numpy().astype(np.uint8)
 
 def aug_noise(img, seg):
-    subject = tio.RandomNoise(mean=(0, img.mean()/img.std()), std=(0, img.std()))(tio.Subject(
+    subject = tio.RandomNoise(mean=sorted((0, img.mean()/img.std())), std=(0, img.std()))(tio.Subject(
         image=tio.ScalarImage(tensor=np.expand_dims(img, axis=0)),
         seg=tio.LabelMap(tensor=np.expand_dims(seg, axis=0))
     ))
