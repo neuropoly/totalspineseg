@@ -102,6 +102,8 @@ def main():
     # Read json file and create a dictionary
     with open(args.config, "r") as file:
         config = json.load(file)
+        if config['TYPE'] != 'LABEL':
+            raise ValueError('Type error: please specify LABEL paths')
         if 'DATASETS_PATH' in config.keys():
             config['TRAINING'] = [os.path.join(config['DATASETS_PATH'], rel_path) for rel_path in config['TRAINING']]
             config['VALIDATION'] = [os.path.join(config['DATASETS_PATH'], rel_path) for rel_path in config['VALIDATION']]
