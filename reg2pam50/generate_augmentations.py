@@ -64,8 +64,8 @@ def main():
         help='Segmentation suffix for output, defaults to "".'
     )
     parser.add_argument(
-        '--augmentations-per-image', '-n', type=int, default=5,
-        help='Number of augmentation images to generate. Default is 5.'
+        '--augmentations-per-image', '-n', type=int, default=7,
+        help='Number of augmentation images to generate. Default is 7.'
     )
     parser.add_argument(
         '--max-workers', '-w', type=int, default=min(32, mp.cpu_count() + 4),
@@ -172,15 +172,22 @@ def generate_augmentations(
         output_image_path = output_images_path / image_path.relative_to(images_path).parent / image_path.name.replace(f'{image_suffix}.nii.gz', f'_a{i}{output_image_suffix}.nii.gz')
         output_seg_path = output_segs_path / image_path.relative_to(images_path).parent / seg_path.name.replace(f'{seg_suffix}.nii.gz', f'_a{i}{output_seg_suffix}.nii.gz')
 
-        augs = np.random.choice([
-                aug_labels2image,
-                aug_flip,
+        augs = []
+        
+        # Randomly add aug_labels2image, aug_flip, aug_inverse with respective probabilities
+        if np.random.rand() < 0.1:
+            augs.append(aug_labels2image)
+        if np.random.rand() < 0.3:
+            augs.append(aug_flip)
+        if np.random.rand() < 0.3:
+            augs.append(aug_inverse)
+        
+        augs.extend(np.random.choice([
                 np.random.choice([
                     aug_bspline,
                     aug_aff,
                     aug_elastic,
                 ]),
-                aug_inverse,
                 np.random.choice([
                     aug_log,
                     aug_sqrt,
@@ -197,10 +204,13 @@ def generate_augmentations(
                     aug_blur,
                     aug_noise,
                 ]),
-                aug_anisotropy,
             ],
-            np.random.choice(range(1,4))
-        )
+            np.random.choice(range(1,4)),
+            False
+        ))
+
+        if np.random.rand() < 0.7:
+            augs.append(aug_anisotropy)
 
         # Augment the images
         output_image_data, output_seg_data = image_data, seg_data
@@ -363,10 +373,13 @@ def aug_blur(img, seg):
     return subject.image.data.squeeze().numpy(), subject.seg.data.squeeze().numpy().astype(np.uint8)
 
 def aug_noise(img, seg):
-    subject = tio.RandomNoise(mean=sorted((0, img.mean()/img.std())), std=(0, img.std()))(tio.Subject(
+    original_mean, original_std = np.mean(img), np.std(img)
+    img = (img - original_mean) / original_std
+    subject = tio.RandomNoise()(tio.Subject(
         image=tio.ScalarImage(tensor=np.expand_dims(img, axis=0)),
         seg=tio.LabelMap(tensor=np.expand_dims(seg, axis=0))
     ))
+    img = img  * original_std + original_mean
     return subject.image.data.squeeze().numpy(), subject.seg.data.squeeze().numpy().astype(np.uint8)
 
 def aug_swap(img, seg):
