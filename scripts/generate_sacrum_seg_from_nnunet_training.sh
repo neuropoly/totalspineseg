@@ -1,5 +1,7 @@
+#!/bin/bash
+
 # Uncomment for full verbose
-set -x
+# set -x
 
 # Immediately exit if error
 set -e -o pipefail
@@ -7,34 +9,61 @@ set -e -o pipefail
 # Exit if user presses CTRL+C (Linux) or CMD+C (OSX)
 trap "echo Caught Keyboard Interrupt within script. Exiting now.; exit" INT
 
-# FUNCTIONS
-# =========================
-# Segment rootlets using our nnUNet model
-segment_sacrum_nnUNet(){
-  local file="$1"
-
-  echo "Segmenting rootlets using our nnUNet model."
-  # Run rootlets segmentation
-  # TODO: the hard-coded path to the conda environment is not ideal. But the script also needs to be run inside the
-  #  sct_venv environment --> explore if two venvs can be activated at the same time
-  ${HOME}/miniconda3/envs/nnunet/bin/python ${PATH_REPO}/packaging/run_inference_single_subject.py -i ${file}.nii.gz -o ${file}_label-rootlet_nnunet.nii.gz -path-model ${PATH_NNUNET_MODEL} -fold ${FOLD}
-}
-
 # GET PARAMS
 # ======================================================================================================================
 # SET DEFAULT VALUES FOR PARAMETERS.
 # ----------------------------------------------------------------------------------------------------------------------
-PATH_IMG=""
-CONFIG_DATA=""
-OUTPUT_DIR="results/"
-OUTPUT_TXT=""
-SUFFIX_SEG="_seg-manual"
-VERBOSE=1
+PATH_NNUNET_DATA="/home/GRAMES.POLYMTL.CA/p118739/data/nnUNet_raw/Dataset100_TotalSegMRI"
+NNUNET_IMG_FOLDER="imagesTr"
+NNUNET_LABEL_FOLDER="labelsTr"
+OUTPUT_FOLDER="sacrum-seg"
+
+PATH_REPO="/home/GRAMES.POLYMTL.CA/p118739/code/totalsegmentator-mri"
+PATH_NNUNET_MODEL="/home/GRAMES.POLYMTL.CA/p118739/data/nnUNet_results/Dataset300_SacrumDataset/nnUNetTrainer__nnUNetPlans__3d_fullres/"
+PATH_NNUNET_ENV="${HOME}/code/nnUNet/nnUNet_env"
+FOLD="0"
 
 # Print variables to allow easier debug
-echo "Retrieved variables from from the caller sct_run_batch:"
-echo "PATH_DATA: ${PATH_DATA}"
-echo "PATH_DATA_PROCESSED: ${PATH_DATA_PROCESSED}"
-echo "PATH_RESULTS: ${PATH_RESULTS}"
-echo "PATH_LOG: ${PATH_LOG}"
-echo "PATH_QC: ${PATH_QC}"
+echo "See variables:"
+echo "PATH_NNUNET_DATA: ${PATH_NNUNET_DATA}"
+echo "NNUNET_IMG_FOLDER: ${NNUNET_IMG_FOLDER}"
+echo "NNUNET_LABEL_FOLDER: ${NNUNET_LABEL_FOLDER}"
+echo "OUTPUT_FOLDER: ${OUTPUT_FOLDER}"
+echo
+echo "PATH_REPO: ${PATH_REPO}"
+echo "PATH_NNUNET_MODEL: ${PATH_NNUNET_MODEL}"
+echo "PATH_NNUNET_ENV: ${PATH_NNUNET_ENV}"
+echo "FOLD: ${FOLD}"
+echo 
+
+# FUNCTIONS
+# ======================================================================================================================
+# Segment rootlets using our nnUNet model
+segment_sacrum_nnUNet(){
+  local file_in="$1"
+  local file_out="$2"
+
+  echo "Segmenting sacrum using our nnUNet model."
+  # Run rootlets segmentation
+  # TODO: the hard-coded path to the conda environment is not ideal.
+  "${PATH_NNUNET_ENV}"/bin/python3 "${PATH_REPO}"/scripts/run_inference_single_subject.py -i "${file_in}" -o "${file_out}" -path-model "${PATH_NNUNET_MODEL}" -fold "${FOLD}" -use-gpu
+}
+
+# ======================================================================================================================
+# SCRIPT STARTS HERE
+# ======================================================================================================================
+# Go to folder where data will be copied and processed
+cd $PATH_NNUNET_DATA
+
+# Create OUTPUT_FOLDER if missing
+if [[ ! -d ${OUTPUT_FOLDER} ]]; then
+    echo "Creating folder ${PATH_NNUNET_DATA}/${OUTPUT_FOLDER}"
+    mkdir ${OUTPUT_FOLDER}
+fi
+
+# Compute nnUNet segmentation for each image within the NNUNET_IMG_FOLDER
+for img in $(find "$NNUNET_IMG_FOLDER"  -maxdepth 1 -mindepth 1 -printf '%P\n' | head -n 4); do
+    img_in="${PATH_NNUNET_DATA}/${NNUNET_IMG_FOLDER}/${img}"
+    img_out="${PATH_NNUNET_DATA}/${OUTPUT_FOLDER}/${img/0000/label-sacrum_seg}"
+    segment_sacrum_nnUNet "$img_in" "$img_out"
+done
