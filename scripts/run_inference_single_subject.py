@@ -219,7 +219,7 @@ def main():
 
     print('-' * 50)
     print(f"Input file: {fname_file}")
-    print(f"Rootlet segmentation: {fname_file_out}")
+    print(f"nnUNet segmentation: {fname_file_out}")
     print('-' * 50)
 
 
