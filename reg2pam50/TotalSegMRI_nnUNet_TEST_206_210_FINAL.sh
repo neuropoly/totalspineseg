@@ -13,8 +13,8 @@
 # Get params
 ########################################
 PROJ_PATH=~/projects/def-jcohen/totalsegmri
-INPUT_FOLDER=${PROJ_PATH}/input_images
-OUTPUT_FOLDER=TotalSegMRI_output
+INPUT_FOLDER=$1
+OUTPUT_FOLDER=${INPUT_FOLDER}_output
 ENVDIR=${PROJ_PATH}/venv
 
 export nnUNet_def_n_proc=16
