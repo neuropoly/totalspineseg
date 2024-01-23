@@ -50,8 +50,8 @@ def main():
         help='Segmentation suffix, defaults to "".'
     )
     parser.add_argument(
-        '--image-suffix', type=str, default='',
-        help='Image suffix, defaults to "".'
+        '--image-suffix', type=str, default='_0000',
+        help='Image suffix, defaults to "_0000".'
     )
     parser.add_argument(
         '--orient', '-t', type=str, choices=['sag', 'ax', 'cor'], default='sag',
