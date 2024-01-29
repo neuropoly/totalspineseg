@@ -1,103 +1,130 @@
-# totalsegmentator-mri
-Code for the TotalSegmentator MRI project.
+# TotalSegMRI
 
-## Steps to install
+Tool for automatic segmentation and labelling of all vertebrae and intervertebral discs (IVDs), spinal cord, and spinal canal. We follow [TotalSegmentator classes](https://github.com/wasserth/TotalSegmentator?tab=readme-ov-file#class-details) with an additional class for IVDs, spinal cord and spinal canal (See list of class [here](#list-of-class)). We used [nnUNet](https://github.com/MIC-DKFZ/nnUNet) as our backbone for model training and inference.
+
+- [Dependencies](#dependencies)
+- [Installation](#installation)
+- [First Model](#first-model)
+  - [First Model - Train](#first-model---train)
+  - [First Model - Inference](#first-model---inference)
+- [List of class](#list-of-class)
+
+![Figure 1](resources/images/Thumbnail.gif)
+
+## Dependencies
+
+- [Spinal Cord Toolbox (SCT)](https://github.com/neuropoly/spinalcordtoolbox)
+
+## Installation
+
+1. Open Terminal in a directory you want to work on.
+
+1. Create and activate Virtual Environment (Highly recommanded)
+    ```
+    python -m venv venv
+    source venv/bin/activate
+    ```
+
+1. Install [PyTorch](https://pytorch.org/get-started/locally/) as described on their website.
 
 1. Clone this repository
     ```
     git clone https://github.com/neuropoly/totalsegmentator-mri.git
     ```
 
-1. Clone SynthSeg repository
-    ```
-    git clone https://github.com/BBillot/SynthSeg.git
-    ```
-
-1. Download [this google folder](https://drive.google.com/drive/folders/11F8q3jhZR0KfHhBpyKygXMo-alTDbp0U?usp=sharing) (the TotalSegmentator example image was downloaded from [here](https://zenodo.org/record/6802614)).
-
-1. Create Virtual Environment (Please make sure you're using python 3.8 !!!)
-    ```
-    python -m venv venv
-    ```
-
-1. Add SynthSeg to Virtual Environment (If not using bash change '$(pwd)' to the working directory):
-    ```
-    echo "$(pwd)/SynthSeg" > venv/lib/python3.8/site-packages/SynthSeg.pth
-    ```
-
-1. Activate Virtual Environment
-    ```
-    source venv/bin/activate
-    ```
-
 1. Install requirements:
     ```
-    pip install -r SynthSeg/requirements_python3.8.txt
+    python -m pip install -r totalsegmentator-mri/requirements.txt
     ```
 
-## To run scripsts
+## First Model
+A hybrid approach integrating nnU-Net with an iterative algorithm for segmenting vertebrae, IVDs, spinal cord, and spinal canal. To tackle the challenge of having many classes and class imbalance, we developed a two-step training process. A first model (model 1 - 206) was trained (single input channel: image) to identify 4 classes (IVDs, vertebrae, spinal cord and spinal canal) as well as specific IVDs (C2-C3, C7-T1 and L5-S1) representing key anatomical landmarks along the spine, so 7 classes in total (Figure 1A). The output segmentation was processed using an algorithm that distinguished odd and even IVDs based on the C2-C3, C7-T1 and L5-S1 IVD labels output by the model (Figure 1B). Then, a second nnU-Net model (model 2 - 210) was trained (two input channels: 1=image, 2=odd IVDs), to output 12 classes (Figure 1C). Finally, the output of model 2 was processed in order to assign an individual label value to each vertebrae and IVD in the final segmentation mask (Figure 1D).
 
-`resources/labels.json` - Contain mapping of each mask to unique number.
+![Figure 1](resources/images/Figure1.svg)
 
-`resources/classes.json` - Contain mapping of each mask to class of masks with similar statistics (total 15 classes).
+**Figure 1**: Illustration of the hybrid method for automatic segmentation of the spine and spinal cord structures. T1w image (A) is used to train model 1, which outputs 7 classes (B). These output labels are processed to extract odd IVDs (C). The T1w and odd IVDs are used as two input channels to train model 2, which outputs 12 classes (D). These output labels are processed to extract individual IVDs and vertebrae (E).
 
-### Option 1 - Run script for all TotalSegmentator labels
+### First Model - Train
 
-1. Combine all MPRAGE 'blob' masks for each subject into a single segmentation file:
-    ```
-    python totalsegmentator-mri/scripts/combine_masks.py -d TotalSegmentatorMRI_SynthSeg/data/derivatives/manual_masks -o output/ALL_LAB/MP-RAGE_Masks_Combined -m totalsegmentator-mri/resources/labels.json
-    ```
+#### Prerequisites
 
-1. Calculate signal statistics (mean + std) for each masks (group masks into classes of similar statistics):
-    ```
-    python totalsegmentator-mri/scripts/build_intensity_stats.py -d TotalSegmentatorMRI_SynthSeg/data -s output/ALL_LAB/MP-RAGE_Masks_Combined -o output/ALL_LAB/MP-RAGE_priors -m totalsegmentator-mri/resources/labels.json -c totalsegmentator-mri/resources/classes.json
-    ```
+1. Download the corresponding content from [SPIDER dataset](https://doi.org/10.5281/zenodo.10159290) into 'data/src/spider/images' and 'data/src/spider/masks' (you can use `mkdir data/src/spider` to create the folder first).
 
-1. Combine all TotalSegmentator masks for each subject into a single segmentation file:
-    ```
-    python totalsegmentator-mri/scripts/combine_masks.py -d TotalSegmentatorMRI_SynthSeg/Totalsegmentator_dataset -o output/ALL_LAB/TotalSegmentator_Masks_Combined -m totalsegmentator-mri/resources/labels.json --subject-prefix s --subject-subdir segmentations --seg-suffix _ct_seg --output-bids 0
-    ```
+1. Make sure `git` and `git-annex` are installed (You can install with `sudo apt-get install git-annex -y`).
 
-1. Create a synthetic image using TotalSegmentator segmentation and the calculated MPRAGE signal statistics:
+1. Extract [data-multi-subject.zip](https://drive.google.com/file/d/1Sq38xLHnVxhLr0s1j27ywbeshNUjo3IP) into 'data/bids/data-multi-subject'.
+
+1. Extract [data-single-subject.zip](https://drive.google.com/file/d/1YvuFHL8GDJ5SXlMLORWDjR5SNkDL6TUU) into 'data/bids/data-single-subject'.
+
+1. Extract [whole-spine.zip](https://drive.google.com/file/d/143i0ODmeqohpc4vu5Aa5lnv8LLEyOU0F) into 'data/bids/whole-spine'.
+
+1. Prepares datasets in [BIDS](https://bids.neuroimaging.io/) structure
     ```
-    python totalsegmentator-mri/scripts/generate_image.py -s output/ALL_LAB/TotalSegmentator_Masks_Combined -p output/ALL_LAB/MP-RAGE_priors -o output/ALL_LAB/MP-RAGE_Synthetic/test1 -n 2
+    bash totalsegmentator-mri/run/prepare_bids_datasets.sh
     ```
 
-### Option 2 - Run script with TotalSegmentator labels reduced to 15 labels
-
-To reduce number of labels and group all vertebrae, we use `resources/classes.json` as the main masks mapping when combining masks with combine_masks. This way all masks of the same classes will be mapped to the same label.
-
-1. Combine all MPRAGE 'blob' masks for each subject into a single segmentation file:
+1. Prepares datasets in nnUNet structure, preprocess and train the model.
     ```
-    python totalsegmentator-mri/scripts/combine_masks.py -d TotalSegmentatorMRI_SynthSeg/data/derivatives/manual_masks -o output/15_LAB/MP-RAGE_Masks_Combined -m totalsegmentator-mri/resources/classes.json
+    bash totalsegmentator-mri/run/train_nnunet.sh
     ```
 
-1. Calculate signal statistics (mean + std) for each masks:
-    ```
-    python totalsegmentator-mri/scripts/build_intensity_stats.py -d TotalSegmentatorMRI_SynthSeg/data -s output/15_LAB/MP-RAGE_Masks_Combined -o output/15_LAB/MP-RAGE_priors -m totalsegmentator-mri/resources/classes.json
-    ```
-
-1. Combine all TotalSegmentator masks for each subject into a single segmentation file:
-    ```
-    python totalsegmentator-mri/scripts/combine_masks.py -d TotalSegmentatorMRI_SynthSeg/Totalsegmentator_dataset -o output/15_LAB/TotalSegmentator_Masks_Combined -m totalsegmentator-mri/resources/classes.json --subject-prefix s --subject-subdir segmentations --seg-suffix _ct_seg --output-bids 0
-    ```
-
-1. Create a synthetic image using TotalSegmentator segmentation and the calculated MPRAGE signal statistics:
-    ```
-    python totalsegmentator-mri/scripts/generate_image.py -s output/15_LAB/TotalSegmentator_Masks_Combined -p output/15_LAB/MP-RAGE_priors -o output/15_LAB/MP-RAGE_Synthetic/test1 -n 2
-    ```
-## Data organization
-
-As a starting point, a few MPRAGE data are under our private [google folder](https://drive.google.com/drive/folders/1CAkz4ZuxQjWza7GAXhXxTkKcyB9p3yME).
-
-We will follow the BIDS structure:
+### First Model - Inference
+Run the model on a folder containing the images in .nii.gz format.
 ```
-├── derivatives
-│   └── manual_masks
-│       └── sub-errsm37
-│           └── anat
-└── sub-errsm37
-    └── anat
-        ├── sub-errsm37_T1w.json
-        └── sub-errsm37_T1w.nii.gz
+bash totalsegmentator-mri/run/inference_nnunet.sh INPUT_FOLDER OUTPUT_FOLDER
 ```
+
+## List of class
+
+|Label|Name|
+|:-----|:-----|
+| 18 | vertebrae_L5 |
+| 19 | vertebrae_L4 |
+| 20 | vertebrae_L3 |
+| 21 | vertebrae_L2 |
+| 22 | vertebrae_L1 |
+| 23 | vertebrae_T12 |
+| 24 | vertebrae_T11 |
+| 25 | vertebrae_T10 |
+| 26 | vertebrae_T9 |
+| 27 | vertebrae_T8 |
+| 28 | vertebrae_T7 |
+| 29 | vertebrae_T6 |
+| 30 | vertebrae_T5 |
+| 31 | vertebrae_T4 |
+| 32 | vertebrae_T3 |
+| 33 | vertebrae_T2 |
+| 34 | vertebrae_T1 |
+| 35 | vertebrae_C7 |
+| 36 | vertebrae_C6 |
+| 37 | vertebrae_C5 |
+| 38 | vertebrae_C4 |
+| 39 | vertebrae_C3 |
+| 40 | vertebrae_C2 |
+| 41 | vertebrae_C1 |
+| 92 | sacrum |
+| 200 | spinal_cord |
+| 201 | spinal_canal |
+| 202 | disc_L5_S |
+| 203 | disc_L4_L5 |
+| 204 | disc_L3_L4 |
+| 205 | disc_L2_L3 |
+| 206 | disc_L1_L2 |
+| 207 | disc_T12_L1 |
+| 208 | disc_T11_T12 |
+| 209 | disc_T10_T11 |
+| 210 | disc_T9_T10 |
+| 211 | disc_T8_T9 |
+| 212 | disc_T7_T8 |
+| 213 | disc_T6_T7 |
+| 214 | disc_T5_T6 |
+| 215 | disc_T4_T5 |
+| 216 | disc_T3_T4 |
+| 217 | disc_T2_T3 |
+| 218 | disc_T1_T2 |
+| 219 | disc_C7_T1 |
+| 220 | disc_C6_C7 |
+| 221 | disc_C5_C6 |
+| 222 | disc_C4_C5 |
+| 223 | disc_C3_C4 |
+| 224 | disc_C2_C3 |

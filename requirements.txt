@@ -1,0 +1,10 @@
+# General packages
+numpy
+nibabel
+gryds
+torchio
+scipy
+Pillow
+nilearn
+SimpleITK
+nnunetv2
