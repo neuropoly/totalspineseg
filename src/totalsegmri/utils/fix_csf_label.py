@@ -1,12 +1,10 @@
 import sys, argparse, textwrap
-from pathlib import Path
-
-import numpy as np
-import nibabel as nib
-
 import multiprocessing as mp
 from tqdm.contrib.concurrent import process_map
 from functools import partial
+import numpy as np
+import nibabel as nib
+from totalsegmri.utils.dirpath import DirPath
 
 def main():
     
@@ -159,34 +157,6 @@ def fix_csf_label(seg_path, cord_label, csf_label, output_path, seg_suffix, outp
     
     # Save mapped segmentation
     nib.save(mapped_seg, output_seg_path)
-
-class DirPath:
-    """
-    Get path from argparse and return as Path object.
-    
-    Args:
-        create: Create directory if it doesn't exist
-        
-    """
-
-    def __init__(self, create=False):
-        self.create = create
-
-    def __call__(self, dir_path):
-        path = Path(dir_path)
-        
-        if self.create and not path.exists():
-            try:
-                path.mkdir(parents=True, exist_ok=True) 
-            except:
-                pass
-                
-        if path.is_dir():
-            return path
-        else:
-            raise argparse.ArgumentTypeError(
-                f"readble_dir:{path} is not a valid path")
-
 
 if __name__ == '__main__':
     main()

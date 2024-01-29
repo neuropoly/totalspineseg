@@ -31,11 +31,11 @@ else
     echo "Preparing SPIDER dataset"
 
     echo "Convert images and masks from .mha to .nii.gz format"
-    python totalsegmentator-mri/utils/mha2nii.py -i data/src/spider/images -o data/bids/spider
-    python totalsegmentator-mri/utils/mha2nii.py -i data/src/spider/masks -o data/bids/spider/derivatives/labels
+    python totalsegmentator-mri/src/totalsegmri/utils/mha2nii.py -i data/src/spider/images -o data/bids/spider
+    python totalsegmentator-mri/src/totalsegmri/utils/mha2nii.py -i data/src/spider/masks -o data/bids/spider/derivatives/labels
 
     echo "Map SPIDER labels to the labels used in this project"
-    python totalsegmentator-mri/utils/map_labels.py -m totalsegmentator-mri/resources/labels_maps/spider.json -i data/bids/spider/derivatives/labels -o data/bids/spider/derivatives/labels
+    python totalsegmentator-mri/src/totalsegmri/utils/map_labels.py -m totalsegmentator-mri/resources/labels_maps/spider.json -i data/bids/spider/derivatives/labels -o data/bids/spider/derivatives/labels
 
     echo "Rename files to follow BIDS naming conventions"
     # Add 'sub-' prefix to filenames

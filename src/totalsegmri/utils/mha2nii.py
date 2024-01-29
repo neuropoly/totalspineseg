@@ -1,9 +1,9 @@
 import sys, argparse, textwrap
-from pathlib import Path
 import multiprocessing as mp
 from tqdm.contrib.concurrent import process_map
 from functools import partial
 import SimpleITK as sitk
+from totalsegmri.utils.dirpath import DirPath
 
 
 def main():
@@ -105,35 +105,6 @@ def mha2nii(image_path, images_path, output_path):
     
     output_nii_path = output_path / image_path.name.replace(f'.mha', f'.nii.gz')
     sitk.WriteImage(sitk.ReadImage(image_path), output_nii_path)
-
-
-class DirPath(object):
-    """
-    Get path parameter from argparse and return it as pathlib Path object.
-
-    Args:
-    create (bool): Indicate if the directorie should be created. Default: False.
-    """
-
-    def __init__(self, create:bool=False):
-        self.create = create
-
-    def __call__(self, dir):
-
-        path = Path(dir)
-
-        # Create dir if create was specified
-        if self.create and not path.exists():
-            try:
-                path.mkdir(parents=True, exist_ok=True)
-            except: pass
-
-        # Test if path exists
-        if path.is_dir():
-            return path
-        else:
-            raise argparse.ArgumentTypeError(f'readable_dir:{path} is not a valid path')
-
 
 if __name__ == '__main__':
     main()

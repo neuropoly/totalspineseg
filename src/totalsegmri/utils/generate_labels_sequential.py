@@ -1,13 +1,11 @@
 import sys, argparse, textwrap
-from pathlib import Path
-
+from scipy.ndimage import label, binary_dilation, generate_binary_structure, iterate_structure
 import numpy as np
 import nibabel as nib
-from scipy.ndimage import label, binary_dilation, generate_binary_structure, iterate_structure
-
 import multiprocessing as mp
-from tqdm.contrib.concurrent import process_map
 from functools import partial
+from tqdm.contrib.concurrent import process_map
+from totalsegmri.utils.dirpath import DirPath
 
 def main():
     
@@ -286,34 +284,6 @@ def generate_labels(
     output_seg_path.parent.mkdir(parents=True, exist_ok=True)
     # Save mapped segmentation
     nib.save(seg, output_seg_path)
-
-
-class DirPath:
-    """
-    Get path from argparse and return as Path object.
-    
-    Args:
-        create: Create directory if it doesn't exist
-        
-    """
-
-    def __init__(self, create=False):
-        self.create = create
-
-    def __call__(self, dir_path):
-        path = Path(dir_path)
-        
-        if self.create and not path.exists():
-            try:
-                path.mkdir(parents=True, exist_ok=True) 
-            except:
-                pass
-                
-        if path.is_dir():
-            return path
-        else:
-            raise argparse.ArgumentTypeError(
-                f"readble_dir:{path} is not a valid path")
 
 def pairs_dict(pair):
     # Convert comma-separated string to a tuple of integers

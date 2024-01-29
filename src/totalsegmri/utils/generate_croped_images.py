@@ -1,13 +1,11 @@
-import sys, argparse, textwrap
+import sys, argparse, textwrap, tempfile, shutil, subprocess
 from pathlib import Path
 import multiprocessing as mp
 from functools import partial
 from tqdm.contrib.concurrent import process_map
 import nibabel as nib
 import numpy as np
-import subprocess
-import tempfile
-import shutil
+from totalsegmri.utils.dirpath import DirPath
 
 
 def main():
@@ -215,33 +213,6 @@ def generate_croped_images(
         (temp_path / 'seg.nii.gz').rename(output_seg_path)
     finally:
         shutil.rmtree(temp_path)
-
-class DirPath(object):
-    """
-    Get path parameter from argparse and return it as pathlib Path object.
-
-    Args:
-    create (bool): Indicate if the directorie should be created. Default: False.
-    """
-
-    def __init__(self, create:bool=False):
-        self.create = create
-
-    def __call__(self, dir):
-
-        path = Path(dir)
-
-        # Create dir if create was specified
-        if self.create and not path.exists():
-            try:
-                path.mkdir(parents=True, exist_ok=True)
-            except: pass
-
-        # Test if path exists
-        if path.is_dir():
-            return path
-        else:
-            raise argparse.ArgumentTypeError(f'readable_dir:{path} is not a valid path')
 
 def run_command(command):
     result = subprocess.run(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)

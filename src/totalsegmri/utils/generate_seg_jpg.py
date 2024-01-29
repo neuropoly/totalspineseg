@@ -1,13 +1,13 @@
 import sys, argparse, textwrap
-from pathlib import Path
 import numpy as np
 import nibabel as nib
 from nibabel import freesurfer
 from PIL import Image
 from nilearn import image as nl_image
 import multiprocessing as mp
-from tqdm.contrib.concurrent import process_map
 from functools import partial
+from tqdm.contrib.concurrent import process_map
+from totalsegmri.utils.dirpath import DirPath
 
 
 def main():
@@ -228,35 +228,6 @@ def generate_seg_jpg(image_path, segs_path, images_path, output_path, seg_suffix
 
     # Save the Image object as a JPG file
     jpg_image.save(output_jpg_path)
-
-
-class DirPath(object):
-    """
-    Get path parameter from argparse and return it as pathlib Path object.
-
-    Args:
-    create (bool): Indicate if the directorie should be created. Default: False.
-    """
-
-    def __init__(self, create:bool=False):
-        self.create = create
-
-    def __call__(self, dir):
-
-        path = Path(dir)
-
-        # Create dir if create was specified
-        if self.create and not path.exists():
-            try:
-                path.mkdir(parents=True, exist_ok=True)
-            except: pass
-
-        # Test if path exists
-        if path.is_dir():
-            return path
-        else:
-            raise argparse.ArgumentTypeError(f'readable_dir:{path} is not a valid path')
-
 
 if __name__ == '__main__':
     main()

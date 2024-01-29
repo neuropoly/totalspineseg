@@ -9,7 +9,7 @@ Tool for automatic segmentation and labelling of all vertebrae and intervertebra
   - [First Model - Inference](#first-model---inference)
 - [List of class](#list-of-class)
 
-![Figure 1](resources/images/Thumbnail.gif)
+![Figure 1](images/Thumbnail.gif)
 
 ## Dependencies
 
@@ -27,9 +27,10 @@ Tool for automatic segmentation and labelling of all vertebrae and intervertebra
 
 1. Install [PyTorch](https://pytorch.org/get-started/locally/) as described on their website.
 
-1. Clone this repository
+1. Clone this repository and install
     ```
     git clone https://github.com/neuropoly/totalsegmentator-mri.git
+    python -m pip install -e totalsegmentator-mri
     ```
 
 1. Install requirements:
@@ -40,7 +41,7 @@ Tool for automatic segmentation and labelling of all vertebrae and intervertebra
 ## First Model
 A hybrid approach integrating nnU-Net with an iterative algorithm for segmenting vertebrae, IVDs, spinal cord, and spinal canal. To tackle the challenge of having many classes and class imbalance, we developed a two-step training process. A first model (model 1 - 206) was trained (single input channel: image) to identify 4 classes (IVDs, vertebrae, spinal cord and spinal canal) as well as specific IVDs (C2-C3, C7-T1 and L5-S1) representing key anatomical landmarks along the spine, so 7 classes in total (Figure 1A). The output segmentation was processed using an algorithm that distinguished odd and even IVDs based on the C2-C3, C7-T1 and L5-S1 IVD labels output by the model (Figure 1B). Then, a second nnU-Net model (model 2 - 210) was trained (two input channels: 1=image, 2=odd IVDs), to output 12 classes (Figure 1C). Finally, the output of model 2 was processed in order to assign an individual label value to each vertebrae and IVD in the final segmentation mask (Figure 1D).
 
-![Figure 1](resources/images/Figure1.svg)
+![Figure 1](images/Figure1.svg)
 
 **Figure 1**: Illustration of the hybrid method for automatic segmentation of the spine and spinal cord structures. T1w image (A) is used to train model 1, which outputs 7 classes (B). These output labels are processed to extract odd IVDs (C). The T1w and odd IVDs are used as two input channels to train model 2, which outputs 12 classes (D). These output labels are processed to extract individual IVDs and vertebrae (E).
 
