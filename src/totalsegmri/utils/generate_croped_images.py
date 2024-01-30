@@ -199,7 +199,7 @@ def generate_croped_images(
             # Get the z - loop to fine the most inferior possible z with spinal canal (label 201). 
             while zmin == -1 or 201 not in seg_data[..., zmin]:
                 zmin = z_indices[(seg_data == last_vert) & (y_indices == y_indices[seg_data == last_vert].max())].min()
-                last_vert -= 1
+                last_vert += 1
             run_command(f'sct_crop_image -i {temp_path}/img.nii.gz -zmin {zmin} -o {temp_path}/img.nii.gz')
             run_command(f'sct_crop_image -i {temp_path}/seg.nii.gz -zmin {zmin} -o {temp_path}/seg.nii.gz')
         elif 207 in seg_data:
@@ -209,8 +209,8 @@ def generate_croped_images(
             run_command(f'sct_crop_image -i {temp_path}/seg.nii.gz -zmax {zmax} -o {temp_path}/seg.nii.gz')
 
         # Copy files from tmp to output destination
-        (temp_path / 'img.nii.gz').rename(output_image_path)
-        (temp_path / 'seg.nii.gz').rename(output_seg_path)
+        shutil.copy(str(temp_path / 'img.nii.gz'), str(output_image_path))
+        shutil.copy(str(temp_path / 'seg.nii.gz'), str(output_seg_path))
     finally:
         shutil.rmtree(temp_path)
 
