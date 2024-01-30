@@ -54,7 +54,7 @@ nnUNetv2_predict -d 206 -i ${OUTPUT_FOLDER}/input -o ${OUTPUT_FOLDER}/206 -f  0 
 nnUNetv2_apply_postprocessing -i ${OUTPUT_FOLDER}/206 -o ${OUTPUT_FOLDER}/206_pp -pp_pkl_file $nnUNet_results/Dataset206_TotalSegMRI/nnUNetTrainer__nnUNetPlans__3d_fullres/crossval_results_folds_0_1_2_3_4/postprocessing.pkl -np $JOBS -plans_json $nnUNet_results/Dataset206_TotalSegMRI/nnUNetTrainer__nnUNetPlans__3d_fullres/plans.json
 
 python totalsegmentator-mri/src/totalsegmri/utils/generate_labels_sequential.py -i ${OUTPUT_FOLDER}/206_pp -o ${OUTPUT_FOLDER}/210_input --output-seg-suffix _0001 --disc-labels 1 2 3 4 --init-disc 2,224 3,219 4,202 --combine-before-label
-python totalsegmentator-mri/src/totalsegmri/utils/map_labels.py -i ${OUTPUT_FOLDER}/210_input -o ${OUTPUT_FOLDER}/210_input -m totalsegmentator-mri/resources/labels_maps/nnunet_210_0001.json --seg-suffix _0001 --output-seg-suffix _0001
+python totalsegmentator-mri/src/totalsegmri/utils/map_labels.py -i ${OUTPUT_FOLDER}/210_input -o ${OUTPUT_FOLDER}/210_input -m totalsegmentator-mri/src/totalsegmri/resources/labels_maps/nnunet_210_0001.json --seg-suffix _0001 --output-seg-suffix _0001
 
 for i in ${OUTPUT_FOLDER}/210_input/*; do
     cp ${OUTPUT_FOLDER}/input/$(basename ${i//0001.nii.gz/0000.nii.gz}) ${i//0001.nii.gz/0000.nii.gz}
@@ -64,7 +64,7 @@ nnUNetv2_predict -d 210 -i ${OUTPUT_FOLDER}/210_input -o ${OUTPUT_FOLDER}/210 -f
 nnUNetv2_apply_postprocessing -i ${OUTPUT_FOLDER}/210 -o ${OUTPUT_FOLDER}/210_pp -pp_pkl_file $nnUNet_results/Dataset210_TotalSegMRI/nnUNetTrainer__nnUNetPlans__3d_fullres/crossval_results_folds_0_1_2_3_4/postprocessing.pkl -np $JOBS -plans_json $nnUNet_results/Dataset210_TotalSegMRI/nnUNetTrainer__nnUNetPlans__3d_fullres/plans.json
 
 python totalsegmentator-mri/src/totalsegmri/utils/generate_labels_sequential.py -i ${OUTPUT_FOLDER}/210_pp -o ${OUTPUT_FOLDER}/output  --disc-labels 2 3 4 5 6 --vertebrea-labels 8 9 10 11 12 --init-disc 4,224 5,219 6,202 --init-vertebrae 10,41 11,34 12,18
-python totalsegmentator-mri/src/totalsegmri/utils/map_labels.py -i ${OUTPUT_FOLDER}/206_pp -o ${OUTPUT_FOLDER}/output -m totalsegmentator-mri/resources/labels_maps/nnunet_206_canal.json --add-output
+python totalsegmentator-mri/src/totalsegmri/utils/map_labels.py -i ${OUTPUT_FOLDER}/206_pp -o ${OUTPUT_FOLDER}/output -m totalsegmentator-mri/src/totalsegmri/resources/labels_maps/nnunet_206_canal.json --add-output
 
 # Fix csf label to include all non cord spinal canal, this will put the spinal canal label in all the voxels (labeled as a backgroupn) between the spinal canal and the spinal cord.
 python totalsegmentator-mri/src/totalsegmri/utils/fix_csf_label.py -i ${OUTPUT_FOLDER}/output -o ${OUTPUT_FOLDER}/output

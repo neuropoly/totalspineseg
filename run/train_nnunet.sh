@@ -40,7 +40,7 @@ for d in 206 210; do
     mkdir -p data/nnUNet/nnUNet_raw/Dataset${d}_TotalSegMRI/labelsTr
     
     # Copy dataset file
-    cp totalsegmentator-mri/resources/datasets/dataset_${d}.json data/nnUNet/nnUNet_raw/Dataset${d}_TotalSegMRI/dataset.json
+    cp totalsegmentator-mri/src/totalsegmri/resources/datasets/dataset_${d}.json data/nnUNet/nnUNet_raw/Dataset${d}_TotalSegMRI/dataset.json
 done
 
 # Convert from BIDS to nnUNet dataset, loop over each dataset
@@ -75,11 +75,11 @@ python totalsegmentator-mri/src/totalsegmri/utils/generate_croped_images.py -p s
 for f in data/nnUNet/nnUNet_raw/Dataset206_TotalSegMRI/*Tr/*.nii.gz; do cp $f ${f/206/210}; done
 
 # Map labels to 210 2'nd channel
-python totalsegmentator-mri/src/totalsegmri/utils/map_labels.py -m totalsegmentator-mri/resources/labels_maps/nnunet_210_0001.json -i data/nnUNet/nnUNet_raw/Dataset210_TotalSegMRI/labelsTr -o data/nnUNet/nnUNet_raw/Dataset${d}_TotalSegMRI/imagesTr --output-seg-suffix _0001
+python totalsegmentator-mri/src/totalsegmri/utils/map_labels.py -m totalsegmentator-mri/src/totalsegmri/resources/labels_maps/nnunet_210_0001.json -i data/nnUNet/nnUNet_raw/Dataset210_TotalSegMRI/labelsTr -o data/nnUNet/nnUNet_raw/Dataset${d}_TotalSegMRI/imagesTr --output-seg-suffix _0001
 
 for d in 206 210; do
     # Map original labels to the dataset specific labels
-    python totalsegmentator-mri/src/totalsegmri/utils/map_labels.py -m totalsegmentator-mri/resources/labels_maps/nnunet_${d}.json -i data/nnUNet/nnUNet_raw/Dataset${d}_TotalSegMRI/labelsTr -o data/nnUNet/nnUNet_raw/Dataset${d}_TotalSegMRI/labelsTr
+    python totalsegmentator-mri/src/totalsegmri/utils/map_labels.py -m totalsegmentator-mri/src/totalsegmri/resources/labels_maps/nnunet_${d}.json -i data/nnUNet/nnUNet_raw/Dataset${d}_TotalSegMRI/labelsTr -o data/nnUNet/nnUNet_raw/Dataset${d}_TotalSegMRI/labelsTr
     
     # Preprocess
     nnUNetv2_plan_and_preprocess -d $d -c 3d_fullres -npfp $JOBS -np $JOBS --verify_dataset_integrity
