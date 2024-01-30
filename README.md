@@ -57,7 +57,7 @@ A hybrid approach integrating nnU-Net with an iterative algorithm for segmenting
 
 1. Extract [data-single-subject.zip](https://drive.google.com/file/d/1YvuFHL8GDJ5SXlMLORWDjR5SNkDL6TUU) into 'data/bids/data-single-subject'.
 
-1. Extract [whole-spine.zip](https://drive.google.com/file/d/143i0ODmeqohpc4vu5Aa5lnv8LLEyOU0F) into 'data/bids/whole-spine'.
+1. Extract [whole-spine.zip](https://drive.google.com/file/d/143i0ODmeqohpc4vu5Aa5lnv8LLEyOU0F) (private dataset) into 'data/bids/whole-spine'.
 
 1. Prepares datasets in [BIDS](https://bids.neuroimaging.io/) structure
     ```
