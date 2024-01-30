@@ -1,4 +1,5 @@
 # General packages
+tqdm
 numpy
 nibabel
 gryds
