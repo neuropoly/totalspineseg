@@ -3,6 +3,7 @@ import numpy as np
 import nibabel as nib
 import multiprocessing as mp
 from functools import partial
+from pathlib import Path
 from tqdm.contrib.concurrent import process_map
 from totalsegmri.utils.dirpath import DirPath
 
@@ -95,7 +96,7 @@ def main():
 
     if verbose:
         print(textwrap.dedent(f'''
-            Running with arguments:
+            Running {Path(__file__).stem} with the following params:
             seg_dir = "{seg_path}"
             output_dir = "{output_path}"
             map = "{map_file.name}"

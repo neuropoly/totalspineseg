@@ -2,6 +2,7 @@ import sys, argparse, textwrap
 import multiprocessing as mp
 from functools import partial
 from tqdm.contrib.concurrent import process_map
+from pathlib import Path
 import nibabel as nib
 import numpy as np
 import torchio as tio
@@ -105,7 +106,7 @@ def main():
     # Print the argument values if verbose is enabled
     if verbose:
         print(textwrap.dedent(f''' 
-            Running with the following arguments:
+            Running {Path(__file__).stem} with the following params:
             images_path = "{images_path}"
             segs_path = "{segs_path}"
             output_images_path = "{output_images_path}"

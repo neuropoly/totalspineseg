@@ -6,6 +6,7 @@ from PIL import Image
 from nilearn import image as nl_image
 import multiprocessing as mp
 from functools import partial
+from pathlib import Path
 from tqdm.contrib.concurrent import process_map
 from totalsegmri.utils.dirpath import DirPath
 
@@ -102,7 +103,7 @@ def main():
     # Print the argument values if verbose is enabled
     if verbose:
         print(textwrap.dedent(f''' 
-            Running with the following arguments:
+            Running {Path(__file__).stem} with the following params:
             images_path = "{images_path}"
             segs_path = "{segs_path}"
             output_dir = "{output_path}"

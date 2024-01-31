@@ -1,5 +1,6 @@
 import sys, argparse, textwrap
 from scipy.ndimage import label, binary_dilation, generate_binary_structure, iterate_structure
+from pathlib import Path
 import numpy as np
 import nibabel as nib
 import multiprocessing as mp
@@ -140,7 +141,7 @@ def main():
 
     if verbose:
         print(textwrap.dedent(f'''
-            Running with arguments:
+            Running {Path(__file__).stem} with the following params:
             seg_dir = "{seg_path}"
             output_dir = "{output_path}"
             subject_dir = "{subject_dir}"

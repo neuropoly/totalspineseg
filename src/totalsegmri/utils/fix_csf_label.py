@@ -2,6 +2,7 @@ import sys, argparse, textwrap
 import multiprocessing as mp
 from tqdm.contrib.concurrent import process_map
 from functools import partial
+from pathlib import Path
 import numpy as np
 import nibabel as nib
 from totalsegmri.utils.dirpath import DirPath
@@ -89,7 +90,7 @@ def main():
 
     if verbose:
         print(textwrap.dedent(f'''
-            Running with arguments:
+            Running {Path(__file__).stem} with the following params:
             seg_dir = "{seg_path}"
             output_dir = "{output_path}"
             subject_dir = "{subject_dir}"
