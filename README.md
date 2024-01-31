@@ -49,7 +49,7 @@ A hybrid approach integrating nnU-Net with an iterative algorithm for segmenting
 
 #### Prerequisites
 
-1. Download the corresponding content from [SPIDER dataset](https://doi.org/10.5281/zenodo.10159290) into 'data/src/spider/images' and 'data/src/spider/masks' (you can use `mkdir data/src/spider` to create the folder first).
+1. Download the corresponding content from [SPIDER dataset](https://doi.org/10.5281/zenodo.10159290) into 'data/raw/spider/images' and 'data/raw/spider/masks' (you can use `mkdir data/raw/spider` to create the folder first).
 
 1. Make sure `git` and `git-annex` are installed (You can install with `sudo apt-get install git-annex -y`).
 
@@ -61,18 +61,18 @@ A hybrid approach integrating nnU-Net with an iterative algorithm for segmenting
 
 1. Prepares datasets in [BIDS](https://bids.neuroimaging.io/) structure
     ```
-    bash totalsegmentator-mri/run/prepare_bids_datasets.sh
+    source totalsegmentator-mri/run/prepare_bids_datasets.sh
     ```
 
 1. Prepares datasets in nnUNet structure, preprocess and train the model.
     ```
-    bash totalsegmentator-mri/run/train_nnunet.sh
+    source totalsegmentator-mri/run/train_nnunet.sh
     ```
 
 ### First Model - Inference
 Run the model on a folder containing the images in .nii.gz format.
 ```
-bash totalsegmentator-mri/run/inference_nnunet.sh INPUT_FOLDER OUTPUT_FOLDER
+source totalsegmentator-mri/run/inference_nnunet.sh INPUT_FOLDER OUTPUT_FOLDER
 ```
 
 ## List of class
