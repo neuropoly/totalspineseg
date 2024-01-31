@@ -25,14 +25,14 @@ if [ ! -d totalsegmentator-mri ]; then
 fi
 
 # Check if the SPIDER dataset images and masks are available
-if [ ! -d data/src/spider/images ] || [ ! -d data/src/spider/masks ]; then
-    echo "SPIDER dataset images or masks not found. Please make sure they are available in data/src/spider."
+if [ ! -d data/raw/spider/images ] || [ ! -d data/raw/spider/masks ]; then
+    echo "SPIDER dataset images or masks not found. Please make sure they are available in data/raw/spider."
 else
     echo "Preparing SPIDER dataset"
 
     echo "Convert images and masks from .mha to .nii.gz format"
-    python totalsegmentator-mri/src/totalsegmri/utils/mha2nii.py -i data/src/spider/images -o data/bids/spider
-    python totalsegmentator-mri/src/totalsegmri/utils/mha2nii.py -i data/src/spider/masks -o data/bids/spider/derivatives/labels
+    python totalsegmentator-mri/src/totalsegmri/utils/mha2nii.py -i data/raw/spider/images -o data/bids/spider
+    python totalsegmentator-mri/src/totalsegmri/utils/mha2nii.py -i data/raw/spider/masks -o data/bids/spider/derivatives/labels
 
     echo "Map SPIDER labels to the labels used in this project"
     python totalsegmentator-mri/src/totalsegmri/utils/map_labels.py -m totalsegmentator-mri/src/totalsegmri/resources/labels_maps/spider.json -i data/bids/spider/derivatives/labels -o data/bids/spider/derivatives/labels
