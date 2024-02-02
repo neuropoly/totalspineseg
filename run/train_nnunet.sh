@@ -67,6 +67,15 @@ done
 echo "Append '_0000' to the images names"
 for f in data/nnUNet/nnUNet_raw/Dataset206_TotalSegMRI/imagesTr/*.nii.gz; do mv $f ${f/.nii.gz/_0000.nii.gz}; done
 
+# Remove images withot segmentation
+for f in data/nnUNet/nnUNet_raw/Dataset206_TotalSegMRI/imagesTr/*.nii.gz; do if [ ! -f data/nnUNet/nnUNet_raw/Dataset206_TotalSegMRI/labelsTr/$(basename ${f/_0000.nii.gz/.nii.gz}) ]; then rm $f; fi; done
+
+echo "Duplicate spider T2Sw X 7, whole X 5 to balance the dataset."
+for f in data/nnUNet/nnUNet_raw/Dataset206_TotalSegMRI/imagesTr/spider*_T2Sw_0000.nii.gz; do for i in {1..6}; do cp $f ${f/_0000.nii.gz/_${i}_0000.nii.gz}; done; done
+for f in data/nnUNet/nnUNet_raw/Dataset206_TotalSegMRI/labelsTr/spider*_T2Sw.nii.gz; do for i in {1..6}; do cp $f ${f/.nii.gz/_${i}.nii.gz}; done; done
+for f in data/nnUNet/nnUNet_raw/Dataset206_TotalSegMRI/imagesTr/whole*_0000.nii.gz; do for i in {1..4}; do cp $f ${f/_0000.nii.gz/_${i}_0000.nii.gz}; done; done
+for f in data/nnUNet/nnUNet_raw/Dataset206_TotalSegMRI/labelsTr/whole*.nii.gz; do for i in {1..4}; do cp $f ${f/.nii.gz/_${i}.nii.gz}; done; done
+
 echo "Fix csf label to include all non cord spinal canal, this will put the spinal canal label in all the voxels (labeled as a backgroupn) between the spinal canal and the spinal cord."
 python totalsegmentator-mri/src/totalsegmri/utils/fix_csf_label.py -i data/nnUNet/nnUNet_raw/Dataset206_TotalSegMRI/labelsTr -o data/nnUNet/nnUNet_raw/Dataset206_TotalSegMRI/labelsTr
 
