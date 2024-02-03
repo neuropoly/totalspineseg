@@ -64,13 +64,18 @@ A hybrid approach integrating nnU-Net with an iterative algorithm for segmenting
     source totalsegmentator-mri/run/prepare_bids_datasets.sh
     ```
 
-1. Prepares datasets in nnUNet structure, preprocess and train the model.
+1. Prepares datasets in nnUNetv2 structure.
+    ```
+    source totalsegmentator-mri/run/prepare_nnunet_datasets.sh
+    ```
+
+1. Train the model.
     ```
     source totalsegmentator-mri/run/train_nnunet.sh
     ```
 
 ### First Model - Inference
-Run the model on a folder containing the images in .nii.gz format.
+Run the model on a folder containing the images in .nii.gz format (Make sure to train the model or extract the trained `nnUNet_results` into `data/nnUNet/nnUNet_results` befor running).
 ```
 source totalsegmentator-mri/run/inference_nnunet.sh INPUT_FOLDER OUTPUT_FOLDER
 ```
