@@ -19,7 +19,7 @@ Tool for automatic segmentation and labelling of all vertebrae and intervertebra
 
 1. Open Terminal in a directory you want to work on.
 
-1. Create and activate Virtual Environment (Highly recommanded)
+1. Create and activate Virtual Environment (Highly recommanded):
     ```
     python -m venv venv
     source venv/bin/activate
@@ -27,7 +27,7 @@ Tool for automatic segmentation and labelling of all vertebrae and intervertebra
 
 1. Install [PyTorch](https://pytorch.org/get-started/locally/) as described on their website.
 
-1. Clone this repository and install
+1. Clone and install this repository:
     ```
     git clone https://github.com/neuropoly/totalsegmentator-mri.git
     python -m pip install -e totalsegmentator-mri
@@ -46,8 +46,6 @@ A hybrid approach integrating nnU-Net with an iterative algorithm for segmenting
 **Figure 1**: Illustration of the hybrid method for automatic segmentation of the spine and spinal cord structures. T1w image (A) is used to train model 1, which outputs 7 classes (B). These output labels are processed to extract odd IVDs (C). The T1w and odd IVDs are used as two input channels to train model 2, which outputs 12 classes (D). These output labels are processed to extract individual IVDs and vertebrae (E).
 
 ### First Model - Train
-
-#### Prerequisites
 
 1. Download the corresponding content from [SPIDER dataset](https://doi.org/10.5281/zenodo.10159290) into 'data/raw/spider/images' and 'data/raw/spider/masks' (you can use `mkdir data/raw/spider` to create the folder first).
 
