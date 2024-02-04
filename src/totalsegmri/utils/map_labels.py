@@ -16,14 +16,14 @@ def main():
         '''),
         epilog=textwrap.dedent('''
             Examples:
-            map_labels -i labels -o labels_maped -m map.json
-            map_labels -i labels -o labels_maped  -m map.json -d sub- -s anat -w 32
+            map_labels -s labels -o labels_maped -m map.json
+            map_labels -s labels -o labels_maped  -m map.json -d sub- -s anat -w 32
         '''),
         formatter_class=argparse.RawTextHelpFormatter
     )
 
     parser.add_argument(
-        '--seg-dir', '-i', type=DirPath(), required=True,
+        '--segs-dir', '-s', type=DirPath(), required=True,
         help='Folder containing input segmentations for each subject.'
     )
     parser.add_argument(
@@ -43,7 +43,7 @@ def main():
         '''),
     )
     parser.add_argument(
-        '--subject-subdir', '-s', type=str, default='', 
+        '--subject-subdir', '-u', type=str, default='', 
         help='Subfolder inside subject folder containing masks, defaults to no subfolder.'
     )
     parser.add_argument(

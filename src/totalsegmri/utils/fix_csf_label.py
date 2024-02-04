@@ -16,13 +16,13 @@ def main():
         '''),
         epilog=textwrap.dedent('''
             Examples:
-            fix_csf_label -i labels -o labels_fixed
+            fix_csf_label -s labels -o labels_fixed
         '''),
         formatter_class=argparse.RawTextHelpFormatter
     )
 
     parser.add_argument(
-        '--seg-dir', '-i', type=DirPath(), required=True,
+        '--segs-dir', '-s', type=DirPath(), required=True,
         help='Folder containing input segmentations.'
     )
     parser.add_argument(
@@ -38,7 +38,7 @@ def main():
         '''),
     )
     parser.add_argument(
-        '--subject-subdir', '-s', type=str, default='', 
+        '--subject-subdir', '-u', type=str, default='', 
         help='Subfolder inside subject folder containing masks (for example "anat"), defaults to no subfolder.'
     )
     parser.add_argument(

@@ -17,13 +17,13 @@ def main():
         '''),
         epilog=textwrap.dedent('''
             Examples:
-            generate_labels_sequential -i labels_init -o labels
+            generate_labels_sequential -s labels_init -o labels
         '''),
         formatter_class=argparse.RawTextHelpFormatter
     )
 
     parser.add_argument(
-        '--seg-dir', '-i', type=DirPath(), required=True,
+        '--segs-dir', '-s', type=DirPath(), required=True,
         help='Folder containing input segmentations.'
     )
     parser.add_argument(
@@ -39,7 +39,7 @@ def main():
         '''),
     )
     parser.add_argument(
-        '--subject-subdir', '-s', type=str, default='', 
+        '--subject-subdir', '-u', type=str, default='', 
         help='Subfolder inside subject folder containing masks (for example "anat"), defaults to no subfolder.'
     )
     parser.add_argument(
@@ -176,8 +176,8 @@ def main():
     segs_path_list = list(seg_path.glob(glob_pattern))
 
     # Create a partially-applied function with the extra arguments
-    partial_generate_labels = partial(
-        generate_labels,
+    partial_generate_labels_sequential = partial(
+        generate_labels_sequential,
         output_path=output_path,
         seg_suffix=seg_suffix,
         output_seg_suffix=output_seg_suffix,
@@ -196,10 +196,10 @@ def main():
    )
 
     with mp.Pool() as pool:
-        process_map(partial_generate_labels, segs_path_list, max_workers=max_workers)
+        process_map(partial_generate_labels_sequential, segs_path_list, max_workers=max_workers)
     
 
-def generate_labels(
+def generate_labels_sequential(
             seg_path,
             output_path,
             seg_suffix,

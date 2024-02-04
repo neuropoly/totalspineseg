@@ -35,7 +35,7 @@ else
     python totalsegmentator-mri/src/totalsegmri/utils/mha2nii.py -i data/raw/spider/masks -o data/bids/spider/derivatives/labels
 
     echo "Map SPIDER labels to the labels used in this project"
-    python totalsegmentator-mri/src/totalsegmri/utils/map_labels.py -m totalsegmentator-mri/src/totalsegmri/resources/labels_maps/spider.json -i data/bids/spider/derivatives/labels -o data/bids/spider/derivatives/labels
+    python totalsegmentator-mri/src/totalsegmri/utils/map_labels.py -m totalsegmentator-mri/src/totalsegmri/resources/labels_maps/spider.json -s data/bids/spider/derivatives/labels -o data/bids/spider/derivatives/labels
 
     echo "Rename files to follow BIDS naming conventions"
     # Add 'sub-' prefix to filenames

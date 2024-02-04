@@ -60,7 +60,7 @@ for f in data/nnUNet/nnUNet_raw/Dataset206_TotalSegMRI/imagesTr/whole*_0000.nii.
 for f in data/nnUNet/nnUNet_raw/Dataset206_TotalSegMRI/labelsTr/whole*.nii.gz; do for i in {1..4}; do cp $f ${f/.nii.gz/_${i}.nii.gz}; done; done
 
 echo "Fix csf label to include all non cord spinal canal, this will put the spinal canal label in all the voxels (labeled as a backgroupn) between the spinal canal and the spinal cord."
-python totalsegmentator-mri/src/totalsegmri/utils/fix_csf_label.py -i data/nnUNet/nnUNet_raw/Dataset206_TotalSegMRI/labelsTr -o data/nnUNet/nnUNet_raw/Dataset206_TotalSegMRI/labelsTr
+python totalsegmentator-mri/src/totalsegmri/utils/fix_csf_label.py -s data/nnUNet/nnUNet_raw/Dataset206_TotalSegMRI/labelsTr -o data/nnUNet/nnUNet_raw/Dataset206_TotalSegMRI/labelsTr
 
 echo "Crop images and segmentations in the most anteior voxel of the lowest vertebrae in the image or at the lowest voxel of T12-L1 IVD (for SPIDER dataset)."
 for dsn in single multi whole; do
@@ -72,9 +72,9 @@ echo "Copy from 206 to 210 dataset"
 for f in data/nnUNet/nnUNet_raw/Dataset206_TotalSegMRI/*Tr/*.nii.gz; do cp $f ${f/206/210}; done
 
 echo "Map labels to 210 2'nd channel"
-python totalsegmentator-mri/src/totalsegmri/utils/map_labels.py -m totalsegmentator-mri/src/totalsegmri/resources/labels_maps/nnunet_210_0001.json -i data/nnUNet/nnUNet_raw/Dataset210_TotalSegMRI/labelsTr -o data/nnUNet/nnUNet_raw/Dataset210_TotalSegMRI/imagesTr --output-seg-suffix _0001
+python totalsegmentator-mri/src/totalsegmri/utils/map_labels.py -m totalsegmentator-mri/src/totalsegmri/resources/labels_maps/nnunet_210_0001.json -s data/nnUNet/nnUNet_raw/Dataset210_TotalSegMRI/labelsTr -o data/nnUNet/nnUNet_raw/Dataset210_TotalSegMRI/imagesTr --output-seg-suffix _0001
 
 for d in 206 210; do
     echo "Map original labels to the dataset specific labels"
-    python totalsegmentator-mri/src/totalsegmri/utils/map_labels.py -m totalsegmentator-mri/src/totalsegmri/resources/labels_maps/nnunet_${d}.json -i data/nnUNet/nnUNet_raw/Dataset${d}_TotalSegMRI/labelsTr -o data/nnUNet/nnUNet_raw/Dataset${d}_TotalSegMRI/labelsTr
+    python totalsegmentator-mri/src/totalsegmri/utils/map_labels.py -m totalsegmentator-mri/src/totalsegmri/resources/labels_maps/nnunet_${d}.json -s data/nnUNet/nnUNet_raw/Dataset${d}_TotalSegMRI/labelsTr -o data/nnUNet/nnUNet_raw/Dataset${d}_TotalSegMRI/labelsTr
 done
