@@ -24,8 +24,6 @@ PATH_NNUNET_MODEL="/home/GRAMES.POLYMTL.CA/p118739/data/nnUNet_results/Dataset30
 PATH_NNUNET_ENV="${HOME}/code/nnUNet/nnUNet_env"
 FOLD="0"
 
-SACRUM_VALUE="50"
-
 # Print variables to allow easier debug
 echo "See variables:"
 echo "PATH_CONFIG: ${PATH_CONFIG}"
@@ -37,8 +35,6 @@ echo "PATH_NNUNET_MODEL: ${PATH_NNUNET_MODEL}"
 echo "PATH_NNUNET_ENV: ${PATH_NNUNET_ENV}"
 echo "FOLD: ${FOLD}"
 echo
-echo "SACRUM_VALUE: ${SACRUM_VALUE}"
-echo 
 
 # FUNCTIONS
 # ======================================================================================================================
@@ -47,7 +43,6 @@ segment_sacrum_nnUNet(){
   local file_in="$1"
   local file_out="$2"
 
-  echo "Segmenting sacrum using our nnUNet model."
   # Run rootlets segmentation
   # TODO: the hard-coded path to the conda environment is not ideal.
   "${PATH_NNUNET_ENV}"/bin/python3 "${PATH_REPO}"/scripts/run_inference_single_subject.py -i "${file_in}" -o "${file_out}" -path-model "${PATH_NNUNET_MODEL}" -fold "${FOLD}" -use-gpu
@@ -59,7 +54,6 @@ generate_json(){
   local process="$2"
   local author="$3"
 
-  echo "Segmenting sacrum using our nnUNet model."
   # Run rootlets segmentation
   # TODO: the hard-coded path to the conda environment is not ideal.
   "${PATH_NNUNET_ENV}"/bin/python3 "${PATH_REPO}"/scripts/create_jsonsidecar.py -path-json "${path_json}" -process "${process}" -author "${author}"
