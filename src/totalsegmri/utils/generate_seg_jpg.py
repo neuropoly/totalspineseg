@@ -9,7 +9,9 @@ from functools import partial
 from pathlib import Path
 from tqdm.contrib.concurrent import process_map
 from totalsegmri.utils.dirpath import DirPath
+import warnings
 
+warnings.filterwarnings("ignore")
 
 def main():
 
