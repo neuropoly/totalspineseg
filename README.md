@@ -51,9 +51,9 @@ A hybrid approach integrating nnU-Net with an iterative algorithm for segmenting
 
 1. Make sure `git` and `git-annex` are installed (You can install with `sudo apt-get install git-annex -y`).
 
-1. Extract [data-multi-subject.zip](https://drive.google.com/file/d/1Sq38xLHnVxhLr0s1j27ywbeshNUjo3IP) into 'data/bids/data-multi-subject'.
+1. Extract [data-multi-subject_PAM50_seg.zip](https://drive.google.com/file/d/1Sq38xLHnVxhLr0s1j27ywbeshNUjo3IP) into 'data/bids/data-multi-subject'.
 
-1. Extract [data-single-subject.zip](https://drive.google.com/file/d/1YvuFHL8GDJ5SXlMLORWDjR5SNkDL6TUU) into 'data/bids/data-single-subject'.
+1. Extract [data-single-subject_PAM50_seg.zip](https://drive.google.com/file/d/1YvuFHL8GDJ5SXlMLORWDjR5SNkDL6TUU) into 'data/bids/data-single-subject'.
 
 1. Extract [whole-spine.zip](https://drive.google.com/file/d/143i0ODmeqohpc4vu5Aa5lnv8LLEyOU0F) (private dataset) into 'data/bids/whole-spine'.
 
