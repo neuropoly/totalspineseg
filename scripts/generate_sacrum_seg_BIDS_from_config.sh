@@ -98,9 +98,9 @@ for FILE_PATH in $FILES; do
     generate_json "$JSON_PATH" "$PROCESS" "$AUTHOR"
 
     # Create QC report
-    QC_PATH="${BIDS_DERIVATIVES}/qc"
+    QC_PATH="${DATASETS_PATH}/qc"
     echo "Add ${FILE_PATH} to QC ${QC_PATH}"
-    sct_qc -i "$FILE_PATH" -s "$OUT_PATH" -p sct_deepseg_lesion -plane sagittal -qc "$QC_PATH"
+    sct_qc -i "$FILE_PATH" -s "$OUT_PATH" -p sct_label_vertebrae -qc "$QC_PATH"
 
 done
 
