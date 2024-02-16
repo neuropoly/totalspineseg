@@ -1,5 +1,5 @@
 import sys, argparse, textwrap
-from scipy.ndimage import label, binary_dilation, generate_binary_structure, iterate_structure
+from scipy.ndimage import label
 from pathlib import Path
 import numpy as np
 import nibabel as nib
@@ -104,18 +104,18 @@ def main():
     segs_path_list = list(seg_path.glob(glob_pattern))
 
     # Create a partially-applied function with the extra arguments
-    partial_generate_labels = partial(
-        generate_labels,
+    partial_generate_largest_labels = partial(
+        generate_largest_labels,
         output_path=output_path,
         seg_suffix=seg_suffix,
         output_seg_suffix=output_seg_suffix,
    )
 
     with mp.Pool() as pool:
-        process_map(partial_generate_labels, segs_path_list, max_workers=max_workers)
+        process_map(partial_generate_largest_labels, segs_path_list, max_workers=max_workers)
     
 
-def generate_labels(
+def generate_largest_labels(
             seg_path,
             output_path,
             seg_suffix,
@@ -148,10 +148,6 @@ def generate_labels(
     output_seg_path.parent.mkdir(parents=True, exist_ok=True)
     # Save mapped segmentation
     nib.save(seg, output_seg_path)
-
-def pairs_dict(pair):
-    # Convert comma-separated string to a tuple of integers
-    return tuple(map(int, pair.split(',')))
 
 if __name__ == '__main__':
     main()

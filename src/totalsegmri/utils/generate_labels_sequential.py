@@ -286,9 +286,5 @@ def generate_labels_sequential(
     # Save mapped segmentation
     nib.save(seg, output_seg_path)
 
-def pairs_dict(pair):
-    # Convert comma-separated string to a tuple of integers
-    return tuple(map(int, pair.split(',')))
-
 if __name__ == '__main__':
     main()
