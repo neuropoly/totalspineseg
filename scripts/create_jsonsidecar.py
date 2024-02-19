@@ -29,7 +29,7 @@ def create_json_file():
                 "Date": time.strftime('%Y-%m-%d %H:%M:%S')
             },
             {
-                "Name": "Quality Control",
+                "Name": "Manual",
                 "Author": author,
                 "Date": time.strftime('%Y-%m-%d %H:%M:%S')
             }
