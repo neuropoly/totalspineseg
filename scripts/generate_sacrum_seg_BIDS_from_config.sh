@@ -43,7 +43,7 @@ segment_sacrum_nnUNet(){
   local file_in="$1"
   local file_out="$2"
 
-  # Run rootlets segmentation
+  # Call python function
   # TODO: the hard-coded path to the conda environment is not ideal.
   "${PATH_NNUNET_ENV}"/bin/python3 "${PATH_REPO}"/scripts/run_inference_single_subject.py -i "${file_in}" -o "${file_out}" -path-model "${PATH_NNUNET_MODEL}" -fold "${FOLD}" -use-gpu
 }
@@ -54,10 +54,21 @@ generate_json(){
   local process="$2"
   local author="$3"
 
-  # Run rootlets segmentation
+  # Call python function
   # TODO: the hard-coded path to the conda environment is not ideal.
   "${PATH_NNUNET_ENV}"/bin/python3 "${PATH_REPO}"/scripts/create_jsonsidecar.py -path-json "${path_json}" -process "${process}" -author "${author}"
 }
+
+# Keep largest component only
+keep_largest_component(){
+  local seg_in="$1"
+  local seg_out="$2"
+
+  # Call python function
+  # TODO: the hard-coded path to the conda environment is not ideal.
+  "${PATH_NNUNET_ENV}"/bin/python3 "${PATH_REPO}"/scripts/keep_largest_component.py --seg-in "${seg_in}" --seg-out "${seg_out}"
+}
+
 
 # ======================================================================================================================
 # SCRIPT STARTS HERE
@@ -91,6 +102,7 @@ for FILE_PATH in $FILES; do
     # Generate output segmentation
     echo "Generate segmentation ${FILE_PATH} ${OUT_PATH}"
     segment_sacrum_nnUNet "$FILE_PATH" "$OUT_PATH"
+    keep_largest_component "$FILE_PATH" "$OUT_PATH"
 
     # Generate json sidecar
     JSON_PATH=${OUT_PATH/".nii.gz"/".json"}
