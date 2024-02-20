@@ -47,7 +47,7 @@ A hybrid approach integrating nnU-Net with an iterative algorithm for segmenting
 
 ### First Model - Train
 
-1. Download the corresponding content from [SPIDER dataset](https://doi.org/10.5281/zenodo.10159290) into 'data/raw/spider/images' and 'data/raw/spider/masks' (you can use `mkdir data/raw/spider` to create the folder first).
+1. Download the corresponding content from [SPIDER dataset](https://doi.org/10.5281/zenodo.10159290) into 'data/raw/spider/images' and 'data/raw/spider/masks' (you can use `mkdir -p data/raw/spider` to create the folder first).
 
 1. Make sure `git` and `git-annex` are installed (You can install with `sudo apt-get install git-annex -y`).
 
