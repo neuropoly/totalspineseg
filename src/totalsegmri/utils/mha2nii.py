@@ -4,7 +4,6 @@ from pathlib import Path
 from tqdm.contrib.concurrent import process_map
 from functools import partial
 import SimpleITK as sitk
-from totalsegmri.utils.dirpath import DirPath
 
 
 def main():
@@ -17,11 +16,11 @@ def main():
         formatter_class=argparse.RawTextHelpFormatter
     )
     parser.add_argument(
-        '--images-dir', '-i', type=DirPath(), required=True,
+        '--images-dir', '-i', type=Path, required=True,
         help='The folder where input .mha images files are located (required).'
     )
     parser.add_argument(
-        '--output-dir', '-o', type=DirPath(True), required=True,
+        '--output-dir', '-o', type=Path, required=True,
         help='The folder where output .nii.gz images will be saved (required).'
     )
     parser.add_argument(

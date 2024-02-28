@@ -6,7 +6,6 @@ import nibabel as nib
 import multiprocessing as mp
 from functools import partial
 from tqdm.contrib.concurrent import process_map
-from totalsegmri.utils.dirpath import DirPath
 
 def main():
     
@@ -23,11 +22,11 @@ def main():
     )
 
     parser.add_argument(
-        '--segs-dir', '-s', type=DirPath(), required=True,
+        '--segs-dir', '-s', type=Path, required=True,
         help='Folder containing input segmentations.'
     )
     parser.add_argument(
-        '--output-dir', '-o', type=DirPath(True), required=True, 
+        '--output-dir', '-o', type=Path, required=True, 
         help='Folder to save output segmentations.'
     )
     parser.add_argument(

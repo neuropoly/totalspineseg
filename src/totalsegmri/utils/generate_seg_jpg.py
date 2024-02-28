@@ -8,7 +8,6 @@ import multiprocessing as mp
 from functools import partial
 from pathlib import Path
 from tqdm.contrib.concurrent import process_map
-from totalsegmri.utils.dirpath import DirPath
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -25,15 +24,15 @@ def main():
         formatter_class=argparse.RawTextHelpFormatter
     )
     parser.add_argument(
-        '--images-dir', '-i', type=DirPath(), required=True,
+        '--images-dir', '-i', type=Path, required=True,
         help='The folder where input NIfTI images files are located (required).'
     )
     parser.add_argument(
-        '--segs-dir', '-s', type=DirPath(), required=True,
+        '--segs-dir', '-s', type=Path, required=True,
         help='The folder where input NIfTI segmentation files are located (required).'
     )
     parser.add_argument(
-        '--output-dir', '-o', type=DirPath(True), required=True,
+        '--output-dir', '-o', type=Path, required=True,
         help='The folder where output combined JPG images will be saved (required).'
     )
     parser.add_argument(

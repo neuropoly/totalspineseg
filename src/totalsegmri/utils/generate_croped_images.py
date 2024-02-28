@@ -6,7 +6,6 @@ from pathlib import Path
 from tqdm.contrib.concurrent import process_map
 import nibabel as nib
 import numpy as np
-from totalsegmri.utils.dirpath import DirPath
 
 
 def main():
@@ -20,19 +19,19 @@ def main():
         formatter_class=argparse.RawTextHelpFormatter
     )
     parser.add_argument(
-        '--images-dir', '-i', type=DirPath(), required=True,
+        '--images-dir', '-i', type=Path, required=True,
         help='The folder where input NIfTI images files are located (required).'
     )
     parser.add_argument(
-        '--segs-dir', '-s', type=DirPath(), required=True,
+        '--segs-dir', '-s', type=Path, required=True,
         help='The folder where input NIfTI segmentation files are located (required).'
     )
     parser.add_argument(
-        '--output-images-dir', '-o', type=DirPath(True), required=True,
+        '--output-images-dir', '-o', type=Path, required=True,
         help='The folder where output combined JPG images will be saved (required).'
     )
     parser.add_argument(
-        '--output-segs-dir', '-g', type=DirPath(True), required=True,
+        '--output-segs-dir', '-g', type=Path, required=True,
         help='The folder where output combined JPG images will be saved (required).'
     )
     parser.add_argument(
