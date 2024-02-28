@@ -103,7 +103,7 @@ def main():
 
 def mha2nii(image_path, images_path, output_path):
     
-    output_nii_path = output_path / image_path.name.replace(f'.mha', f'.nii.gz')
+    output_nii_path = output_path / image_path.relative_to(images_path).parent / image_path.name.replace(f'.mha', f'.nii.gz')
     sitk.WriteImage(sitk.ReadImage(image_path), output_nii_path)
 
 if __name__ == '__main__':

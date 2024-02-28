@@ -177,6 +177,7 @@ def main():
     # Create a partially-applied function with the extra arguments
     partial_generate_labels_sequential = partial(
         generate_labels_sequential,
+        segs_path=segs_path,
         output_path=output_path,
         seg_suffix=seg_suffix,
         output_seg_suffix=output_seg_suffix,
@@ -200,6 +201,7 @@ def main():
 
 def generate_labels_sequential(
             seg_path,
+            segs_path,
             output_path,
             seg_suffix,
             output_seg_suffix,
@@ -217,7 +219,7 @@ def generate_labels_sequential(
             combine_before_label,
         ):
     
-    output_seg_path = output_path / seg_path.name.replace(f'{seg_suffix}.nii.gz', f'{output_seg_suffix}.nii.gz')
+    output_seg_path = output_path / seg_path.relative_to(segs_path).parent / seg_path.name.replace(f'{seg_suffix}.nii.gz', f'{output_seg_suffix}.nii.gz')
 
     # Load segmentation
     seg = nib.load(seg_path)

@@ -114,15 +114,15 @@ def main():
     segs_path_list = list(segs_path.glob(glob_pattern))
 
     # Create a partially-applied function with the extra arguments
-    partial_fix_csf_label = partial(fix_csf_label, cord_label=cord_label, csf_label=csf_label, output_path=output_path, seg_suffix=seg_suffix, output_seg_suffix=output_seg_suffix)
+    partial_fix_csf_label = partial(fix_csf_label, segs_path=segs_path, cord_label=cord_label, csf_label=csf_label, output_path=output_path, seg_suffix=seg_suffix, output_seg_suffix=output_seg_suffix)
 
     with mp.Pool() as pool:
         process_map(partial_fix_csf_label, segs_path_list, max_workers=max_workers)
     
 
-def fix_csf_label(seg_path, cord_label, csf_label, output_path, seg_suffix, output_seg_suffix):
+def fix_csf_label(seg_path, segs_path, cord_label, csf_label, output_path, seg_suffix, output_seg_suffix):
     
-    output_seg_path = output_path / seg_path.name.replace(f'{seg_suffix}.nii.gz', f'{output_seg_suffix}.nii.gz')
+    output_seg_path = output_path / seg_path.relative_to(segs_path).parent / seg_path.name.replace(f'{seg_suffix}.nii.gz', f'{output_seg_suffix}.nii.gz')
 
     # Load segmentation
     seg = nib.load(seg_path)

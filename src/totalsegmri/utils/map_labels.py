@@ -125,15 +125,15 @@ def main():
     segs_path_list = list(segs_path.glob(glob_pattern))
 
     # Create a partially-applied function with the extra arguments
-    partial_map_seg = partial(map_seg, map_dict=map_dict, output_path=output_path, seg_suffix=seg_suffix, output_seg_suffix=output_seg_suffix, add_output=add_output, default_input=default_input)
+    partial_map_seg = partial(map_seg, segs_path=segs_path, map_dict=map_dict, output_path=output_path, seg_suffix=seg_suffix, output_seg_suffix=output_seg_suffix, add_output=add_output, default_input=default_input)
 
     with mp.Pool() as pool:
         process_map(partial_map_seg, segs_path_list, max_workers=max_workers)
     
 
-def map_seg(seg_path, map_dict, output_path, seg_suffix, output_seg_suffix, add_output, default_input):
+def map_seg(seg_path, segs_path, map_dict, output_path, seg_suffix, output_seg_suffix, add_output, default_input):
     
-    output_seg_path = output_path / seg_path.name.replace(f'{seg_suffix}.nii.gz', f'{output_seg_suffix}.nii.gz')
+    output_seg_path = output_path / seg_path.relative_to(segs_path).parent / seg_path.name.replace(f'{seg_suffix}.nii.gz', f'{output_seg_suffix}.nii.gz')
 
     # Load segmentation
     seg = nib.load(seg_path)
