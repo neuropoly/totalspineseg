@@ -21,6 +21,12 @@ def main():
         It combines the specified slice of the image and segmentation files and saves the result as a JPG image
         in the specified output folder.'''
         ),
+        epilog=textwrap.dedent('''
+            Examples:
+            generate_seg_jpg -i images -s labels -o preview
+            For BIDS:
+            generate_seg_jpg -i . -s derivatives/labels -o derivatives/preview --seg-suffix "_seg" -d "sub-" -u "anat"
+        '''),
         formatter_class=argparse.RawTextHelpFormatter
     )
     parser.add_argument(
@@ -152,7 +158,7 @@ def generate_seg_jpg(image_path, segs_path, images_path, output_path, seg_suffix
     seg_path = segs_path / image_path.relative_to(images_path).parent /  image_path.name.replace(f'{image_suffix}.nii.gz', f'{seg_suffix}.nii.gz')
     if not seg_path.is_file():
         seg_path = seg_path.parent / seg_path.name.replace('.nii.gz', '.mgz')
-    output_jpg_path = output_path / image_path.name.replace(f'{image_suffix}.nii.gz', f'_{orient}_{sliceloc}.jpg')
+    output_jpg_path = output_path / image_path.relative_to(images_path).parent / image_path.name.replace(f'{image_suffix}.nii.gz', f'_{orient}_{sliceloc}.jpg')
     
     if not image_path.is_file() or not seg_path.is_file():
         return

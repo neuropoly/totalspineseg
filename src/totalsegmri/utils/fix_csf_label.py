@@ -16,6 +16,8 @@ def main():
         epilog=textwrap.dedent('''
             Examples:
             fix_csf_label -s labels -o labels_fixed
+            For BIDS:
+            fix_csf_label -s derivatives/labels -o derivatives/labels --seg-suffix "_seg" --output-seg-suffix "_seg_fixed" -d "sub-" -u "anat"
         '''),
         formatter_class=argparse.RawTextHelpFormatter
     )

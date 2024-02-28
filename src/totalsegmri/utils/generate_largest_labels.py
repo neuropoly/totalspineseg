@@ -16,7 +16,9 @@ def main():
         '''),
         epilog=textwrap.dedent('''
             Examples:
-            generate_largest_labels -s labels_init -o labels
+            generate_largest_labels -s labels -o labels_largest
+            For BIDS:
+            generate_largest_labels -s derivatives/labels -o derivatives/labels --seg-suffix "_seg" --output-seg-suffix "_seg_largest" -d "sub-" -u "anat"
         '''),
         formatter_class=argparse.RawTextHelpFormatter
     )

@@ -13,6 +13,12 @@ def main():
         description=textwrap.dedent(f'''
         This script processes .mha images and convert them into .nii.gz images.'''
         ),
+        epilog=textwrap.dedent('''
+            Examples:
+            mha2nii -i images_mha -o images
+            For BIDS:
+            mha2nii -i . -o . --image-suffix "" --output-image-suffix "" -d "sub-" -u "anat"
+        '''),
         formatter_class=argparse.RawTextHelpFormatter
     )
     parser.add_argument(

@@ -16,6 +16,12 @@ def main():
         This script processes NIfTI (Neuroimaging Informatics Technology Initiative) image and segmentation files.
         It crop images and segmentations in the most anteior voxel the lowest vertebrae in the image or at the lowest voxel of T12-L1 IVD.'''
         ),
+        epilog=textwrap.dedent('''
+            Examples:
+            generate_cropped_images -i images -s labels -o images_cropped -g labels_cropped
+            For BIDS:
+            generate_cropped_images -i . -s derivatives/labels -o . -g derivatives/labels --image-suffix "" --output-image-suffix "" --seg-suffix "_seg" --output-seg-suffix "_seg_cropped" -d "sub-" -u "anat"
+        '''),
         formatter_class=argparse.RawTextHelpFormatter
     )
     parser.add_argument(
@@ -28,11 +34,11 @@ def main():
     )
     parser.add_argument(
         '--output-images-dir', '-o', type=Path, required=True,
-        help='The folder where output combined JPG images will be saved (required).'
+        help='The folder where output cropped images will be saved (required).'
     )
     parser.add_argument(
         '--output-segs-dir', '-g', type=Path, required=True,
-        help='The folder where output combined JPG images will be saved (required).'
+        help='The folder where output cropped segmentations will be saved (required).'
     )
     parser.add_argument(
         '--subject-dir', '-d', type=str, default=None, nargs='?', const='',

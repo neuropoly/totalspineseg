@@ -17,6 +17,12 @@ def main():
         This script processes NIfTI (Neuroimaging Informatics Technology Initiative) image and segmentation files.
         It apply transformation on the image and the segmentation to make augmented image.'''
         ),
+        epilog=textwrap.dedent('''
+            Examples:
+            generate_augmentations -i images -s labels -o images -g labels
+            For BIDS:
+            generate_augmentations -i . -s derivatives/labels -o . -g derivatives/labels --image-suffix "" --output-image-suffix "" --seg-suffix "_seg" --output-seg-suffix "_seg" -d "sub-" -u "anat"
+        '''),
         formatter_class=argparse.RawTextHelpFormatter
     )
     parser.add_argument(
@@ -29,11 +35,11 @@ def main():
     )
     parser.add_argument(
         '--output-images-dir', '-o', type=Path, required=True,
-        help='The folder where output combined JPG images will be saved (required).'
+        help='The folder where output augmented images will be saved with _a1, _a2 etc. suffixes (required).'
     )
     parser.add_argument(
         '--output-segs-dir', '-g', type=Path, required=True,
-        help='The folder where output combined JPG images will be saved (required).'
+        help='The folder where output augmented segmentation will be saved with _a1, _a2 etc. suffixes (required).'
     )
     parser.add_argument(
         '--subject-dir', '-d', type=str, default=None, nargs='?', const='',

@@ -17,6 +17,8 @@ def main():
         epilog=textwrap.dedent('''
             Examples:
             generate_labels_sequential -s labels_init -o labels
+            For BIDS:
+            generate_labels_sequential -s derivatives/labels -o derivatives/labels --seg-suffix "_seg" --output-seg-suffix "_seg_seq" -d "sub-" -u "anat"
         '''),
         formatter_class=argparse.RawTextHelpFormatter
     )
