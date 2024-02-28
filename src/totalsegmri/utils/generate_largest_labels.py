@@ -22,7 +22,7 @@ def main():
     )
 
     parser.add_argument(
-        '--seg-dir', '-s', type=Path, required=True,
+        '--segs-dir', '-s', type=Path, required=True,
         help='Folder containing input segmentations.'
     )
     parser.add_argument(
@@ -68,7 +68,7 @@ def main():
         sys.exit()
 
     # Get arguments
-    seg_path = args.seg_dir
+    segs_path = args.segs_dir
     output_path = args.output_dir
     subject_dir = args.subject_dir
     subject_subdir = args.subject_subdir
@@ -81,7 +81,7 @@ def main():
     if verbose:
         print(textwrap.dedent(f'''
             Running {Path(__file__).stem} with the following params:
-            seg_dir = "{seg_path}"
+            segs_dir = "{segs_path}"
             output_dir = "{output_path}"
             subject_dir = "{subject_dir}"
             subject_subdir = "{subject_subdir}"
@@ -100,7 +100,7 @@ def main():
     glob_pattern += f'{prefix}*{seg_suffix}.nii.gz'
 
     # Process the NIfTI image and segmentation files
-    segs_path_list = list(seg_path.glob(glob_pattern))
+    segs_path_list = list(segs_path.glob(glob_pattern))
 
     # Create a partially-applied function with the extra arguments
     partial_generate_largest_labels = partial(
