@@ -102,7 +102,7 @@ for FILE_PATH in $FILES; do
     # Generate output segmentation
     echo "Generate segmentation ${FILE_PATH} ${OUT_PATH}"
     segment_sacrum_nnUNet "$FILE_PATH" "$OUT_PATH"
-    keep_largest_component "$FILE_PATH" "$OUT_PATH"
+    keep_largest_component "$OUT_PATH" "$OUT_PATH"
 
     # Generate json sidecar
     JSON_PATH=${OUT_PATH/".nii.gz"/".json"}
