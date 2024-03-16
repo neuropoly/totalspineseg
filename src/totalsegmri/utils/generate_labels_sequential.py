@@ -16,9 +16,9 @@ def main():
         '''),
         epilog=textwrap.dedent('''
             Examples:
-            generate_labels_sequential -s labels_init -o labels
+            generate_labels_sequential -s labels_init -o labels --disc-labels 2 3 4 5 6 --vertebrea-labels 8 9 10 11 12 --init-disc 4:224 5:219 6:202 --init-vertebrae 10:41 11:34 12:18
             For BIDS:
-            generate_labels_sequential -s derivatives/labels -o derivatives/labels --seg-suffix "_seg" --output-seg-suffix "_seg_seq" -d "sub-" -u "anat"
+            generate_labels_sequential -s derivatives/labels -o derivatives/labels --disc-labels 2 3 4 5 6 --vertebrea-labels 8 9 10 11 12 --init-disc 4:224 5:219 6:202 --init-vertebrae 10:41 11:34 12:18 --seg-suffix "_seg" --output-seg-suffix "_seg_seq" -d "sub-" -u "anat"
         '''),
         formatter_class=argparse.RawTextHelpFormatter
     )
@@ -60,8 +60,8 @@ def main():
         help='The disc labels.'
     )
     parser.add_argument(
-        '--init-disc', type=lambda x:map(int, x.split(',')), nargs='+', default=[],
-        help='Init labels list for disc ordered by priority (input_label,output_label !!without space!!). for example 4,224 5,219 6,202'
+        '--init-disc', type=lambda x:map(int, x.split(':')), nargs='+', default=[],
+        help='Init labels list for disc ordered by priority (input_label:output_label !!without space!!). for example 4:224 5:219 6:202'
     )
     parser.add_argument(
         '--output-disc-step', type=int, default=-1,
@@ -72,8 +72,8 @@ def main():
         help='The vertebrae labels.'
     )
     parser.add_argument(
-        '--init-vertebrae', type=lambda x:map(int, x.split(',')), nargs='+', default=[],
-        help='Init labels list for vertebrae ordered by priority (input_label,output_label !!without space!!). for example 10,41 11,34 12,18'
+        '--init-vertebrae', type=lambda x:map(int, x.split(':')), nargs='+', default=[],
+        help='Init labels list for vertebrae ordered by priority (input_label:output_label !!without space!!). for example 10:41 11:34 12:18'
     )
     parser.add_argument(
         '--output-vertebrea-step', type=int, default=-1,
