@@ -78,6 +78,10 @@ def main():
         help='Number of augmentation images to generate. Default is 7.'
     )
     parser.add_argument(
+        '--labels2image', action="store_true", default=False,
+        help='Use Random Labels To Image augmentation, defaults to false.'
+    )
+    parser.add_argument(
         '--max-workers', '-w', type=int, default=min(32, mp.cpu_count() + 4),
         help='Max worker to run in parallel proccess, defaults to min(32, mp.cpu_count() + 4).'
     )
@@ -105,6 +109,7 @@ def main():
     output_image_suffix = args.output_image_suffix
     output_seg_suffix = args.output_seg_suffix
     augmentations_per_image = args.augmentations_per_image
+    labels2image = args.labels2image
     max_workers = args.max_workers
     verbose = args.verbose
     
@@ -124,6 +129,7 @@ def main():
             output_image_suffix = "{output_image_suffix}"
             output_seg_suffix = "{output_seg_suffix}"
             augmentations_per_image = "{augmentations_per_image}"
+            labels2image = "{labels2image}"
             max_workers = "{max_workers}"
             verbose = "{verbose}"
         '''))
@@ -150,6 +156,7 @@ def main():
         output_image_suffix=output_image_suffix,
         output_seg_suffix=output_seg_suffix,
         augmentations_per_image=augmentations_per_image,
+        labels2image=labels2image,
     )
 
     with mp.Pool() as pool:
@@ -167,6 +174,7 @@ def generate_augmentations(
         output_image_suffix,
         output_seg_suffix,
         augmentations_per_image,
+        labels2image,
     ):
     
     seg_path = segs_path / image_path.relative_to(images_path).parent /  image_path.name.replace(f'{image_suffix}.nii.gz', f'{seg_suffix}.nii.gz')
@@ -187,7 +195,7 @@ def generate_augmentations(
         augs = []
         
         # Randomly add aug_labels2image, aug_flip, aug_inverse with respective probabilities
-        if np.random.rand() < 0.1:
+        if labels2image and np.random.rand() < 0.1:
             augs.append(aug_labels2image)
         if np.random.rand() < 0.3:
             augs.append(aug_flip)
