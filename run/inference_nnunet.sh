@@ -62,7 +62,7 @@ nnUNetv2_apply_postprocessing -i ${OUTPUT_FOLDER}/206 -o ${OUTPUT_FOLDER}/206_pp
 # First we will use an iterative algorithm to label IVDs with the definite labels
 python totalsegmentator-mri/src/totalsegmri/utils/generate_labels_sequential.py -s ${OUTPUT_FOLDER}/206_pp -o ${OUTPUT_FOLDER}/210_input --output-seg-suffix _0001 --disc-labels 1 2 3 4 --init-disc 2:224 3:219 4:202 --combine-before-label
 # Then, we map the IVDs labels to the odd and even IVDs to use as the 2'nd channel of the second model.
-python totalsegmentator-mri/src/totalsegmri/utils/map_labels.py -s ${OUTPUT_FOLDER}/210_input -o ${OUTPUT_FOLDER}/210_input -m totalsegmentator-mri/src/totalsegmri/resources/labels_maps/nnunet_210_0001.json --seg-suffix _0001 --output-seg-suffix _0001
+python totalsegmentator-mri/src/totalsegmri/utils/map_labels.py -s ${OUTPUT_FOLDER}/210_input -o ${OUTPUT_FOLDER}/210_input -m totalsegmentator-mri/src/totalsegmri/resources/labels_maps/nnunet_step2_input.json --seg-suffix _0001 --output-seg-suffix _0001
 
 # For each of the created odd and even IVDs segmentation, copy the original image to use as the 1'st channel intp the second model input folder
 for i in ${OUTPUT_FOLDER}/210_input/*; do
@@ -77,7 +77,7 @@ nnUNetv2_apply_postprocessing -i ${OUTPUT_FOLDER}/210 -o ${OUTPUT_FOLDER}/210_pp
 python totalsegmentator-mri/src/totalsegmri/utils/generate_labels_sequential.py -s ${OUTPUT_FOLDER}/210_pp -o ${OUTPUT_FOLDER}/output  --disc-labels 2 3 4 5 6 --vertebrea-labels 8 9 10 11 12 --init-disc 4:224 5:219 6:202 --init-vertebrae 10:41 11:34 12:18
 
 # Use the spinal cord and canal form the first model output.
-python totalsegmentator-mri/src/totalsegmri/utils/map_labels.py -s ${OUTPUT_FOLDER}/206_pp -o ${OUTPUT_FOLDER}/output -m totalsegmentator-mri/src/totalsegmri/resources/labels_maps/nnunet_206_canal.json --add-output
+python totalsegmentator-mri/src/totalsegmri/utils/map_labels.py -s ${OUTPUT_FOLDER}/206_pp -o ${OUTPUT_FOLDER}/output -m 7:201 8:200 --add-output
 
 # Fix csf label to include all non cord spinal canal, this will put the spinal canal label in all the voxels (labeled as a backgroupn) between the spinal canal and the spinal cord.
 python totalsegmentator-mri/src/totalsegmri/utils/fix_csf_label.py -s ${OUTPUT_FOLDER}/output -o ${OUTPUT_FOLDER}/output
