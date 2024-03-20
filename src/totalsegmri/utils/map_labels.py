@@ -11,12 +11,13 @@ def main():
     # Parse command line arguments
     parser = argparse.ArgumentParser(
         description=textwrap.dedent(f'''
-            Map segmentation labels to other labels using json mapping file.
+            Map segmentation labels to other, new labels using json or a dict mapping.
         '''),
         epilog=textwrap.dedent('''
             Examples:
             map_labels -s labels -o labels_mapped -m map.json
-            map_labels -s labels -o labels_mapped  -m map.json -d sub- -s anat -w 32
+            map_labels -s labels -o labels_mapped -m 92:1 93:2
+            map_labels -s labels -o labels_mapped  -m map.json -d sub- -s anat
             For BIDS:
             map_labels -s derivatives/labels -o derivatives/labels -m map.json --seg-suffix "_seg" --output-seg-suffix "_seg_mapped" -d "sub-" -u "anat"
         '''),
@@ -32,8 +33,13 @@ def main():
         help='Folder to save output segmentations for each subject.'
     )
     parser.add_argument(
-        '--map', '-m', type=argparse.FileType('r', encoding='utf-8'), required=True,
-        help='JSON file mapping each mask to a unique number, e.g. {"1": 2, "2": 15}'
+        '--map', '-m', type=str, nargs='+', default=[],
+        help=textwrap.dedent('''
+            JSON file or dict mapping each input_label to an output_label.
+            The format should be input_label:output_label without any spaces.
+            For example, you can use a JSON file like map.json containing {"1": 2, "2": 15},
+            or provide a dict directly like 1:2 2:15
+        '''),
     )
     parser.add_argument(
         '--subject-dir', '-d', type=str, default=None, nargs='?', const='',
@@ -84,7 +90,7 @@ def main():
     # Get arguments
     segs_path = args.segs_dir
     output_path = args.output_dir
-    map_file = args.map
+    map_list = args.map
     subject_dir = args.subject_dir
     subject_subdir = args.subject_subdir
     prefix = args.prefix
@@ -100,7 +106,7 @@ def main():
             Running {Path(__file__).stem} with the following params:
             segs_dir = "{segs_path}"
             output_dir = "{output_path}"
-            map = "{map_file.name}"
+            map = {map_list}
             subject_dir = "{subject_dir}"
             subject_subdir = "{subject_subdir}"
             prefix = "{prefix}"
@@ -112,9 +118,16 @@ def main():
             verbose = {verbose}
         '''))
 
-    # Load label mappings from JSON file
-    map_dict = json.load(map_file)
-    map_file.close()
+    # Load map into a dict
+    if len(map_list) == 1 and map_list[0][-5:] == '.json':
+        # Load label mappings from JSON file
+        with open(map_list[0], 'r', encoding='utf-8') as map_file:
+            map_dict = json.load(map_file)
+    else:
+        try:
+            map_dict = {int(l_in): int(l_out) for l_in, l_out in map(lambda x:x.split(':'), map_list)}
+        except:
+            raise ValueError("Input param map is not in the right structure. Make sure it is in the right format, e.g., 1:2 3:5")
 
     glob_pattern = ""
     if subject_dir is not None:
