@@ -69,9 +69,14 @@ def main():
         '--default-input', action="store_true", default=False,
         help='Init output from input, defaults to false (init all to 0).'
     )
-    parser.add_argument(
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
         '--add-output', action="store_true", default=False,
-        help='Add new mapped labels to output if the output file exist, defaults to false (Overrite the output file).'
+        help='If the output file already exists, add all the labels from the existing output to the mapped input before saving (the labels from the output are prioritized), defaults to false (Overwrite the output file).'
+    )
+    group.add_argument(
+        '--add-input', action="store_true", default=False,
+        help='If the output file already exists, add the mapped input labels to the existing output labels before saving (the labels from the input are prioritized). Defaults to false (overwrite the output file).'
     )
     parser.add_argument(
         '--max-workers', '-w', type=int, default=min(32, mp.cpu_count() + 4),
@@ -98,6 +103,7 @@ def main():
     output_seg_suffix = args.output_seg_suffix
     default_input = args.default_input
     add_output = args.add_output
+    add_input = args.add_input
     max_workers = args.max_workers
     verbose = args.verbose
 
@@ -114,6 +120,7 @@ def main():
             output_seg_suffix = "{output_seg_suffix}"
             default_input = "{default_input}"
             add_output = "{add_output}"
+            add_input = "{add_input}"
             max_workers = "{max_workers}"
             verbose = {verbose}
         '''))
@@ -140,13 +147,13 @@ def main():
     segs_path_list = list(segs_path.glob(glob_pattern))
 
     # Create a partially-applied function with the extra arguments
-    partial_map_seg = partial(map_seg, segs_path=segs_path, map_dict=map_dict, output_path=output_path, seg_suffix=seg_suffix, output_seg_suffix=output_seg_suffix, add_output=add_output, default_input=default_input)
+    partial_map_seg = partial(map_seg, segs_path=segs_path, map_dict=map_dict, output_path=output_path, seg_suffix=seg_suffix, output_seg_suffix=output_seg_suffix, add_output=add_output, add_input=add_input, default_input=default_input)
 
     with mp.Pool() as pool:
         process_map(partial_map_seg, segs_path_list, max_workers=max_workers)
     
 
-def map_seg(seg_path, segs_path, map_dict, output_path, seg_suffix, output_seg_suffix, add_output, default_input):
+def map_seg(seg_path, segs_path, map_dict, output_path, seg_suffix, output_seg_suffix, add_output, add_input, default_input):
     
     output_seg_path = output_path / seg_path.relative_to(segs_path).parent / seg_path.name.replace(f'{seg_suffix}.nii.gz', f'{output_seg_suffix}.nii.gz')
 
@@ -165,7 +172,7 @@ def map_seg(seg_path, segs_path, map_dict, output_path, seg_suffix, output_seg_s
         mapped_seg_data[seg_data==int(orig)] = int(new)
 
     # Add new mapped labels to output
-    if add_output and output_seg_path.is_file():
+    if (add_output or add_input) and output_seg_path.is_file():
         # Load segmentation
         output_seg = nib.load(output_seg_path)
         output_seg_data = output_seg.get_fdata()
@@ -173,8 +180,13 @@ def map_seg(seg_path, segs_path, map_dict, output_path, seg_suffix, output_seg_s
         # Convert data to uint8 to avoid issues with segmentation IDs
         output_seg_data = output_seg_data.astype(np.uint8)
 
-        # Update output from existing output file
-        mapped_seg_data[output_seg_data != 0] = output_seg_data[output_seg_data != 0]
+        if add_output:
+            # Update output from existing output file
+            mapped_seg_data[output_seg_data != 0] = output_seg_data[output_seg_data != 0]
+        elif add_input:
+            # Update output from existing output file
+            output_seg_data[mapped_seg_data != 0] = mapped_seg_data[mapped_seg_data != 0]
+            mapped_seg_data = output_seg_data
 
     # Create result segmentation 
     mapped_seg = nib.Nifti1Image(mapped_seg_data, seg.affine, seg.header)
