@@ -7,6 +7,9 @@ import nibabel as nib
 import numpy as np
 import torchio as tio
 import gryds
+import warnings
+
+warnings.filterwarnings("ignore")
 
 
 def main():
