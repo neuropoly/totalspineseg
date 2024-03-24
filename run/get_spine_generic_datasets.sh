@@ -18,9 +18,12 @@ trap "echo Caught Keyboard Interrupt within script. Exiting now.; exit" INT
 # ======================================================================================================================
 
 
+# Set the paths to the BIDS data folders
+bids=data/bids
+
 # Make sure data/bids exists and enter it
-mkdir -p data/bids
-cd data/bids
+mkdir -p $bids
+cd $bids
 
 # Loop over two dataset directories: data-multi-subject and data-single-subject
 for ds in data-multi-subject data-single-subject; do

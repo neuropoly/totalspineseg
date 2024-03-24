@@ -17,66 +17,119 @@ trap "echo Caught Keyboard Interrupt within script. Exiting now.; exit" INT
 # SCRIPT STARTS HERE
 # ======================================================================================================================
 
-for d in 206 210; do
-    echo "Make nnUNet raw folders ($d)"
-    mkdir -p data/nnUNet/nnUNet_raw/Dataset${d}_TotalSegMRI/imagesTr
-    mkdir -p data/nnUNet/nnUNet_raw/Dataset${d}_TotalSegMRI/labelsTr
-    
-    echo "Copy dataset file"
-    if [ "$d" = "206" ]; then s=1; else s=2; fi
-    cp totalsegmentator-mri/src/totalsegmri/resources/datasets/dataset_step${s}.json data/nnUNet/nnUNet_raw/Dataset${d}_TotalSegMRI/dataset.json
-done
+# Set the path to the utils folder and resources
+utils=totalsegmentator-mri/src/totalsegmri/utils
+resources=totalsegmentator-mri/src/totalsegmri/resources
+
+# Set nnunet params
+nnUNet_raw=data/nnUNet/raw
+
+# Set the paths to the BIDS data folders
+bids=data/bids
+
+echo "Make nnUNet raw folders"
+mkdir -p $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr
+mkdir -p $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr
+mkdir -p $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr_PAM50
+mkdir -p $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr_PAM50
 
 # Convert from BIDS to nnUNet dataset, loop over each dataset
 for ds in spider data-single-subject data-multi-subject whole-spine; do
     echo "Working on $ds"
-
-    # Set segmentation file name based on dataset, 'seg' for 'spider', 'PAM50_seg' otherwise.
-    [ "$ds" = "spider" ] && seg="seg" || seg="PAM50_seg"
-
-    echo "Copy images and labels into the nnUNet dataset folder"
-    cp data/bids/$ds/sub-*/anat/sub-*.nii.gz data/nnUNet/nnUNet_raw/Dataset206_TotalSegMRI/imagesTr
-    cp data/bids/$ds/derivatives/labels/sub-*/anat/sub-*_$seg.nii.gz data/nnUNet/nnUNet_raw/Dataset206_TotalSegMRI/labelsTr
-    
     # Format dataset name by removing 'data-' and '-subject' or '-spine'
     dsn=${ds/data-/}; dsn=${dsn/-subject/}; dsn=${dsn/-spine/}
 
+    echo "Copy images and labels into the nnUNet dataset folder"
+    cp $bids/$ds/sub-*/anat/sub-*.nii.gz $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr
+    cp $bids/$ds/derivatives/labels/sub-*/anat/sub-*_totalsegmri.nii.gz $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr
+    # For single and multi subject datasets, in which there are missing labels get also PAM50_seg
+    if [ "$dsn" = "single" ] || [ "$dsn" = "multi" ]; then
+        cp $bids/$ds/derivatives/labels/sub-*/anat/sub-*_PAM50_seg.nii.gz $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr_PAM50
+    fi
     echo "Replace 'sub-' with dataset name"
-    for f in data/nnUNet/nnUNet_raw/Dataset206_TotalSegMRI/*Tr/sub-*.nii.gz; do mv $f ${f/sub-/${dsn}_}; done
-
-    echo "Remove _$seg from files name"
-    for f in data/nnUNet/nnUNet_raw/Dataset206_TotalSegMRI/labelsTr/*_$seg.nii.gz; do mv $f ${f/_$seg/}; done
+    for f in $nnUNet_raw/Dataset100_TotalSegMRI/*/sub-*.nii.gz; do mv $f ${f/sub-/${dsn}_}; done
 done
 
-echo "Append '_0000' to the images names"
-for f in data/nnUNet/nnUNet_raw/Dataset206_TotalSegMRI/imagesTr/*.nii.gz; do mv $f ${f/.nii.gz/_0000.nii.gz}; done
+echo "Remove _totalsegmri and PAM50_seg from files name"
+for f in $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr/*_totalsegmri.nii.gz; do mv $f ${f/_totalsegmri/}; done
+for f in $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr_PAM50/*_PAM50_seg.nii.gz; do mv $f ${f/_PAM50_seg/}; done
+
+echo "Copy images to imagesTr_PAM50 folder"
+for f in $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr_PAM50/*.nii.gz; do cp ${f/labelsTr_PAM50/imagesTr} ${f/labelsTr_PAM50/imagesTr_PAM50}; done
 
 echo "Remove images withot segmentation"
-for f in data/nnUNet/nnUNet_raw/Dataset206_TotalSegMRI/imagesTr/*.nii.gz; do if [ ! -f data/nnUNet/nnUNet_raw/Dataset206_TotalSegMRI/labelsTr/$(basename ${f/_0000.nii.gz/.nii.gz}) ]; then rm $f; fi; done
+for f in $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr*/*.nii.gz; do if [ ! -f ${f/imagesTr/labelsTr} ]; then rm $f; fi; done
 
-echo "Duplicate spider T2Sw X 7, whole X 5 to balance the dataset."
-for f in data/nnUNet/nnUNet_raw/Dataset206_TotalSegMRI/imagesTr/spider*_T2Sw_0000.nii.gz; do for i in {1..6}; do cp $f ${f/_0000.nii.gz/_${i}_0000.nii.gz}; done; done
-for f in data/nnUNet/nnUNet_raw/Dataset206_TotalSegMRI/labelsTr/spider*_T2Sw.nii.gz; do for i in {1..6}; do cp $f ${f/.nii.gz/_${i}.nii.gz}; done; done
-for f in data/nnUNet/nnUNet_raw/Dataset206_TotalSegMRI/imagesTr/whole*_0000.nii.gz; do for i in {1..4}; do cp $f ${f/_0000.nii.gz/_${i}_0000.nii.gz}; done; done
-for f in data/nnUNet/nnUNet_raw/Dataset206_TotalSegMRI/labelsTr/whole*.nii.gz; do for i in {1..4}; do cp $f ${f/.nii.gz/_${i}.nii.gz}; done; done
+echo "Remove _PAM50_seg images and labels when _totalsegmri exists"
+for f in $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr/*.nii.gz; do rm -f ${f/labelsTr/labelsTr_PAM50}; rm -f ${f/labelsTr/imagesTr_PAM50}; done
+
+echo "Append '_0000' to the images names"
+for f in $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr*/*.nii.gz; do mv $f ${f/.nii.gz/_0000.nii.gz}; done
 
 echo "Fix csf label to include all non cord spinal canal, this will put the spinal canal label in all the voxels (labeled as a backgroupn) between the spinal canal and the spinal cord."
-python totalsegmentator-mri/src/totalsegmri/utils/fix_csf_label.py -s data/nnUNet/nnUNet_raw/Dataset206_TotalSegMRI/labelsTr -o data/nnUNet/nnUNet_raw/Dataset206_TotalSegMRI/labelsTr
+python $utils/fix_csf_label.py -s $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr_PAM50 -o $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr_PAM50
 
-echo "Crop images and segmentations in the most anteior voxel of the lowest vertebrae in the image or at the lowest voxel of T12-L1 IVD (for SPIDER dataset)."
-for dsn in single multi whole; do
-    python totalsegmentator-mri/src/totalsegmri/utils/generate_croped_images.py -p ${dsn}_ -i data/nnUNet/nnUNet_raw/Dataset206_TotalSegMRI/imagesTr -s data/nnUNet/nnUNet_raw/Dataset206_TotalSegMRI/labelsTr -o data/nnUNet/nnUNet_raw/Dataset206_TotalSegMRI/imagesTr -g data/nnUNet/nnUNet_raw/Dataset206_TotalSegMRI/labelsTr
+echo "Crop _PAM50 images and segmentations in the most anteior voxel of the lowest vertebrae in the image."
+python $utils/generate_croped_images.py -i $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr_PAM50 -s $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr_PAM50 -o $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr_PAM50 -g $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr_PAM50
+
+echo "Move the cropped images and segmentations to the main folder"
+for f in $nnUNet_raw/Dataset100_TotalSegMRI/*_PAM50/*.nii.gz; do mv $f ${f/_PAM50/}; done
+rm -r $nnUNet_raw/Dataset100_TotalSegMRI/*_PAM50
+
+echo "Making test folders and moving 10% of the data to test folders"
+mkdir -p $nnUNet_raw/Dataset100_TotalSegMRI/imagesTs
+mkdir -p $nnUNet_raw/Dataset100_TotalSegMRI/labelsTs
+
+# Make sure each dataset and contrast has 10% of the data in the test folder
+for d in spider single multi whole; do
+    for c in T1w T2w T2Sw; do
+        files=($(for f in $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr/${d}_*${c}.nii.gz; do basename "${f/.nii.gz/}"; done))
+        files_shuf=($(shuf -e "${files[@]}"))
+        files_10p=(${files[@]:0:$((${#files[@]} * 10 / 100))})
+        for f in ${files_10p[@]}; do
+            mv $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr/${f}_0000.nii.gz $nnUNet_raw/Dataset100_TotalSegMRI/imagesTs;
+            mv $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr/${f}.nii.gz $nnUNet_raw/Dataset100_TotalSegMRI/labelsTs;
+        done
+    done
 done
-python totalsegmentator-mri/src/totalsegmri/utils/generate_croped_images.py -p spider_ -i data/nnUNet/nnUNet_raw/Dataset206_TotalSegMRI/imagesTr -s data/nnUNet/nnUNet_raw/Dataset206_TotalSegMRI/labelsTr -o data/nnUNet/nnUNet_raw/Dataset206_TotalSegMRI/imagesTr -g data/nnUNet/nnUNet_raw/Dataset206_TotalSegMRI/labelsTr --from-bottom
 
-echo "Copy from 206 to 210 dataset"
-for f in data/nnUNet/nnUNet_raw/Dataset206_TotalSegMRI/*Tr/*.nii.gz; do cp $f ${f/206/210}; done
+echo "Generate augmentations"
+cp -r $nnUNet_raw/Dataset100_TotalSegMRI $nnUNet_raw/Dataset110_TotalSegMRI_l2ia
 
-echo "Map labels to 210 2'nd channel"
-python totalsegmentator-mri/src/totalsegmri/utils/map_labels.py -m totalsegmentator-mri/src/totalsegmri/resources/labels_maps/nnunet_step2_input.json -s data/nnUNet/nnUNet_raw/Dataset210_TotalSegMRI/labelsTr -o data/nnUNet/nnUNet_raw/Dataset210_TotalSegMRI/imagesTr --output-seg-suffix _0001
+python $utils/generate_augmentations.py -i $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr -s $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr -o $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr -g $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr
+python $utils/generate_augmentations.py -i $nnUNet_raw/Dataset110_TotalSegMRI_l2ia/imagesTr -s $nnUNet_raw/Dataset110_TotalSegMRI_l2ia/labelsTr -o $nnUNet_raw/Dataset110_TotalSegMRI_l2ia/imagesTr -g $nnUNet_raw/Dataset110_TotalSegMRI_l2ia/labelsTr --labels2image
 
-for d in 206 210; do
-    echo "Map original labels to the dataset specific labels"
-    if [ "$d" = "206" ]; then s=1; else s=2; fi
-    python totalsegmentator-mri/src/totalsegmri/utils/map_labels.py -m totalsegmentator-mri/src/totalsegmri/resources/labels_maps/nnunet_step${s}.json -s data/nnUNet/nnUNet_raw/Dataset${d}_TotalSegMRI/labelsTr -o data/nnUNet/nnUNet_raw/Dataset${d}_TotalSegMRI/labelsTr
-done
+echo "Map labels form TotalSegMRI labels to the datasets specific label"
+cp -r $nnUNet_raw/Dataset100_TotalSegMRI $nnUNet_raw/Dataset101_TotalSegMRI_step1
+cp -r $nnUNet_raw/Dataset100_TotalSegMRI $nnUNet_raw/Dataset102_TotalSegMRI_step2
+cp -r $nnUNet_raw/Dataset100_TotalSegMRI $nnUNet_raw/Dataset103_TotalSegMRI_full
+
+cp -r $nnUNet_raw/Dataset110_TotalSegMRI_l2ia $nnUNet_raw/Dataset111_TotalSegMRI_step1_l2ia
+cp -r $nnUNet_raw/Dataset110_TotalSegMRI_l2ia $nnUNet_raw/Dataset112_TotalSegMRI_step2_l2ia
+cp -r $nnUNet_raw/Dataset110_TotalSegMRI_l2ia $nnUNet_raw/Dataset113_TotalSegMRI_full_l2ia
+
+python $utils/map_labels.py -m $resources/labels_maps/nnunet_step1.json -s $nnUNet_raw/Dataset101_TotalSegMRI_step1/labelsTr -o $nnUNet_raw/Dataset101_TotalSegMRI_step1/labelsTr
+python $utils/map_labels.py -m $resources/labels_maps/nnunet_step1.json -s $nnUNet_raw/Dataset101_TotalSegMRI_step1/labelsTs -o $nnUNet_raw/Dataset101_TotalSegMRI_step1/labelsTs
+python $utils/map_labels.py -m $resources/labels_maps/nnunet_step2_input.json -s $nnUNet_raw/Dataset102_TotalSegMRI_step2/labelsTr -o $nnUNet_raw/Dataset102_TotalSegMRI_step2/imagesTr --output-seg-suffix _0001
+python $utils/map_labels.py -m $resources/labels_maps/nnunet_step2_input.json -s $nnUNet_raw/Dataset102_TotalSegMRI_step2/labelsTs -o $nnUNet_raw/Dataset102_TotalSegMRI_step2/imagesTs --output-seg-suffix _0001
+python $utils/map_labels.py -m $resources/labels_maps/nnunet_step2.json -s $nnUNet_raw/Dataset102_TotalSegMRI_step2/labelsTr -o $nnUNet_raw/Dataset102_TotalSegMRI_step2/labelsTr
+python $utils/map_labels.py -m $resources/labels_maps/nnunet_step2.json -s $nnUNet_raw/Dataset102_TotalSegMRI_step2/labelsTs -o $nnUNet_raw/Dataset102_TotalSegMRI_step2/labelsTs
+python $utils/map_labels.py -m $resources/labels_maps/nnunet_full.json -s $nnUNet_raw/Dataset103_TotalSegMRI_full/labelsTr -o $nnUNet_raw/Dataset103_TotalSegMRI_full/labelsTr
+python $utils/map_labels.py -m $resources/labels_maps/nnunet_full.json -s $nnUNet_raw/Dataset103_TotalSegMRI_full/labelsTs -o $nnUNet_raw/Dataset103_TotalSegMRI_full/labelsTs
+
+python $utils/map_labels.py -m $resources/labels_maps/nnunet_step1.json -s $nnUNet_raw/Dataset111_TotalSegMRI_step1_l2ia/labelsTr -o $nnUNet_raw/Dataset111_TotalSegMRI_step1_l2ia/labelsTr
+python $utils/map_labels.py -m $resources/labels_maps/nnunet_step1.json -s $nnUNet_raw/Dataset111_TotalSegMRI_step1_l2ia/labelsTs -o $nnUNet_raw/Dataset111_TotalSegMRI_step1_l2ia/labelsTs
+python $utils/map_labels.py -m $resources/labels_maps/nnunet_step2_input.json -s $nnUNet_raw/Dataset112_TotalSegMRI_step2_l2ia/labelsTr -o $nnUNet_raw/Dataset112_TotalSegMRI_step2_l2ia/imagesTr --output-seg-suffix _0001
+python $utils/map_labels.py -m $resources/labels_maps/nnunet_step2_input.json -s $nnUNet_raw/Dataset112_TotalSegMRI_step2_l2ia/labelsTs -o $nnUNet_raw/Dataset112_TotalSegMRI_step2_l2ia/imagesTs --output-seg-suffix _0001
+python $utils/map_labels.py -m $resources/labels_maps/nnunet_step2.json -s $nnUNet_raw/Dataset112_TotalSegMRI_step2_l2ia/labelsTr -o $nnUNet_raw/Dataset112_TotalSegMRI_step2_l2ia/labelsTr
+python $utils/map_labels.py -m $resources/labels_maps/nnunet_step2.json -s $nnUNet_raw/Dataset112_TotalSegMRI_step2_l2ia/labelsTs -o $nnUNet_raw/Dataset112_TotalSegMRI_step2_l2ia/labelsTs
+python $utils/map_labels.py -m $resources/labels_maps/nnunet_full.json -s $nnUNet_raw/Dataset113_TotalSegMRI_full_l2ia/labelsTr -o $nnUNet_raw/Dataset113_TotalSegMRI_full_l2ia/labelsTr
+python $utils/map_labels.py -m $resources/labels_maps/nnunet_full.json -s $nnUNet_raw/Dataset113_TotalSegMRI_full_l2ia/labelsTs -o $nnUNet_raw/Dataset113_TotalSegMRI_full_l2ia/labelsTs
+
+echo "Copy dataset files"
+cp $resources/datasets/dataset_step1.json $nnUNet_raw/Dataset101_TotalSegMRI_step1/dataset.json
+cp $resources/datasets/dataset_step2.json $nnUNet_raw/Dataset102_TotalSegMRI_step2/dataset.json
+cp $resources/datasets/dataset_full.json $nnUNet_raw/Dataset103_TotalSegMRI_full/dataset.json
+cp $resources/datasets/dataset_step1.json $nnUNet_raw/Dataset111_TotalSegMRI_step1_l2ia/dataset.json
+cp $resources/datasets/dataset_step2.json $nnUNet_raw/Dataset112_TotalSegMRI_step2_l2ia/dataset.json
+cp $resources/datasets/dataset_full.json $nnUNet_raw/Dataset113_TotalSegMRI_full_l2ia/dataset.json
