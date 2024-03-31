@@ -36,10 +36,13 @@ export nnUNet_results=data/nnUNet/results
 export nnUNet_tests=data/nnUNet/tests
 export nnUNet_exports=data/nnUNet/exports
 
-# Set the fold to work with
-FOLD=0
-# Set the datasets to work with if provided, otherwise work with all datasets
-DATASETS=${@:-101 102 103 111 112 113}
+nnUNetTrainer=nnUNetTrainer_8000epochs
+
+# Set the datasets to work with - default is 101 102 103
+DATASETS=${1:-101 102 103}
+
+# Set the fold to work with - default is 0
+FOLD=${2:-0}
 
 echo "Working with datasets: $DATASETS"
 
@@ -54,16 +57,16 @@ for d in ${DATASETS[@]}; do
     fi
     
     echo "Train nnUNet model for dataset $d_name"
-    nnUNetv2_train $d 3d_fullres $FOLD -tr nnUNetTrainer_4000epochs --npz
+    nnUNetv2_train $d 3d_fullres $FOLD -tr $nnUNetTrainer --npz
 
     echo "Export the model for dataset $d_name in $nnUNet_exports"
     mkdir -p $nnUNet_exports
     mkdir -p $nnUNet_results/$d_name/ensembles
-    nnUNetv2_export_model_to_zip -d $d -o $nnUNet_exports/${d_name}.zip -c 3d_fullres -f $FOLD -tr nnUNetTrainer_4000epochs
+    nnUNetv2_export_model_to_zip -d $d -o $nnUNet_exports/${d_name}.zip -c 3d_fullres -f $FOLD -tr $nnUNetTrainer
 
     echo "Testing nnUNet model for dataset $d_name"
     mkdir -p $nnUNet_tests/$d_name
-    nnUNetv2_predict -d $d -i $nnUNet_raw/$d_name/imagesTs -o $nnUNet_tests/$d_name -f $FOLD -c 3d_fullres -tr nnUNetTrainer_4000epochs -npp $JOBS -nps $JOBS
-    nnUNetv2_evaluate_folder $nnUNet_raw/$d_name/labelsTs $nnUNet_tests/$d_name -djfile $nnUNet_results/$d_name/nnUNetTrainer_4000epochs__nnUNetPlans__3d_fullres/dataset.json -pfile $nnUNet_results/$d_name/nnUNetTrainer_4000epochs__nnUNetPlans__3d_fullres/plans.json -np $JOBS
+    nnUNetv2_predict -d $d -i $nnUNet_raw/$d_name/imagesTs -o $nnUNet_tests/$d_name -f $FOLD -c 3d_fullres -tr $nnUNetTrainer -npp $JOBS -nps $JOBS
+    nnUNetv2_evaluate_folder $nnUNet_raw/$d_name/labelsTs $nnUNet_tests/$d_name -djfile $nnUNet_results/$d_name/${nnUNetTrainer}__nnUNetPlans__3d_fullres/dataset.json -pfile $nnUNet_results/$d_name/${nnUNetTrainer}__nnUNetPlans__3d_fullres/plans.json -np $JOBS
 
 done

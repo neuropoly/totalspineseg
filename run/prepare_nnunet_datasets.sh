@@ -97,19 +97,12 @@ for d in spider single multi whole; do
 done
 
 echo "Generate augmentations"
-cp -r $nnUNet_raw/Dataset100_TotalSegMRI $nnUNet_raw/Dataset110_TotalSegMRI_l2ia
-
-python $utils/generate_augmentations.py -i $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr -s $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr -o $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr -g $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr
-python $utils/generate_augmentations.py -i $nnUNet_raw/Dataset110_TotalSegMRI_l2ia/imagesTr -s $nnUNet_raw/Dataset110_TotalSegMRI_l2ia/labelsTr -o $nnUNet_raw/Dataset110_TotalSegMRI_l2ia/imagesTr -g $nnUNet_raw/Dataset110_TotalSegMRI_l2ia/labelsTr --labels2image
+python $utils/generate_augmentations.py -i $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr -s $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr -o $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr -g $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr --labels2image
 
 echo "Map labels form TotalSegMRI labels to the datasets specific label"
 cp -r $nnUNet_raw/Dataset100_TotalSegMRI $nnUNet_raw/Dataset101_TotalSegMRI_step1
 cp -r $nnUNet_raw/Dataset100_TotalSegMRI $nnUNet_raw/Dataset102_TotalSegMRI_step2
 cp -r $nnUNet_raw/Dataset100_TotalSegMRI $nnUNet_raw/Dataset103_TotalSegMRI_full
-
-cp -r $nnUNet_raw/Dataset110_TotalSegMRI_l2ia $nnUNet_raw/Dataset111_TotalSegMRI_step1_l2ia
-cp -r $nnUNet_raw/Dataset110_TotalSegMRI_l2ia $nnUNet_raw/Dataset112_TotalSegMRI_step2_l2ia
-cp -r $nnUNet_raw/Dataset110_TotalSegMRI_l2ia $nnUNet_raw/Dataset113_TotalSegMRI_full_l2ia
 
 python $utils/map_labels.py -m $resources/labels_maps/nnunet_step1.json -s $nnUNet_raw/Dataset101_TotalSegMRI_step1/labelsTr -o $nnUNet_raw/Dataset101_TotalSegMRI_step1/labelsTr
 python $utils/map_labels.py -m $resources/labels_maps/nnunet_step1.json -s $nnUNet_raw/Dataset101_TotalSegMRI_step1/labelsTs -o $nnUNet_raw/Dataset101_TotalSegMRI_step1/labelsTs
@@ -120,19 +113,7 @@ python $utils/map_labels.py -m $resources/labels_maps/nnunet_step2.json -s $nnUN
 python $utils/map_labels.py -m $resources/labels_maps/nnunet_full.json -s $nnUNet_raw/Dataset103_TotalSegMRI_full/labelsTr -o $nnUNet_raw/Dataset103_TotalSegMRI_full/labelsTr
 python $utils/map_labels.py -m $resources/labels_maps/nnunet_full.json -s $nnUNet_raw/Dataset103_TotalSegMRI_full/labelsTs -o $nnUNet_raw/Dataset103_TotalSegMRI_full/labelsTs
 
-python $utils/map_labels.py -m $resources/labels_maps/nnunet_step1.json -s $nnUNet_raw/Dataset111_TotalSegMRI_step1_l2ia/labelsTr -o $nnUNet_raw/Dataset111_TotalSegMRI_step1_l2ia/labelsTr
-python $utils/map_labels.py -m $resources/labels_maps/nnunet_step1.json -s $nnUNet_raw/Dataset111_TotalSegMRI_step1_l2ia/labelsTs -o $nnUNet_raw/Dataset111_TotalSegMRI_step1_l2ia/labelsTs
-python $utils/map_labels.py -m $resources/labels_maps/nnunet_step2_input.json -s $nnUNet_raw/Dataset112_TotalSegMRI_step2_l2ia/labelsTr -o $nnUNet_raw/Dataset112_TotalSegMRI_step2_l2ia/imagesTr --output-seg-suffix _0001
-python $utils/map_labels.py -m $resources/labels_maps/nnunet_step2_input.json -s $nnUNet_raw/Dataset112_TotalSegMRI_step2_l2ia/labelsTs -o $nnUNet_raw/Dataset112_TotalSegMRI_step2_l2ia/imagesTs --output-seg-suffix _0001
-python $utils/map_labels.py -m $resources/labels_maps/nnunet_step2.json -s $nnUNet_raw/Dataset112_TotalSegMRI_step2_l2ia/labelsTr -o $nnUNet_raw/Dataset112_TotalSegMRI_step2_l2ia/labelsTr
-python $utils/map_labels.py -m $resources/labels_maps/nnunet_step2.json -s $nnUNet_raw/Dataset112_TotalSegMRI_step2_l2ia/labelsTs -o $nnUNet_raw/Dataset112_TotalSegMRI_step2_l2ia/labelsTs
-python $utils/map_labels.py -m $resources/labels_maps/nnunet_full.json -s $nnUNet_raw/Dataset113_TotalSegMRI_full_l2ia/labelsTr -o $nnUNet_raw/Dataset113_TotalSegMRI_full_l2ia/labelsTr
-python $utils/map_labels.py -m $resources/labels_maps/nnunet_full.json -s $nnUNet_raw/Dataset113_TotalSegMRI_full_l2ia/labelsTs -o $nnUNet_raw/Dataset113_TotalSegMRI_full_l2ia/labelsTs
-
 echo "Copy dataset files"
 cp $resources/datasets/dataset_step1.json $nnUNet_raw/Dataset101_TotalSegMRI_step1/dataset.json
 cp $resources/datasets/dataset_step2.json $nnUNet_raw/Dataset102_TotalSegMRI_step2/dataset.json
 cp $resources/datasets/dataset_full.json $nnUNet_raw/Dataset103_TotalSegMRI_full/dataset.json
-cp $resources/datasets/dataset_step1.json $nnUNet_raw/Dataset111_TotalSegMRI_step1_l2ia/dataset.json
-cp $resources/datasets/dataset_step2.json $nnUNet_raw/Dataset112_TotalSegMRI_step2_l2ia/dataset.json
-cp $resources/datasets/dataset_full.json $nnUNet_raw/Dataset113_TotalSegMRI_full_l2ia/dataset.json
