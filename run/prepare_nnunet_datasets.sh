@@ -76,6 +76,9 @@ echo "Move the cropped images and segmentations to the main folder"
 for f in $nnUNet_raw/Dataset100_TotalSegMRI/*_PAM50/*.nii.gz; do mv $f ${f/_PAM50/}; done
 rm -r $nnUNet_raw/Dataset100_TotalSegMRI/*_PAM50
 
+echo "Transform labels to images space"
+python $utils/transform_labels2images.py -i $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr -s $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr -o $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr
+
 echo "Making test folders and moving 10% of the data to test folders"
 mkdir -p $nnUNet_raw/Dataset100_TotalSegMRI/imagesTs
 mkdir -p $nnUNet_raw/Dataset100_TotalSegMRI/labelsTs
@@ -85,7 +88,7 @@ for d in spider single multi whole; do
     for c in T1w T2w T2Sw; do
         files=($(for f in $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr/${d}_*${c}.nii.gz; do basename "${f/.nii.gz/}"; done))
         files_shuf=($(shuf -e "${files[@]}"))
-        files_10p=(${files[@]:0:$((${#files[@]} * 10 / 100))})
+        files_10p=(${files_shuf[@]:0:$((${#files_shuf[@]} * 10 / 100))})
         for f in ${files_10p[@]}; do
             mv $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr/${f}_0000.nii.gz $nnUNet_raw/Dataset100_TotalSegMRI/imagesTs;
             mv $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr/${f}.nii.gz $nnUNet_raw/Dataset100_TotalSegMRI/labelsTs;

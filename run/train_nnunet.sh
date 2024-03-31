@@ -36,6 +36,8 @@ export nnUNet_results=data/nnUNet/results
 export nnUNet_tests=data/nnUNet/tests
 export nnUNet_exports=data/nnUNet/exports
 
+# Set the fold to work with
+FOLD=0
 # Set the datasets to work with if provided, otherwise work with all datasets
 DATASETS=${@:-101 102 103 111 112 113}
 
@@ -44,22 +46,24 @@ echo "Working with datasets: $DATASETS"
 for d in ${DATASETS[@]}; do
 
     # Get the dataset name
-    for f in $nnUNet_raw/Dataset${d}_TotalSegMRI*; do d_name=$(basename $f); done
+    d_name=$(basename $(ls -d $nnUNet_raw/Dataset${d}_TotalSegMRI*))
     
-    echo "Preprocess dataset $d_name"
-    nnUNetv2_plan_and_preprocess -d $d -c 3d_fullres -npfp $JOBS -np $JOBS --verify_dataset_integrity
+    if [ ! -d $nnUNet_preprocessed/Dataset${d}_TotalSegMRI* ]; then
+        echo "Preprocess dataset $d_name"
+        nnUNetv2_plan_and_preprocess -d $d -c 3d_fullres -npfp $JOBS -np $JOBS --verify_dataset_integrity
+    fi
     
     echo "Train nnUNet model for dataset $d_name"
-    nnUNetv2_train $d 3d_fullres 0 --npz
+    nnUNetv2_train $d 3d_fullres $FOLD -tr nnUNetTrainer_4000epochs --npz
 
     echo "Export the model for dataset $d_name in $nnUNet_exports"
     mkdir -p $nnUNet_exports
     mkdir -p $nnUNet_results/$d_name/ensembles
-    nnUNetv2_export_model_to_zip -d $d -o $nnUNet_exports/${d_name}.zip -c 3d_fullres -f 0
+    nnUNetv2_export_model_to_zip -d $d -o $nnUNet_exports/${d_name}.zip -c 3d_fullres -f $FOLD -tr nnUNetTrainer_4000epochs
 
     echo "Testing nnUNet model for dataset $d_name"
     mkdir -p $nnUNet_tests/$d_name
-    nnUNetv2_predict -d $d -i $nnUNet_raw/$d_name/imagesTs -o $nnUNet_tests/$d_name -f 0 -c 3d_fullres -npp $JOBS -nps $JOBS
-    nnUNetv2_evaluate_folder $nnUNet_raw/$d_name/labelsTs $nnUNet_tests/$d_name -djfile $nnUNet_results/$d_name/nnUNetTrainer__nnUNetPlans__3d_fullres/dataset.json -pfile $nnUNet_results/$d_name/nnUNetTrainer__nnUNetPlans__3d_fullres/plans.json -np $JOBS
+    nnUNetv2_predict -d $d -i $nnUNet_raw/$d_name/imagesTs -o $nnUNet_tests/$d_name -f $FOLD -c 3d_fullres -tr nnUNetTrainer_4000epochs -npp $JOBS -nps $JOBS
+    nnUNetv2_evaluate_folder $nnUNet_raw/$d_name/labelsTs $nnUNet_tests/$d_name -djfile $nnUNet_results/$d_name/nnUNetTrainer_4000epochs__nnUNetPlans__3d_fullres/dataset.json -pfile $nnUNet_results/$d_name/nnUNetTrainer_4000epochs__nnUNetPlans__3d_fullres/plans.json -np $JOBS
 
 done
