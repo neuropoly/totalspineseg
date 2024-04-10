@@ -70,7 +70,7 @@ for d in ${DATASETS[@]}; do
     nnUNetv2_export_model_to_zip -d $d -o $nnUNet_exports/${d_name}_fold_$FOLD.zip -c 3d_fullres -f $FOLD -tr $nnUNetTrainer
 
     echo "Testing nnUNet model for dataset $d_name"
-    mkdir -p $nnUNet_tests/$d_name
+    mkdir -p $nnUNet_tests/${d_name}_fold_$FOLD
     nnUNetv2_predict -d $d -i $nnUNet_raw/$d_name/imagesTs -o $nnUNet_tests/${d_name}_fold_$FOLD -f $FOLD -c 3d_fullres -tr $nnUNetTrainer -npp $JOBS -nps $JOBS
     nnUNetv2_evaluate_folder $nnUNet_raw/$d_name/labelsTs $nnUNet_tests/${d_name}_fold_$FOLD -djfile $nnUNet_results/$d_name/${nnUNetTrainer}__nnUNetPlans__3d_fullres/dataset.json -pfile $nnUNet_results/$d_name/${nnUNetTrainer}__nnUNetPlans__3d_fullres/plans.json -np $JOBS
 
