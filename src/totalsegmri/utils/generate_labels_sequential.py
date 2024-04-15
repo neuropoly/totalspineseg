@@ -1,5 +1,5 @@
 import sys, argparse, textwrap
-from scipy.ndimage import label, binary_dilation, generate_binary_structure, iterate_structure
+from scipy.ndimage import label, binary_dilation, generate_binary_structure, iterate_structure, center_of_mass
 from pathlib import Path
 import numpy as np
 import nibabel as nib
@@ -80,6 +80,14 @@ def main():
         help='The step to take between vertebrae labels in the output, defaults to -1.'
     )
     parser.add_argument(
+        '--vertebrae-sacrum-label', type=lambda x:tuple(map(int, x.split(':'))), default=(),
+        help=textwrap.dedent('''
+            The sacrum label, the vertebrae label from which the sacrum begine and the output sacrum label.
+             It will map all the subsequence label in the vertebrae labeling loop to the sacrum
+             (input_sacrum_label:output_vert_label:output_sacrum_label !!without space!!). for example 14:17:92
+        '''),
+    )
+    parser.add_argument(
         '--csf-labels', type=int, nargs='+', default=[],
         help='The CSF label.'
     )
@@ -102,6 +110,14 @@ def main():
     parser.add_argument(
         '--combine-before-label', action="store_true", default=False,
         help='Combine all labels before label continue voxels, defaults to false (label continue voxels separatly for each label).'
+    )
+    parser.add_argument(
+        '--step-diff-label', action="store_true", default=False,
+        help=textwrap.dedent('''
+            Make step only for different labels. When looping on the labels on the z axis, it will give a new label to the next label only
+             if it is different from the previous label. This is useful if there are labels for odd and even vertebrae, so the next label will
+             be for even vertebrae only if the previous label was odd. If it is still odd, it should give the same label.
+        '''),
     )
     parser.add_argument(
         '--max-workers', '-w', type=int, default=min(32, mp.cpu_count() + 4),
@@ -132,11 +148,13 @@ def main():
     init_vertebrae = dict(args.init_vertebrae)
     output_vertebrea_step = args.output_vertebrea_step
     csf_labels = args.csf_labels
+    vertebrae_sacrum_label = args.vertebrae_sacrum_label
     output_csf_label = args.output_csf_label
     sc_labels = args.sc_labels
     output_sc_label = args.output_sc_label
     dilation_size = args.dilation_size
     combine_before_label = args.combine_before_label
+    step_diff_label = args.step_diff_label
     max_workers = args.max_workers
     verbose = args.verbose
 
@@ -156,12 +174,14 @@ def main():
             vertebrea_labels = "{vertebrea_labels}"
             init_vertebrae = "{init_vertebrae}"
             output_vertebrea_step = "{output_vertebrea_step}"
+            vertebrae_sacrum_label = "{vertebrae_sacrum_label}"
             csf_labels = "{csf_labels}"
             output_csf_label = "{output_csf_label}"
             sc_labels = "{sc_labels}"
             output_sc_label = "{output_sc_label}"
             dilation_size = "{dilation_size}"
             combine_before_label = "{combine_before_label}"
+            step_diff_label = "{step_diff_label}"
             max_workers = "{max_workers}"
             verbose = {verbose}
         '''))
@@ -189,12 +209,14 @@ def main():
         vertebrea_labels=vertebrea_labels,
         init_vertebrae=init_vertebrae,
         output_vertebrea_step=output_vertebrea_step,
+        vertebrae_sacrum_label=vertebrae_sacrum_label,
         csf_labels=csf_labels,
         output_csf_label=output_csf_label,
         sc_labels=sc_labels,
         output_sc_label=output_sc_label,
         dilation_size=dilation_size,
         combine_before_label=combine_before_label,
+        step_diff_label=step_diff_label,
    )
 
     with mp.Pool() as pool:
@@ -213,12 +235,14 @@ def generate_labels_sequential(
             vertebrea_labels,
             init_vertebrae,
             output_vertebrea_step,
+            vertebrae_sacrum_label,
             csf_labels,
             output_csf_label,
             sc_labels,
             output_sc_label,
             dilation_size,
             combine_before_label,
+            step_diff_label,
         ):
     
     output_seg_path = output_path / seg_path.relative_to(segs_path).parent / seg_path.name.replace(f'{seg_suffix}.nii.gz', f'{output_seg_suffix}.nii.gz')
@@ -237,14 +261,11 @@ def generate_labels_sequential(
     # Set CSF label
     seg_data[np.isin(seg_data_src, csf_labels)] = output_csf_label
 
-    # Create an array of z indices
-    z_indices = np.broadcast_to(np.arange(seg_data_src.shape[2]), seg_data_src.shape)
-
     binary_dilation_structure = iterate_structure(generate_binary_structure(3, 1), dilation_size)
 
-    for labels, step, init in (
-        (disc_labels, output_disc_step, init_disc),
-        (vertebrea_labels, output_vertebrea_step, init_vertebrae)):
+    for labels, step, init, is_vert in (
+        (disc_labels, output_disc_step, init_disc, False),
+        (vertebrea_labels, output_vertebrea_step, init_vertebrae, True)):
 
         if len(labels) == 0:
             continue
@@ -256,30 +277,57 @@ def generate_labels_sequential(
             mask_labeled, num_labels = np.zeros_like(seg_data_src), 0
             for l in labels:
                 mask = seg_data_src == l
+                # Dilate
                 tmp_mask_labeled, tmp_num_labels = label(binary_dilation(mask, binary_dilation_structure), np.ones((3, 3, 3)))
+                # Undo dilate
                 tmp_mask_labeled *= mask
                 if tmp_num_labels > 0:
                     mask_labeled[tmp_mask_labeled != 0] = tmp_mask_labeled[tmp_mask_labeled != 0] + num_labels
                     num_labels += tmp_num_labels
 
-        # Get the z-axis index for each label
-        mask_labeled_z_indexes = [np.max(z_indices[mask_labeled==i]) for i in range(1, num_labels+1)]
+        # Get the z index of the center of mass for each label
+        mask_labeled_z_indexes = [_[-1] for _ in center_of_mass(mask_labeled != 0, mask_labeled, range(1, num_labels + 1))]
 
         # Sort the labels by their z-index (reversed)
         sorted_labels = [x for _,x in sorted(zip(mask_labeled_z_indexes,range(1,num_labels+1)))][::-1]
 
+        # Combine sequential labels if they have the same value in the original segmentation
+        if step_diff_label and len(labels) - len(init) > 1:
+            new_sorted_labels = []
+            prev = 0, 0 # Label, Previous label
+            for l in sorted_labels:
+                curr_orig_label = seg_data_src[mask_labeled == l].flat[0]
+                if curr_orig_label == prev[1]:
+                    mask_labeled[mask_labeled == l] = prev[0]
+                    num_labels -= 1
+                else:
+                    new_sorted_labels.append(l)
+                    prev = l, curr_orig_label
+            sorted_labels = new_sorted_labels
+
         first_label = 0
         for k, v in init.items():
             if k in seg_data_src:
-                first_label = v - step * sorted_labels.index(np.min(mask_labeled[seg_data_src == k]))
+                first_label = v - step * sorted_labels.index(mask_labeled[seg_data_src == k].flat[0])
                 break
 
         if first_label == 0:
             print(f"Error: {seg_path}, some initiation label must be in the segmentation (init: {init.keys()})")
             return
 
+        is_sacrum = False
         for i in range(num_labels):
-            seg_data[mask_labeled == sorted_labels[i]] = first_label + step * i
+            target_label = first_label + step * i
+            if is_vert and len(vertebrae_sacrum_label) == 3 and vertebrae_sacrum_label[1] == target_label:
+                is_sacrum = True
+            if is_sacrum:
+                target_label = vertebrae_sacrum_label[2]
+            else:
+                seg_data[mask_labeled == sorted_labels[i]] = target_label
+
+    # Set sacrum label
+    if len(vertebrae_sacrum_label) == 3:
+        seg_data[seg_data_src == vertebrae_sacrum_label[0]] = vertebrae_sacrum_label[2]
 
     # Create result segmentation
     seg = nib.Nifti1Image(seg_data, seg.affine, seg.header)
