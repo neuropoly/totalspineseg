@@ -63,7 +63,7 @@ nnUNetv2_apply_postprocessing -i ${OUTPUT_FOLDER}/206 -o ${OUTPUT_FOLDER}/206_pp
 
 # Distinguished odd and even IVDs based on the C2-C3, C7-T1 and L5-S1 IVD labels output by the first model:
 # First we will use an iterative algorithm to label IVDs with the definite labels
-python $utils/generate_labels_sequential.py -s ${OUTPUT_FOLDER}/206_pp -o ${OUTPUT_FOLDER}/210_input --output-seg-suffix _0001 --disc-labels 1 2 3 4 --init-disc 2:224 3:219 4:202 --combine-before-label
+python $utils/generate_labels_sequential.py -s ${OUTPUT_FOLDER}/206_pp -o ${OUTPUT_FOLDER}/210_input --output-seg-suffix _0001 --disc-labels 1 2 3 4 5 --init-disc 2:224 3:219 4:207 5:202 --combine-before-label
 # Then, we map the IVDs labels to the odd and even IVDs to use as the 2'nd channel of the second model.
 python $utils/map_labels.py -s ${OUTPUT_FOLDER}/210_input -o ${OUTPUT_FOLDER}/210_input -m totalsegmentator-mri/src/totalsegmri/resources/labels_maps/nnunet_step2_input.json --seg-suffix _0001 --output-seg-suffix _0001
 
@@ -77,7 +77,7 @@ nnUNetv2_predict -d 210 -i ${OUTPUT_FOLDER}/210_input -o ${OUTPUT_FOLDER}/210 -f
 nnUNetv2_apply_postprocessing -i ${OUTPUT_FOLDER}/210 -o ${OUTPUT_FOLDER}/210_pp -pp_pkl_file $nnUNet_results/Dataset210_TotalSegMRI/nnUNetTrainer__nnUNetPlans__3d_fullres/crossval_results_folds_0_1_2_3_4/postprocessing.pkl -np $JOBS -plans_json $nnUNet_results/Dataset210_TotalSegMRI/nnUNetTrainer__nnUNetPlans__3d_fullres/plans.json
 
 # Use an iterative algorithm to to assign an individual label value to each vertebrae and IVD in the final segmentation mask.
-python $utils/generate_labels_sequential.py -s ${OUTPUT_FOLDER}/210_pp -o ${OUTPUT_FOLDER}/output  --disc-labels 2 3 4 5 6 --vertebrea-labels 8 9 10 11 12 --init-disc 4:224 5:219 6:202 --init-vertebrae 10:41 11:34 12:18
+python $utils/generate_labels_sequential.py -s ${OUTPUT_FOLDER}/210_pp -o ${OUTPUT_FOLDER}/output --csf-labels 16 --sc-labels 17 --disc-labels 2 3 4 5 6 7 --vertebrea-labels 9 10 11 12 13 14 --init-disc 4:224 5:219 6:207 7:202 --init-vertebrae 11:41 12:34 13:22 14:17 --vertebrae-sacrum-label 14:17:92 --step-diff-label
 
 # Use the spinal cord and canal form the first model output.
 python $utils/map_labels.py -s ${OUTPUT_FOLDER}/206_pp -o ${OUTPUT_FOLDER}/output -m 7:201 8:200 --add-output
