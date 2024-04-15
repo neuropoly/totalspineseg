@@ -4,7 +4,7 @@
     },
     "labels": {
         "background": 0,
-        "disc": [1,2,3,4],
+        "disc": [1,2,3,4,5],
         "disc_C2_C3": 2,
         "disc_C7_T1": 3,
         "disc_T12_L1": 4,
