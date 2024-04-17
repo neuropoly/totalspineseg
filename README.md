@@ -9,7 +9,7 @@ Tool for automatic segmentation and labelling of all vertebrae and intervertebra
 - [Inference](#inference)
 - [List of class](#list-of-class)
 
-![Thumbnail](https://github.com/neuropoly/totalsegmentator-mri/assets/36595323/ceca5bb7-f370-477a-8b21-9774853948c6)
+![Thumbnail](https://github.com/neuropoly/totalsegmentator-mri/assets/36595323/c7a4a951-fcb9-43a2-8c9c-9fafa33e4d67)
 
 ## Dependencies
 
