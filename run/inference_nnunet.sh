@@ -77,7 +77,7 @@ nnUNetv2_predict -d 210 -i ${OUTPUT_FOLDER}/210_input -o ${OUTPUT_FOLDER}/210 -f
 nnUNetv2_apply_postprocessing -i ${OUTPUT_FOLDER}/210 -o ${OUTPUT_FOLDER}/210_pp -pp_pkl_file $nnUNet_results/Dataset210_TotalSegMRI/nnUNetTrainer__nnUNetPlans__3d_fullres/crossval_results_folds_0_1_2_3_4/postprocessing.pkl -np $JOBS -plans_json $nnUNet_results/Dataset210_TotalSegMRI/nnUNetTrainer__nnUNetPlans__3d_fullres/plans.json
 
 # Use an iterative algorithm to to assign an individual label value to each vertebrae and IVD in the final segmentation mask.
-python $utils/generate_labels_sequential.py -s ${OUTPUT_FOLDER}/210_pp -o ${OUTPUT_FOLDER}/output --csf-labels 16 --sc-labels 17 --disc-labels 2 3 4 5 6 7 --vertebrea-labels 9 10 11 12 13 14 --init-disc 4:224 5:219 6:207 7:202 --init-vertebrae 11:41 12:34 13:22 14:17 --vertebrae-sacrum-label 14:17:92 --step-diff-label
+python $utils/generate_labels_sequential.py -s ${OUTPUT_FOLDER}/210_pp -o ${OUTPUT_FOLDER}/output --csf-labels 16 --sc-labels 17 --disc-labels 2 3 4 5 6 7 --vertebrea-labels 9 10 11 12 13 --init-disc 4:224 5:219 6:207 7:202 --init-vertebrae 11:41 12:34 13:22 --vertebrae-sacrum-label 14:17:92 --step-diff-label --clip-to-init
 
 # Use the spinal cord and canal form the first model output.
 python $utils/map_labels.py -s ${OUTPUT_FOLDER}/206_pp -o ${OUTPUT_FOLDER}/output -m 7:201 8:200 --add-output

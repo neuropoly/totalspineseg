@@ -120,6 +120,12 @@ def main():
         '''),
     )
     parser.add_argument(
+        '--clip-to-init', action="store_true", default=False,
+        help=textwrap.dedent('''
+            Clip the output labels to the init labels range. If the output label is out of the init labels range, it will be set to 0.
+        '''),
+    )
+    parser.add_argument(
         '--max-workers', '-w', type=int, default=min(32, mp.cpu_count() + 4),
         help='Max worker to run in parallel proccess, defaults to min(32, mp.cpu_count() + 4).'
     )
@@ -155,6 +161,7 @@ def main():
     dilation_size = args.dilation_size
     combine_before_label = args.combine_before_label
     step_diff_label = args.step_diff_label
+    clip_to_init = args.clip_to_init
     max_workers = args.max_workers
     verbose = args.verbose
 
@@ -182,6 +189,7 @@ def main():
             dilation_size = "{dilation_size}"
             combine_before_label = "{combine_before_label}"
             step_diff_label = "{step_diff_label}"
+            clip_to_init = "{clip_to_init}"
             max_workers = "{max_workers}"
             verbose = {verbose}
         '''))
@@ -217,6 +225,7 @@ def main():
         dilation_size=dilation_size,
         combine_before_label=combine_before_label,
         step_diff_label=step_diff_label,
+        clip_to_init=clip_to_init,
    )
 
     with mp.Pool() as pool:
@@ -243,6 +252,7 @@ def generate_labels_sequential(
             dilation_size,
             combine_before_label,
             step_diff_label,
+            clip_to_init,
         ):
     
     output_seg_path = output_path / seg_path.relative_to(segs_path).parent / seg_path.name.replace(f'{seg_suffix}.nii.gz', f'{output_seg_suffix}.nii.gz')
@@ -255,11 +265,6 @@ def generate_labels_sequential(
     seg_data_src = seg_data.astype(np.uint8)
 
     seg_data = np.zeros_like(seg_data_src)
-
-    # Set cord label
-    seg_data[np.isin(seg_data_src, sc_labels)] = output_sc_label
-    # Set CSF label
-    seg_data[np.isin(seg_data_src, csf_labels)] = output_csf_label
 
     binary_dilation_structure = iterate_structure(generate_binary_structure(3, 1), dilation_size)
 
@@ -286,7 +291,8 @@ def generate_labels_sequential(
                     num_labels += tmp_num_labels
 
         # Get the z index of the center of mass for each label
-        mask_labeled_z_indexes = [_[-1] for _ in center_of_mass(mask_labeled != 0, mask_labeled, range(1, num_labels + 1))]
+        canonical_mask_labeled = nib.as_closest_canonical(nib.Nifti1Image(mask_labeled, seg.affine, seg.header)).get_fdata()
+        mask_labeled_z_indexes = [_[-1] for _ in center_of_mass(canonical_mask_labeled != 0, canonical_mask_labeled, range(1, num_labels + 1))]
 
         # Sort the labels by their z-index (reversed)
         sorted_labels = [x for _,x in sorted(zip(mask_labeled_z_indexes,range(1,num_labels+1)))][::-1]
@@ -305,26 +311,53 @@ def generate_labels_sequential(
                     prev = l, curr_orig_label
             sorted_labels = new_sorted_labels
 
+        # Set the first label
         first_label = 0
         for k, v in init.items():
             if k in seg_data_src:
                 first_label = v - step * sorted_labels.index(mask_labeled[seg_data_src == k].flat[0])
                 break
 
+        # If no init label found, and sacrum present, set first label such that the last vertebrae is L5
+        if first_label == 0 and is_vert and vertebrae_sacrum_label[0] in seg_data_src:
+            first_label = (vertebrae_sacrum_label[1] - step) - step * (len(sorted_labels) - 1)
+
+        # If no init label found, print error
         if first_label == 0:
-            print(f"Error: {seg_path}, some initiation label must be in the segmentation (init: {init.keys()})")
+            print(f"Error: {seg_path}, some initiation label must be in the segmentation (init: {list(init.keys())})")
             return
 
+        # Set the range for clipping
+        init_values = list(init.values())
+        if is_vert and len(vertebrae_sacrum_label) == 3:
+            init_values.append(vertebrae_sacrum_label[1] - step)
+        init_range = (min(init_values), max(init_values))
+
+        # Set the labels
         is_sacrum = False
         for i in range(num_labels):
             target_label = first_label + step * i
+
+            # Check if we are in the sacrum
             if is_vert and len(vertebrae_sacrum_label) == 3 and vertebrae_sacrum_label[1] == target_label:
                 is_sacrum = True
+
+            # Set the target label to the sacrum label if we are in the sacrum
             if is_sacrum:
                 target_label = vertebrae_sacrum_label[2]
-            else:
+
+            # Set the output value for the current label
+            if is_sacrum or (not clip_to_init) or (init_range[0] <= target_label and target_label <= init_range[1]):
                 seg_data[mask_labeled == sorted_labels[i]] = target_label
 
+    # Set cord label
+    if len(sc_labels) > 0:
+        seg_data[seg_data == output_sc_label] = 0
+        seg_data[np.isin(seg_data_src, sc_labels)] = output_sc_label
+    # Set CSF label
+    if len(csf_labels) > 0:
+        seg_data[seg_data == output_csf_label] = 0
+        seg_data[np.isin(seg_data_src, csf_labels)] = output_csf_label
     # Set sacrum label
     if len(vertebrae_sacrum_label) == 3:
         seg_data[seg_data_src == vertebrae_sacrum_label[0]] = vertebrae_sacrum_label[2]
