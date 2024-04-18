@@ -232,8 +232,10 @@ def generate_augmentations(
             False
         ))
 
+        downsampling = max(1, 7 / max(image.header.get_zooms()))
+        _aug_anisotropy = partial(aug_anisotropy, downsampling=(min(1.5, downsampling), downsampling))
         if np.random.rand() < 0.7:
-            augs.append(aug_anisotropy)
+            augs.append(_aug_anisotropy)
 
         # Augment the images
         output_image_data, output_seg_data = image_data, seg_data
@@ -325,8 +327,8 @@ def aug_elastic(img, seg):
     ))
     return subject.image.data.squeeze().numpy(), subject.seg.data.squeeze().numpy().astype(np.uint8)
 
-def aug_anisotropy(img, seg):
-    subject = tio.RandomAnisotropy()(tio.Subject(
+def aug_anisotropy(img, seg, downsampling=7):
+    subject = tio.RandomAnisotropy(downsampling=downsampling)(tio.Subject(
         image=tio.ScalarImage(tensor=np.expand_dims(img, axis=0)),
         seg=tio.LabelMap(tensor=np.expand_dims(seg, axis=0))
     ))
