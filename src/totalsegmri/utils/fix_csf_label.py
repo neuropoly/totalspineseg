@@ -63,8 +63,8 @@ def main():
         help='Label used for csf, defaults to 201.'
     )
     parser.add_argument(
-        '--max-workers', '-w', type=int, default=min(32, mp.cpu_count() + 4),
-        help='Max worker to run in parallel proccess, defaults to min(32, mp.cpu_count() + 4).'
+        '--max-workers', '-w', type=int, default=mp.cpu_count(),
+        help='Max worker to run in parallel proccess, defaults to multiprocessing.cpu_count().'
     )
     parser.add_argument(
         '--verbose', '-v', type=int, default=1, choices=[0, 1],

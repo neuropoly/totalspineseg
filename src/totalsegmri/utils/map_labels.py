@@ -79,8 +79,8 @@ def main():
         help='If the output file already exists, add the mapped input labels to the existing output labels before saving (the labels from the input are prioritized). Defaults to false (overwrite the output file).'
     )
     parser.add_argument(
-        '--max-workers', '-w', type=int, default=min(32, mp.cpu_count() + 4),
-        help='Max worker to run in parallel proccess, defaults to min(32, mp.cpu_count() + 4).'
+        '--max-workers', '-w', type=int, default=mp.cpu_count(),
+        help='Max worker to run in parallel proccess, defaults to multiprocessing.cpu_count().'
     )
     parser.add_argument(
         '--verbose', '-v', type=int, default=1, choices=[0, 1],

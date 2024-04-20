@@ -78,8 +78,8 @@ def main():
         help='The target voxel size in mm. Can accept 1 or 3 parameters for x, y, z. Default is 1mm.'
     )
     parser.add_argument(
-        '--max-workers', '-w', type=int, default=min(32, mp.cpu_count() + 4),
-        help='Max worker to run in parallel proccess, defaults to min(32, mp.cpu_count() + 4).'
+        '--max-workers', '-w', type=int, default=mp.cpu_count(),
+        help='Max worker to run in parallel proccess, defaults to multiprocessing.cpu_count().'
     )
     parser.add_argument(
         '--verbose', '-v', type=int, default=1, choices=[0, 1],
