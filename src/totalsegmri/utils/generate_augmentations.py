@@ -275,14 +275,16 @@ def generate_augmentations(
         # Save mapped segmentation
         nib.save(output_image, output_image_path)
         nib.save(output_seg, output_seg_path)
+        # print(f"\n{output_seg_path.name.replace('.nii.gz', '')}: {[a.func.__name__ if isinstance(a, partial) else a.__name__ for a in augs]}", end='')
 
 def aug_redistribute_seg(img, seg, factor=(-0.2, 0.7), classes=None):
 
+    _seg = seg
     # Ensure factor is a list
     factor=np.array([factor]).flat
 
     if classes:
-        seg = combine_classes(seg, classes)
+        _seg = combine_classes(_seg, classes)
 
     # Compute original mean, std and min/max values
     original_mean, original_std = np.mean(img), np.std(img)
@@ -293,13 +295,13 @@ def aug_redistribute_seg(img, seg, factor=(-0.2, 0.7), classes=None):
     img = (img - img.min()) / (img.max() - img.min())
 
     # Get the unique label values (excluding 0)
-    labels = [_ for _ in np.unique(seg) if _ != 0]
+    labels = [_ for _ in np.unique(_seg) if _ != 0]
     
     to_add = np.zeros_like(img)
     # Loop over each label value
     for l in labels:
         # Get the mask for the current label
-        l_mask = (seg == l)
+        l_mask = (_seg == l)
         l_mean = np.mean(img[l_mask])
         l_std = np.std(img[l_mask])
 
@@ -449,12 +451,13 @@ def aug_swap(img, seg):
     return subject.image.data.squeeze().numpy(), subject.seg.data.squeeze().numpy().astype(np.uint8)
 
 def aug_labels2image(img, seg, classes=None):
+    _seg = seg
     if classes:
-        seg = combine_classes(seg, classes)
+        _seg = combine_classes(seg, classes)
     subject = tio.RandomLabelsToImage(label_key="seg", image_key="image")(tio.Subject(
-        seg=tio.LabelMap(tensor=np.expand_dims(seg, axis=0))
+        seg=tio.LabelMap(tensor=np.expand_dims(_seg, axis=0))
     ))
-    return subject.image.data.squeeze().numpy(), subject.seg.data.squeeze().numpy().astype(np.uint8)
+    return subject.image.data.squeeze().numpy(), seg
 
 def aug_gamma(img, seg):
     subject = tio.RandomGamma((-1, 1))(tio.Subject(
