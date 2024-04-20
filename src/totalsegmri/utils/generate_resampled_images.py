@@ -3,10 +3,7 @@ import multiprocessing as mp
 from functools import partial
 from tqdm.contrib.concurrent import process_map
 from pathlib import Path
-import nibabel as nib
-import numpy as np
 import torchio as tio
-import gryds
 import warnings
 
 warnings.filterwarnings("ignore")
