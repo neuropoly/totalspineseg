@@ -17,7 +17,7 @@ def main():
     # Description and arguments
     parser = argparse.ArgumentParser(
         description=textwrap.dedent(f'''
-        This script processes NIfTI (Neuroimaging Informatics Technology Initiative) image and segmentation files.
+        This script processes .nii.gz or .mgz image with segmentation files.
         It combines the specified slice of the image and segmentation files and saves the result as a JPG image
         in the specified output folder.'''
         ),
@@ -35,7 +35,7 @@ def main():
     )
     parser.add_argument(
         '--segs-dir', '-s', type=Path, default=None,
-        help='The folder where input NIfTI segmentation files are located (required).'
+        help='The folder where input NIfTI segmentation files are located.'
     )
     parser.add_argument(
         '--output-dir', '-o', type=Path, required=True,
@@ -156,10 +156,10 @@ def main():
 def generate_seg_jpg(image_path, segs_path, images_path, output_path, seg_suffix, image_suffix, orient, sliceloc, override):
 
     image_ext = [e for e in EXT if image_path.name.endswith(e)][0]
-    output_jpg_path = output_path / image_path.relative_to(images_path).parent / image_path.name.replace(f'{image_suffix}.{image_ext}', f'_{orient}_{sliceloc}.jpg')
+    output_image_path = output_path / image_path.relative_to(images_path).parent / image_path.name.replace(f'{image_suffix}.{image_ext}', f'_{orient}_{sliceloc}.jpg')
 
     # Check if the output file exists and if the override flag is set to 0
-    if output_jpg_path.exists() and not override:
+    if output_image_path.exists() and not override:
         return
 
     img = tio.ScalarImage(image_path)
@@ -174,13 +174,13 @@ def generate_seg_jpg(image_path, segs_path, images_path, output_path, seg_suffix
     slice_img = img_data.take(slice_index, axis=axis)
 
     # Normalize the slice to the range 0-255
-    slice_img = (255 * (slice_img - np.min(slice_img)) / (np.max(slice_img) - np.min(slice_img))).astype(np.uint8)
+    slice_img = (255.0 * (slice_img - np.min(slice_img)) / (np.max(slice_img) - np.min(slice_img))).astype(np.uint8)
 
     # Repeat the grayscale slice 3 times to create a color image
     slice_img = np.repeat(slice_img[:, :, np.newaxis], 3, axis=2).astype(np.uint8)
 
     # Create a blank color image with the same dimensions as the input image
-    color_img = np.zeros_like(slice_img, dtype=np.uint8)
+    output_data = np.zeros_like(slice_img, dtype=np.uint8)
 
     if segs_path:
 
@@ -207,22 +207,22 @@ def generate_seg_jpg(image_path, segs_path, images_path, output_path, seg_suffix
             for label, color in colors.items():
                 if label != 0:  # Ignore the background (label 0)
                     mask = slice_seg == label
-                    color_img[mask] = color
+                    output_data[mask] = color
 
-    color_img = np.where(color_img > 0, color_img, slice_img)
+    output_data = np.where(output_data > 0, output_data, slice_img)
 
     # Rotate the image 90 degrees counter-clockwise and flip it vertically
-    output_img = np.flipud(color_img)
-    output_img = np.rot90(output_img, k=1)
+    output_data = np.flipud(output_data)
+    output_data = np.rot90(output_data, k=1)
 
     # Create an Image object from the output image
-    jpg_image = Image.fromarray(output_img, mode="RGB")
+    output_image = Image.fromarray(output_data, mode="RGB")
 
     # Make sure output directory exists
-    output_jpg_path.parent.mkdir(parents=True, exist_ok=True)
+    output_image_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Save the Image object as a JPG file
-    jpg_image.save(output_jpg_path)
+    output_image.save(output_image_path)
 
 if __name__ == '__main__':
     main()
