@@ -19,6 +19,7 @@ def main():
         ),
         epilog=textwrap.dedent('''
             Examples:
+            generate_resampled_images -i images -o images
             generate_resampled_images -i images -s labels -o images -g labels -m 1
             For BIDS:
             generate_resampled_images -i . -s derivatives/labels -o . -g derivatives/labels --image-suffix "" --output-image-suffix "" --seg-suffix "_seg" --output-seg-suffix "_seg" -d "sub-" -u "anat" -m 1
@@ -31,7 +32,7 @@ def main():
     )
     parser.add_argument(
         '--segs-dir', '-s', type=Path, default=None,
-        help='The folder where input NIfTI segmentation files are located (required).'
+        help='The folder where input NIfTI segmentation files are located.'
     )
     parser.add_argument(
         '--output-images-dir', '-o', type=Path, required=True,
@@ -39,7 +40,7 @@ def main():
     )
     parser.add_argument(
         '--output-segs-dir', '-g', type=Path, default=None,
-        help='The folder where output augmented segmentation will be saved with _a1, _a2 etc. suffixes (required).'
+        help='The folder where output augmented segmentation will be saved with _a1, _a2 etc. suffixes.'
     )
     parser.add_argument(
         '--subject-dir', '-d', type=str, default=None, nargs='?', const='',
