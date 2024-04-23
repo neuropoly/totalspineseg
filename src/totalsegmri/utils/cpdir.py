@@ -4,6 +4,9 @@ from pathlib import Path
 from tqdm.contrib.concurrent import process_map
 from functools import partial
 import shutil
+import warnings
+
+warnings.filterwarnings("ignore")
 
 
 def main():
@@ -16,6 +19,7 @@ def main():
         epilog=textwrap.dedent('''
             Examples:
             cpdir src dst
+            cpdir src dst -p "*w_0000.nii.gz" "*w.nii.gz"
         '''),
         formatter_class=argparse.RawTextHelpFormatter
     )
@@ -26,6 +30,10 @@ def main():
     parser.add_argument(
         'dst', type=Path,
         help='The destnation folder, will be created if not exist (required).'
+    )
+    parser.add_argument(
+        '--pattern', '-p', type=str, nargs='+', default=['*'],
+        help='The pattern to use for glob (default *).'
     )
     parser.add_argument(
         '--max-workers', '-w', type=int, default=mp.cpu_count(),
@@ -45,21 +53,23 @@ def main():
     # Get the command-line argument values
     src = args.src
     dst = args.dst
+    pattern = args.pattern
     max_workers = args.max_workers
     verbose = args.verbose
-    
+
     # Print the argument values if verbose is enabled
     if verbose:
         print(textwrap.dedent(f''' 
             Running {Path(__file__).stem} with the following params:
             src = "{src}"
             dst = "{dst}"
+            pattern = {pattern}
             max_workers = "{max_workers}"
             verbose = "{verbose}"
         '''))
 
     # Process the files
-    files_path_list = list(src.glob('*'))
+    files_path_list = [_ for __ in [list(src.glob(p)) for p in pattern] for _ in __]
 
     # Create a partially-applied function with the extra arguments
     partial_cpdir = partial(
@@ -69,13 +79,14 @@ def main():
 
     with mp.Pool() as pool:
         process_map(partial_cpdir, files_path_list, max_workers=max_workers)
-    
+
 
 def cpdir(file_path, dst):
-    
+
     # Make sure dst directory exists and copy
     dst.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(file_path, dst)
+    if file_path.is_file():
+        shutil.copy2(file_path, dst)
 
 
 if __name__ == '__main__':

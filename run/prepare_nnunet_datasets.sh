@@ -40,11 +40,11 @@ for ds in spider data-single-subject data-multi-subject whole-spine; do
     dsn=${ds/data-/}; dsn=${dsn/-subject/}; dsn=${dsn/-spine/}
 
     echo "Copy images and labels into the nnUNet dataset folder"
-    cp $bids/$ds/sub-*/anat/sub-*.nii.gz $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr
-    cp $bids/$ds/derivatives/labels/sub-*/anat/sub-*_totalsegmri.nii.gz $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr
+    python $utils/cpdir.py $bids/$ds $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr -p "sub-*/anat/sub-*.nii.gz"
+    python $utils/cpdir.py $bids/$ds/derivatives/labels $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr -p "sub-*/anat/sub-*_totalsegmri.nii.gz"
     # For single and multi subject datasets, in which there are missing labels get also PAM50_seg
     if [ "$dsn" = "single" ] || [ "$dsn" = "multi" ]; then
-        cp $bids/$ds/derivatives/labels/sub-*/anat/sub-*_PAM50_seg.nii.gz $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr_PAM50
+        python $utils/cpdir.py $bids/$ds/derivatives/labels $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr_PAM50 -p "sub-*/anat/sub-*_PAM50_seg.nii.gz"
     fi
     echo "Replace 'sub-' with dataset name"
     for f in $nnUNet_raw/Dataset100_TotalSegMRI/*/sub-*.nii.gz; do mv $f ${f/sub-/${dsn}_}; done
