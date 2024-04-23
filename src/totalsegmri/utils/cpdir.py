@@ -19,7 +19,8 @@ def main():
         epilog=textwrap.dedent('''
             Examples:
             cpdir src dst
-            cpdir src dst -p "*w_0000.nii.gz" "*w.nii.gz"
+            cpdir src dst -p "*w_0000.nii.gz" "*w.nii.gz" -f
+            cpdir src dst -p "*"
         '''),
         formatter_class=argparse.RawTextHelpFormatter
     )
@@ -32,8 +33,12 @@ def main():
         help='The destnation folder, will be created if not exist (required).'
     )
     parser.add_argument(
-        '--pattern', '-p', type=str, nargs='+', default=['*'],
-        help='The pattern to use for glob (default *).'
+        '--pattern', '-p', type=str, nargs='+', default=['**/*'],
+        help='The pattern to use for glob (default "**/*").'
+    )
+    parser.add_argument(
+        '--flat', '-f', action="store_true", default=False,
+        help='Put files in destination folder directly without keeping the source subfolders, defaults to false (keep source subfolders).'
     )
     parser.add_argument(
         '--max-workers', '-w', type=int, default=mp.cpu_count(),
@@ -54,6 +59,7 @@ def main():
     src = args.src
     dst = args.dst
     pattern = args.pattern
+    flat = args.flat
     max_workers = args.max_workers
     verbose = args.verbose
 
@@ -64,29 +70,35 @@ def main():
             src = "{src}"
             dst = "{dst}"
             pattern = {pattern}
+            flat = {flat}
             max_workers = "{max_workers}"
             verbose = "{verbose}"
         '''))
 
     # Process the files
-    files_path_list = [_ for __ in [list(src.glob(p)) for p in pattern] for _ in __]
+    files_path_list = [_ for __ in [list(src.glob(p)) for p in pattern] for _ in __ if _.is_file()]
 
     # Create a partially-applied function with the extra arguments
     partial_cpdir = partial(
         cpdir,
+        src=src,
         dst=dst,
+        flat=flat,
     )
 
     with mp.Pool() as pool:
         process_map(partial_cpdir, files_path_list, max_workers=max_workers)
 
 
-def cpdir(file_path, dst):
+def cpdir(file_path, src, dst, flat):
 
+    if flat:
+        dst_file_path = dst / file_path.name
+    else:
+        dst_file_path = dst / file_path.relative_to(src)
     # Make sure dst directory exists and copy
-    dst.mkdir(parents=True, exist_ok=True)
-    if file_path.is_file():
-        shutil.copy2(file_path, dst)
+    dst_file_path.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(file_path, dst_file_path)
 
 
 if __name__ == '__main__':
