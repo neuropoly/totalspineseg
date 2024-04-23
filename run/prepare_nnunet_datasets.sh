@@ -100,9 +100,9 @@ echo "Generate augmentations"
 python $utils/generate_augmentations.py -i $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr -s $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr -o $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr -g $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr --labels2image
 
 echo "Map labels form TotalSegMRI labels to the datasets specific label"
-cp -r $nnUNet_raw/Dataset100_TotalSegMRI $nnUNet_raw/Dataset101_TotalSegMRI_step1
-cp -r $nnUNet_raw/Dataset100_TotalSegMRI $nnUNet_raw/Dataset102_TotalSegMRI_step2
-cp -r $nnUNet_raw/Dataset100_TotalSegMRI $nnUNet_raw/Dataset103_TotalSegMRI_full
+python $utils/cpdir.py $nnUNet_raw/Dataset100_TotalSegMRI $nnUNet_raw/Dataset101_TotalSegMRI_step1
+python $utils/cpdir.py $nnUNet_raw/Dataset100_TotalSegMRI $nnUNet_raw/Dataset102_TotalSegMRI_step2
+python $utils/cpdir.py $nnUNet_raw/Dataset100_TotalSegMRI $nnUNet_raw/Dataset103_TotalSegMRI_full
 
 python $utils/map_labels.py -m $resources/labels_maps/nnunet_step1.json -s $nnUNet_raw/Dataset101_TotalSegMRI_step1/labelsTr -o $nnUNet_raw/Dataset101_TotalSegMRI_step1/labelsTr
 python $utils/map_labels.py -m $resources/labels_maps/nnunet_step1.json -s $nnUNet_raw/Dataset101_TotalSegMRI_step1/labelsTs -o $nnUNet_raw/Dataset101_TotalSegMRI_step1/labelsTs
