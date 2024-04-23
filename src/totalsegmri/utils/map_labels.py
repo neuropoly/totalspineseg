@@ -5,6 +5,9 @@ import multiprocessing as mp
 from functools import partial
 from pathlib import Path
 from tqdm.contrib.concurrent import process_map
+import warnings
+
+warnings.filterwarnings("ignore")
 
 def main():
     

@@ -6,6 +6,9 @@ import nibabel as nib
 import multiprocessing as mp
 from functools import partial
 from tqdm.contrib.concurrent import process_map
+import warnings
+
+warnings.filterwarnings("ignore")
 
 def main():
     

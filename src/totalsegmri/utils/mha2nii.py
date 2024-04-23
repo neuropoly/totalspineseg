@@ -4,6 +4,9 @@ from pathlib import Path
 from tqdm.contrib.concurrent import process_map
 from functools import partial
 import SimpleITK as sitk
+import warnings
+
+warnings.filterwarnings("ignore")
 
 
 def main():

@@ -5,6 +5,9 @@ from functools import partial
 from pathlib import Path
 import numpy as np
 import nibabel as nib
+import warnings
+
+warnings.filterwarnings("ignore")
 
 def main():
     
