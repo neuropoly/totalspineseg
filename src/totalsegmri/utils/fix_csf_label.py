@@ -128,10 +128,7 @@ def fix_csf_label(seg_path, segs_path, cord_label, csf_label, output_path, seg_s
 
     # Load segmentation
     seg = nib.load(seg_path)
-    seg_data = seg.get_fdata()
-
-    # Convert data to uint8 to avoid issues with segmentation IDs
-    seg_data = seg_data.astype(np.uint8)
+    seg_data = seg.get_fdata().astype(np.uint8)
 
     # Create an array of x indices
     x_indices = np.broadcast_to(np.arange(seg_data.shape[0])[..., np.newaxis, np.newaxis], seg_data.shape)

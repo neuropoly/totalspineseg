@@ -259,10 +259,7 @@ def generate_labels_sequential(
 
     # Load segmentation
     seg = nib.load(seg_path)
-    seg_data = seg.get_fdata()
-
-    # Convert data to uint8 to avoid issues with segmentation IDs
-    seg_data_src = seg_data.astype(np.uint8)
+    seg_data_src = seg.get_fdata().astype(np.uint8)
 
     seg_data = np.zeros_like(seg_data_src)
 

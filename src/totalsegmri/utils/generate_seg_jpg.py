@@ -1,9 +1,10 @@
 import sys, argparse, textwrap
-import numpy as np
 from PIL import Image
 import multiprocessing as mp
 from functools import partial
 from pathlib import Path
+import nibabel as nib
+import numpy as np
 from tqdm.contrib.concurrent import process_map
 import torchio as tio
 import warnings
@@ -161,20 +162,23 @@ def generate_seg_jpg(image_path, segs_path, images_path, output_path, seg_suffix
     # Check if the output file exists and if the override flag is set to 0
     if output_image_path.exists() and not override:
         return
+    
+    image = nib.load(image_path)
+    image_data = image.get_fdata().astype(np.float64)
 
-    img = tio.ScalarImage(image_path)
-    img = tio.ToCanonical()(img)
-    img = tio.Resample((1, 1, 1))(img)
+    tio_image = tio.ScalarImage(tensor=image_data[None, ...], affine=image.affine)
+    tio_image = tio.ToCanonical()(tio_image)
+    tio_image = tio.Resample((1, 1, 1))(tio_image)
 
-    img_data = img.data.squeeze().numpy()
+    image_data = tio_image.data.squeeze().numpy().astype(np.float64)
 
     # Find the specified slice
     axis={'sag': 0, 'cor': 1, 'ax': 2}[orient]
-    slice_index = int(sliceloc * img_data.shape[axis])
-    slice_img = img_data.take(slice_index, axis=axis)
+    slice_index = int(sliceloc * image_data.shape[axis])
+    slice_img = image_data.take(slice_index, axis=axis)
 
     # Normalize the slice to the range 0-255
-    slice_img = (255.0 * (slice_img - np.min(slice_img)) / (np.max(slice_img) - np.min(slice_img))).astype(np.uint8)
+    slice_img = (255 * (slice_img - np.min(slice_img)) / (np.max(slice_img) - np.min(slice_img))).astype(np.uint8)
 
     # Repeat the grayscale slice 3 times to create a color image
     slice_img = np.repeat(slice_img[:, :, np.newaxis], 3, axis=2).astype(np.uint8)
@@ -188,11 +192,13 @@ def generate_seg_jpg(image_path, segs_path, images_path, output_path, seg_suffix
         seg_path = [seg_path.parent / f'{seg_path.name}.{e}' for e in EXT if (seg_path.parent / f'{seg_path.name}.{e}').is_file()][0]
         
         if seg_path.is_file():
-            seg = tio.LabelMap(seg_path)
-            seg = tio.ToCanonical()(seg)
-            seg = tio.Resample(img)(seg)
+            seg = nib.load(seg_path)
+            seg_data = seg.get_fdata().astype(np.uint8)
+            tio_seg = tio.LabelMap(tensor=seg_data[None, ...], affine=seg.affine)
+            tio_seg = tio.ToCanonical()(tio_seg)
+            tio_seg = tio.Resample(tio_image)(tio_seg)
 
-            seg_data = seg.data.squeeze().numpy()
+            seg_data = tio_seg.data.squeeze().numpy().astype(np.uint8)
 
             slice_seg = seg_data.take(slice_index, axis=axis)
 

@@ -3,7 +3,9 @@ import multiprocessing as mp
 from functools import partial
 from tqdm.contrib.concurrent import process_map
 from pathlib import Path
-import SimpleITK as sitk
+import nibabel as nib
+import numpy as np
+import torchio as tio
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -153,20 +155,24 @@ def transform_labels2images(
     
     output_seg_path = output_path / image_path.relative_to(images_path).parent / seg_path.name.replace(f'{seg_suffix}.nii.gz', f'{output_suffix}.nii.gz')
 
-    # Load the image and segmentation
-    image = sitk.ReadImage(image_path)
-    seg = sitk.ReadImage(seg_path)
+    image = nib.load(image_path)
+    seg = nib.load(seg_path)
 
-    # Resample the segmentation to match the image's space
-    resampler = sitk.ResampleImageFilter()
-    resampler.SetReferenceImage(image)  # Use the image as the reference
-    resampler.SetInterpolator(sitk.sitkNearestNeighbor)  # Nearest neighbor interpolation for segmentation
-    
-    output_seg = resampler.Execute(seg)
-    
-    # Save the resampled segmentation
-    sitk.WriteImage(output_seg, output_seg_path)
+    image_data = image.get_fdata().astype(np.float64)
+    seg_data = seg.get_fdata().astype(np.uint8)
 
+    # Create result
+    tio_img=tio.ScalarImage(tensor=image_data[None, ...], affine=image.affine)
+    tio_seg=tio.LabelMap(tensor=seg_data[None, ...], affine=seg.affine)
+    
+    tio_output_seg = tio.Resample(tio_img)(tio_seg)
+    output_seg_data = tio_output_seg.data.numpy()[0, ...].astype(np.uint8)
+    
+    # Make sure output directory exists and save
+    output_seg_path.parent.mkdir(parents=True, exist_ok=True)
+    output_seg = nib.Nifti1Image(output_seg_data, tio_output_seg.affine, seg.header)
+    output_seg.set_data_dtype(np.uint8)
+    nib.save(output_seg, output_seg_path)
 
 if __name__ == '__main__':
     main()

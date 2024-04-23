@@ -3,6 +3,8 @@ import multiprocessing as mp
 from functools import partial
 from tqdm.contrib.concurrent import process_map
 from pathlib import Path
+import nibabel as nib
+import numpy as np
 import torchio as tio
 import warnings
 
@@ -170,36 +172,43 @@ def generate_resampled_images(
         mm,
     ):
     
+    image = nib.load(image_path)
+    image_data = image.get_fdata().astype(np.float64)
     
     if segs_path:
         seg_path = segs_path / image_path.relative_to(images_path).parent /  image_path.name.replace(f'{image_suffix}.nii.gz', f'{seg_suffix}.nii.gz')
-        
+        seg = nib.load(seg_path)
+        seg_data = seg.get_fdata().astype(np.uint8)
+
         # Create result
         subject = tio.Resample(mm)(tio.Subject(
-            image=tio.ScalarImage(image_path),
-            seg=tio.LabelMap(seg_path),
+            image=tio.ScalarImage(tensor=image_data[None, ...], affine=image.affine),
+            seg=tio.LabelMap(tensor=seg_data[None, ...], affine=seg.affine),
         ))
-        output_image, output_seg = subject.image, subject.seg
+        output_image_data, output_seg_data = subject.image.data.numpy()[0, ...].astype(np.float64), subject.seg.data.numpy()[0, ...].astype(np.uint8)
         
         output_seg_path = output_segs_path / image_path.relative_to(images_path).parent / seg_path.name.replace(f'{seg_suffix}.nii.gz', f'{output_seg_suffix}.nii.gz')
 
+        # Make sure output directory exists and save
         output_seg_path.parent.mkdir(parents=True, exist_ok=True)
-        output_seg.save(output_seg_path)
+        output_seg = nib.Nifti1Image(output_seg_data, subject.seg.affine, seg.header)
+        output_seg.set_data_dtype(np.uint8)
+        nib.save(output_seg, output_seg_path)
 
     else:
         # Create result
         subject = tio.Resample(mm)(tio.Subject(
-            image=tio.ScalarImage(image_path),
+            image=tio.ScalarImage(tensor=image_data[None, ...], affine=image.affine),
         ))
-        output_image = subject.image
+        output_image_data = subject.image.data.numpy()[0, ...].astype(np.float64)
 
     output_image_path = output_images_path / image_path.relative_to(images_path).parent / image_path.name.replace(f'{image_suffix}.nii.gz', f'{output_image_suffix}.nii.gz')
 
-    # Make sure output directory exists
+    # Make sure output directory exists and save with original image dtype
     output_image_path.parent.mkdir(parents=True, exist_ok=True)
-    
-    # Save mapped segmentation
-    output_image.save(output_image_path)
+    output_image = nib.Nifti1Image(output_image_data.astype(image.get_data_dtype()), subject.image.affine, image.header)
+    output_image.set_data_dtype(image.get_data_dtype())
+    nib.save(output_image, output_image_path)
 
 if __name__ == '__main__':
     main()

@@ -159,10 +159,7 @@ def map_seg(seg_path, segs_path, map_dict, output_path, seg_suffix, output_seg_s
 
     # Load segmentation
     seg = nib.load(seg_path)
-    seg_data = seg.get_fdata()
-
-    # Convert data to uint8 to avoid issues with segmentation IDs
-    seg_data = seg_data.astype(np.uint8)
+    seg_data = seg.get_fdata().astype(np.uint8)
 
     # Apply label mapping
     mapped_seg_data = np.copy(seg_data) if default_input else np.zeros_like(seg_data)

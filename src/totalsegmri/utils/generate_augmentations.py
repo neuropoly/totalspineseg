@@ -195,7 +195,7 @@ def generate_augmentations(
         return
     
     image = nib.load(image_path)
-    image_data = image.get_fdata()
+    image_data = image.get_fdata().astype(np.float64)
     seg = nib.load(seg_path)
     seg_data = seg.get_fdata().astype(np.uint8)
 
@@ -261,10 +261,10 @@ def generate_augmentations(
         output_image_data, output_seg_data = image_data, seg_data
         for a in augs:
             output_image_data, output_seg_data = a(output_image_data, output_seg_data)
-            # output_seg_data = output_seg_data.astype(np.uint8)
 
-        # Create result
-        output_image = nib.Nifti1Image(output_image_data, image.affine, image.header)
+        # Create result with original image dtype
+        output_image = nib.Nifti1Image(output_image_data.astype(image.get_data_dtype()), image.affine, image.header)
+        output_image.set_data_dtype(image.get_data_dtype())
         output_seg = nib.Nifti1Image(output_seg_data, seg.affine, seg.header)
         output_seg.set_data_dtype(np.uint8)
 
@@ -368,70 +368,70 @@ def aug_bspline(img, seg):
 
     bspline = gryds.BSplineTransformation((grid-.5)/5)
     grid[:,0] += ((grid[:,0] > 0) * 2 - 1) * .9 # Increase the effect on the Y-axis
-    return gryds.Interpolator(img).transform(bspline), gryds.Interpolator(seg, order=0).transform(bspline).astype(np.uint8)
+    return gryds.Interpolator(img).transform(bspline).astype(np.float64), gryds.Interpolator(seg, order=0).transform(bspline).astype(np.uint8)
 
 def aug_flip(img, seg):
     subject = tio.RandomFlip(axes=('LR',))(tio.Subject(
         image=tio.ScalarImage(tensor=np.expand_dims(img, axis=0)),
         seg=tio.LabelMap(tensor=np.expand_dims(seg, axis=0))
     ))
-    return subject.image.data.squeeze().numpy(), subject.seg.data.squeeze().numpy().astype(np.uint8)
+    return subject.image.data.squeeze().numpy().astype(np.float64), subject.seg.data.squeeze().numpy().astype(np.uint8)
 
 def aug_aff(img, seg):
     subject = tio.RandomAffine()(tio.Subject(
         image=tio.ScalarImage(tensor=np.expand_dims(img, axis=0)),
         seg=tio.LabelMap(tensor=np.expand_dims(seg, axis=0))
     ))
-    return subject.image.data.squeeze().numpy(), subject.seg.data.squeeze().numpy().astype(np.uint8)
+    return subject.image.data.squeeze().numpy().astype(np.float64), subject.seg.data.squeeze().numpy().astype(np.uint8)
 
 def aug_elastic(img, seg):
     subject = tio.RandomElasticDeformation(max_displacement=40)(tio.Subject(
         image=tio.ScalarImage(tensor=np.expand_dims(img, axis=0)),
         seg=tio.LabelMap(tensor=np.expand_dims(seg, axis=0))
     ))
-    return subject.image.data.squeeze().numpy(), subject.seg.data.squeeze().numpy().astype(np.uint8)
+    return subject.image.data.squeeze().numpy().astype(np.float64), subject.seg.data.squeeze().numpy().astype(np.uint8)
 
 def aug_anisotropy(img, seg, downsampling=7):
     subject = tio.RandomAnisotropy(downsampling=downsampling)(tio.Subject(
         image=tio.ScalarImage(tensor=np.expand_dims(img, axis=0)),
         seg=tio.LabelMap(tensor=np.expand_dims(seg, axis=0))
     ))
-    return subject.image.data.squeeze().numpy(), subject.seg.data.squeeze().numpy().astype(np.uint8)
+    return subject.image.data.squeeze().numpy().astype(np.float64), subject.seg.data.squeeze().numpy().astype(np.uint8)
 
 def aug_motion(img, seg):
     subject = tio.RandomMotion()(tio.Subject(
         image=tio.ScalarImage(tensor=np.expand_dims(img, axis=0)),
         seg=tio.LabelMap(tensor=np.expand_dims(seg, axis=0))
     ))
-    return subject.image.data.squeeze().numpy(), subject.seg.data.squeeze().numpy().astype(np.uint8)
+    return subject.image.data.squeeze().numpy().astype(np.float64), subject.seg.data.squeeze().numpy().astype(np.uint8)
 
 def aug_ghosting(img, seg):
     subject = tio.RandomGhosting()(tio.Subject(
         image=tio.ScalarImage(tensor=np.expand_dims(img, axis=0)),
         seg=tio.LabelMap(tensor=np.expand_dims(seg, axis=0))
     ))
-    return subject.image.data.squeeze().numpy(), subject.seg.data.squeeze().numpy().astype(np.uint8)
+    return subject.image.data.squeeze().numpy().astype(np.float64), subject.seg.data.squeeze().numpy().astype(np.uint8)
 
 def aug_spike(img, seg):
     subject = tio.RandomSpike()(tio.Subject(
         image=tio.ScalarImage(tensor=np.expand_dims(img, axis=0)),
         seg=tio.LabelMap(tensor=np.expand_dims(seg, axis=0))
     ))
-    return subject.image.data.squeeze().numpy(), subject.seg.data.squeeze().numpy().astype(np.uint8)
+    return subject.image.data.squeeze().numpy().astype(np.float64), subject.seg.data.squeeze().numpy().astype(np.uint8)
 
 def aug_bias_field(img, seg):
     subject = tio.RandomBiasField()(tio.Subject(
         image=tio.ScalarImage(tensor=np.expand_dims(img, axis=0)),
         seg=tio.LabelMap(tensor=np.expand_dims(seg, axis=0))
     ))  
-    return subject.image.data.squeeze().numpy(), subject.seg.data.squeeze().numpy().astype(np.uint8)
+    return subject.image.data.squeeze().numpy().astype(np.float64), subject.seg.data.squeeze().numpy().astype(np.uint8)
 
 def aug_blur(img, seg):
     subject = tio.RandomBlur()(tio.Subject(
         image=tio.ScalarImage(tensor=np.expand_dims(img, axis=0)),
         seg=tio.LabelMap(tensor=np.expand_dims(seg, axis=0))
     ))
-    return subject.image.data.squeeze().numpy(), subject.seg.data.squeeze().numpy().astype(np.uint8)
+    return subject.image.data.squeeze().numpy().astype(np.float64), subject.seg.data.squeeze().numpy().astype(np.uint8)
 
 def aug_noise(img, seg):
     original_mean, original_std = np.mean(img), np.std(img)
@@ -441,14 +441,14 @@ def aug_noise(img, seg):
         seg=tio.LabelMap(tensor=np.expand_dims(seg, axis=0))
     ))
     img = img  * original_std + original_mean
-    return subject.image.data.squeeze().numpy(), subject.seg.data.squeeze().numpy().astype(np.uint8)
+    return subject.image.data.squeeze().numpy().astype(np.float64), subject.seg.data.squeeze().numpy().astype(np.uint8)
 
 def aug_swap(img, seg):
     subject = tio.RandomSwap()(tio.Subject(
         image=tio.ScalarImage(tensor=np.expand_dims(img, axis=0)),
         seg=tio.LabelMap(tensor=np.expand_dims(seg, axis=0))
     ))
-    return subject.image.data.squeeze().numpy(), subject.seg.data.squeeze().numpy().astype(np.uint8)
+    return subject.image.data.squeeze().numpy().astype(np.float64), subject.seg.data.squeeze().numpy().astype(np.uint8)
 
 def aug_labels2image(img, seg, classes=None):
     _seg = seg
@@ -457,14 +457,14 @@ def aug_labels2image(img, seg, classes=None):
     subject = tio.RandomLabelsToImage(label_key="seg", image_key="image")(tio.Subject(
         seg=tio.LabelMap(tensor=np.expand_dims(_seg, axis=0))
     ))
-    return subject.image.data.squeeze().numpy(), seg
+    return subject.image.data.squeeze().numpy().astype(np.float64), seg
 
 def aug_gamma(img, seg):
     subject = tio.RandomGamma((-1, 1))(tio.Subject(
         image=tio.ScalarImage(tensor=np.expand_dims(img, axis=0)),
         seg=tio.LabelMap(tensor=np.expand_dims(seg, axis=0))
     ))
-    return subject.image.data.squeeze().numpy(), subject.seg.data.squeeze().numpy().astype(np.uint8)
+    return subject.image.data.squeeze().numpy().astype(np.float64), subject.seg.data.squeeze().numpy().astype(np.uint8)
 
 def parse_class(c):
     c = [_.split('-') for _ in c.split(',')]
@@ -472,10 +472,10 @@ def parse_class(c):
     return c
 
 def combine_classes(seg, classes):
-    seg = np.zeros_like(_seg:=seg)
+    _seg = np.zeros_like(seg)
     for i, c in enumerate(classes):
-        seg[np.isin(_seg, c)] = i + 1
-    return seg
+        _seg[np.isin(seg, c)] = i + 1
+    return _seg
 
 if __name__ == '__main__':
     main()
