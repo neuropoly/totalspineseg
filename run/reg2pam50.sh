@@ -112,8 +112,9 @@ CLEANUP=0
 LOG_DIR="output/logs"
 # RAM requirement in GB
 RAM_REQUIREMENT=8
-# Get the number of CPUs, subtract 1, and ensure the value is at least 1
-JOBS_FOR_CPUS=$(( $(($(nproc) - 1 < 1 ? 1 : $(nproc) - 1 )) ))
+# Get the number of CPUs, subtract some for system processes
+LEAVE_CPUS=1
+JOBS_FOR_CPUS=$(( $(($(lscpu -p | egrep -v '^#' | wc -l) - $LEAVE_CPUS < 1 ? 1 : $(lscpu -p | egrep -v '^#' | wc -l) - $LEAVE_CPUS )) ))
 # Get the total memory in GB divided by 10, rounded down to nearest integer, and ensure the value is at least 1
 JOBS_FOR_RAMGB=$(( $(awk -v ram_req="$RAM_REQUIREMENT" '/MemTotal/ {print int($2/1024/1024/ram_req < 1 ? 1 : $2/1024/1024/ram_req)}' /proc/meminfo) ))
 # Get the minimum of JOBS_FOR_CPUS and JOBS_FOR_RAMGB
