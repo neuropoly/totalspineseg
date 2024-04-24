@@ -45,7 +45,7 @@ DATASETS=${1:-101 102 103}
 # Set the fold to work with - default is 0
 FOLD=${2:-0}
 
-echo "Working with datasets: $DATASETS, fold: $FOLD"
+echo "Working with datasets: ${DATASETS[@]}, fold: $FOLD"
 
 for d in ${DATASETS[@]}; do
 
