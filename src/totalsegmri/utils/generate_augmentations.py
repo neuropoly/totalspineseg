@@ -208,7 +208,7 @@ def generate_augmentations(
         # Contrast augmentation
         if np.random.rand() < 0.8:
                 _aug_redistribute_seg = partial(aug_redistribute_seg, classes=seg_classes)
-                augs.append(np.random.choice([
+                augs.extend(np.random.choice([
                     _aug_redistribute_seg,
                     aug_gamma,
                     np.random.choice([
@@ -218,9 +218,9 @@ def generate_augmentations(
                         aug_sin,
                         aug_sig,
                     ]),
-                ], p=[0.4, 0.3, 0.3]))
+                ], p=[0.4, 0.3, 0.3], size=np.random.choice([1, 2]), replace=False))
 
-        # Image form segmentation augmentation
+        # Image form segmentation augmentation in 1% of cases(0.5*(1-0.8))
         elif labels2image and np.random.rand() < 0.5:
             _aug_labels2image = partial(aug_labels2image, classes=seg_classes)
             augs.append(_aug_labels2image)
@@ -277,7 +277,7 @@ def generate_augmentations(
         nib.save(output_seg, output_seg_path)
         # print(f"\n{output_seg_path.name.replace('.nii.gz', '')}: {[a.func.__name__ if isinstance(a, partial) else a.__name__ for a in augs]}", end='')
 
-def aug_redistribute_seg(img, seg, factor=(-0.2, 0.7), classes=None):
+def aug_redistribute_seg(img, seg, factor=(-1.3, 1.3), classes=None):
 
     _seg = seg
     # Ensure factor is a list
@@ -288,7 +288,7 @@ def aug_redistribute_seg(img, seg, factor=(-0.2, 0.7), classes=None):
 
     # Compute original mean, std and min/max values
     original_mean, original_std = np.mean(img), np.std(img)
-    img_min, img_max = np.min(img), np.max(img)
+    original_min, original_max = np.min(img), np.max(img)
 
     # Normlize
     img = (img - original_mean) / original_std
@@ -313,20 +313,20 @@ def aug_redistribute_seg(img, seg, factor=(-0.2, 0.7), classes=None):
         coeff = 1 / (l_std * np.sqrt(2 * np.pi))
         to_add += coeff * np.exp(exponent) * np.random.uniform(-1, 1)
 
-    img += (to_add - to_add.min()) / ((to_add.max() - to_add.min()) / np.random.uniform(factor[0], factor[-1]))
+    img += np.random.uniform(factor[0], factor[-1]) * (to_add - to_add.min()) / (to_add.max() - to_add.min())
 
     # Return to original range
-    img = np.interp(img, (img_min, img_max), (img_min, img_max))
+    img = original_min + (original_max - original_min) * (img - img.min()) / (img.max() - img.min())
 
     return img, seg
 
 def aug_transform(img, seg, transform):
     # Compute original mean, std and min/max values
     original_mean, original_std = np.mean(img), np.std(img)
-    img_min, img_max = np.min(img), np.max(img)
+    original_min, original_max = np.min(img), np.max(img)
 
     # Generate random mean and std
-    random_mean = np.random.rand() * (img_max - img_min) + img_min
+    random_mean = np.random.rand() * (original_max - original_min) + original_min
     random_std = (np.random.rand() * 1.5 + 0.5) * original_std
 
     # Normlize
@@ -340,12 +340,12 @@ def aug_transform(img, seg, transform):
     img = img  * random_std + random_mean
 
     # Return to original range
-    img = np.interp(img, (img_min, img_max), (img_min, img_max))
+    img = original_min + (original_max - original_min) * (img - img.min()) / (img.max() - img.min())
 
     return img, seg
 
 def aug_log(img, seg):
-    return aug_transform(img, seg, np.log)
+    return aug_transform(img, seg, lambda x:np.log(1 + x))
 
 def aug_sqrt(img, seg):
     return aug_transform(img, seg, np.sqrt)
@@ -413,7 +413,7 @@ def aug_ghosting(img, seg):
     return subject.image.data.squeeze().numpy().astype(np.float64), subject.seg.data.squeeze().numpy().astype(np.uint8)
 
 def aug_spike(img, seg):
-    subject = tio.RandomSpike()(tio.Subject(
+    subject = tio.RandomSpike(intensity=(1, 2))(tio.Subject(
         image=tio.ScalarImage(tensor=np.expand_dims(img, axis=0)),
         seg=tio.LabelMap(tensor=np.expand_dims(seg, axis=0))
     ))
@@ -460,7 +460,7 @@ def aug_labels2image(img, seg, classes=None):
     return subject.image.data.squeeze().numpy().astype(np.float64), seg
 
 def aug_gamma(img, seg):
-    subject = tio.RandomGamma((-1, 1))(tio.Subject(
+    subject = tio.RandomGamma()(tio.Subject(
         image=tio.ScalarImage(tensor=np.expand_dims(img, axis=0)),
         seg=tio.LabelMap(tensor=np.expand_dims(seg, axis=0))
     ))
