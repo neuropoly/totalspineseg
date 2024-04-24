@@ -207,18 +207,18 @@ def generate_augmentations(
 
         # Contrast augmentation
         if np.random.rand() < 0.8:
-                _aug_redistribute_seg = partial(aug_redistribute_seg, classes=seg_classes)
-                augs.extend(np.random.choice([
-                    _aug_redistribute_seg,
-                    aug_gamma,
-                    np.random.choice([
-                        aug_log,
-                        aug_sqrt,
-                        aug_exp,
-                        aug_sin,
-                        aug_sig,
-                    ]),
-                ], p=[0.4, 0.3, 0.3], size=np.random.choice([1, 2]), replace=False))
+            _aug_redistribute_seg = partial(aug_redistribute_seg, classes=seg_classes)
+            augs.extend(np.random.choice([
+                _aug_redistribute_seg,
+                aug_gamma,
+                np.random.choice([
+                    aug_log,
+                    aug_sqrt,
+                    aug_exp,
+                    aug_sin,
+                    aug_sig,
+                ]),
+            ], p=[0.4, 0.3, 0.3], size=np.random.choice([1, 2]), replace=False))
 
         # Image form segmentation augmentation in 1% of cases(0.5*(1-0.8))
         elif labels2image and np.random.rand() < 0.5:
