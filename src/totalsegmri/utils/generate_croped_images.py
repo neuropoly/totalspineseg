@@ -122,9 +122,9 @@ def main():
             seg_suffix = "{seg_suffix}"
             output_image_suffix = "{output_image_suffix}"
             output_seg_suffix = "{output_seg_suffix}"
-            from_bottom = "{from_bottom}"
-            max_workers = "{max_workers}"
-            verbose = "{verbose}"
+            from_bottom = {from_bottom}
+            max_workers = {max_workers}
+            verbose = {verbose}
         '''))
 
     glob_pattern = ""

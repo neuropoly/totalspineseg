@@ -75,8 +75,8 @@ def main():
         help='Slice location within the specified orientation (0-1). Default is 0.5 (middle slice).'
     )
     parser.add_argument(
-        '--override', '-r', type=int, default=0, choices=[0, 1],
-        help='Override existing output files. 0: Do not override, 1: Override. Default is 0.'
+        '--override', '-r', action="store_true", default=False,
+        help='Override existing output files, defaults to false (Do not override).'
     )
     parser.add_argument(
         '--max-workers', '-w', type=int, default=mp.cpu_count(),
@@ -121,10 +121,10 @@ def main():
             seg_suffix = "{seg_suffix}"
             image_suffix = "{image_suffix}"
             orient = "{orient}"
-            sliceloc = "{sliceloc}"
-            override = "{override}"
-            max_workers = "{max_workers}"
-            verbose = "{verbose}"
+            sliceloc = {sliceloc}
+            override = {override}
+            max_workers = {max_workers}
+            verbose = {verbose}
         '''))
 
     glob_pattern = ""

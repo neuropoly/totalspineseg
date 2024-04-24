@@ -85,8 +85,8 @@ def main():
             subject_dir = "{subject_dir}"
             subject_subdir = "{subject_subdir}"
             prefix = "{prefix}"
-            max_workers = "{max_workers}"
-            verbose = "{verbose}"
+            max_workers = {max_workers}
+            verbose = {verbose}
         '''))
 
     glob_pattern = ""

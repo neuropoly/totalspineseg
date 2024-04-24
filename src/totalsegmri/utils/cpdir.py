@@ -69,10 +69,10 @@ def main():
             Running {Path(__file__).stem} with the following params:
             src = "{src}"
             dst = "{dst}"
-            pattern = {pattern}
+            pattern = "{pattern}"
             flat = {flat}
-            max_workers = "{max_workers}"
-            verbose = "{verbose}"
+            max_workers = {max_workers}
+            verbose = {verbose}
         '''))
 
     # Process the files

@@ -139,8 +139,8 @@ def main():
             augmentations_per_image = {augmentations_per_image}
             labels2image = {labels2image}
             seg_classes = {seg_classes}
-            max_workers = "{max_workers}"
-            verbose = "{verbose}"
+            max_workers = {max_workers}
+            verbose = {verbose}
         '''))
 
     glob_pattern = ""

@@ -102,9 +102,9 @@ def main():
             prefix = "{prefix}"
             seg_suffix = "{seg_suffix}"
             output_seg_suffix = "{output_seg_suffix}"
-            cord_label = "{cord_label}"
-            csf_label = "{csf_label}"
-            max_workers = "{max_workers}"
+            cord_label = {cord_label}
+            csf_label = {csf_label}
+            max_workers = {max_workers}
             verbose = {verbose}
         '''))
     

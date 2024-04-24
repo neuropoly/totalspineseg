@@ -121,10 +121,10 @@ def main():
             prefix = "{prefix}"
             seg_suffix = "{seg_suffix}"
             output_seg_suffix = "{output_seg_suffix}"
-            default_input = "{default_input}"
-            add_output = "{add_output}"
-            add_input = "{add_input}"
-            max_workers = "{max_workers}"
+            default_input = {default_input}
+            add_output = {add_output}
+            add_input = {add_input}
+            max_workers = {max_workers}
             verbose = {verbose}
         '''))
 
