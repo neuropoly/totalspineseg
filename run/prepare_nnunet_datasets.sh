@@ -97,7 +97,7 @@ for d in spider single multi whole; do
 done
 
 echo "Generate augmentations"
-python $utils/generate_augmentations.py -i $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr -s $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr -o $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr -g $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr --labels2image
+python $utils/generate_augmentations.py -i $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr -s $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr -o $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr -g $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr --labels2image --seg-classes 202-224 18-41,92 200 201
 
 echo "Map labels form TotalSegMRI labels to the datasets specific label"
 python $utils/cpdir.py $nnUNet_raw/Dataset100_TotalSegMRI $nnUNet_raw/Dataset101_TotalSegMRI_step1

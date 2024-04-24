@@ -22,9 +22,9 @@ def main():
         ),
         epilog=textwrap.dedent('''
             Examples:
-            generate_augmentations -i images -s labels -o images -g labels
+            generate_augmentations -i images -s labels -o images -g labels --labels2image --seg-classes 202-224 18-41,92 200 201
             For BIDS:
-            generate_augmentations -i . -s derivatives/labels -o . -g derivatives/labels --image-suffix "" --output-image-suffix "" --seg-suffix "_seg" --output-seg-suffix "_seg" -d "sub-" -u "anat"
+            generate_augmentations -i . -s derivatives/labels -o . -g derivatives/labels --image-suffix "" --output-image-suffix "" --seg-suffix "_seg" --output-seg-suffix "_seg" -d "sub-" -u "anat" --labels2image --seg-classes 202-224 18-41,92 200 201
         '''),
         formatter_class=argparse.RawTextHelpFormatter
     )
@@ -85,8 +85,8 @@ def main():
         help='Use Random Labels To Image augmentation, defaults to false.'
     )
     parser.add_argument(
-        '--seg-classes', type=parse_class, nargs='+', default=[parse_class(_) for _ in ['202-224', '18-41,92', '200', '201', ]],
-        help='Define classes of labels for per class augmentation. Default 202-224 18-41,92 200 201 (IVDs, vertebrae, disc, csf).'
+        '--seg-classes', type=parse_class, nargs='+', default=None,
+        help='Define classes of labels for per class augmentation. Example: 202-224 18-41,92 200 201 for IVDs, vertebrae, disc, csf (Default to use each label as a separate class ).'
     )
     parser.add_argument(
         '--max-workers', '-w', type=int, default=mp.cpu_count(),
@@ -136,9 +136,9 @@ def main():
             seg_suffix = "{seg_suffix}"
             output_image_suffix = "{output_image_suffix}"
             output_seg_suffix = "{output_seg_suffix}"
-            augmentations_per_image = "{augmentations_per_image}"
-            labels2image = "{labels2image}"
-            seg_classes = "{seg_classes}"
+            augmentations_per_image = {augmentations_per_image}
+            labels2image = {labels2image}
+            seg_classes = {seg_classes}
             max_workers = "{max_workers}"
             verbose = "{verbose}"
         '''))
