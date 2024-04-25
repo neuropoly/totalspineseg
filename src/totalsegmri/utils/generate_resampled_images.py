@@ -192,6 +192,8 @@ def generate_resampled_images(
         # Make sure output directory exists and save
         output_seg_path.parent.mkdir(parents=True, exist_ok=True)
         output_seg = nib.Nifti1Image(output_seg_data, subject.seg.affine, seg.header)
+        output_seg.set_qform(subject.seg.affine)
+        output_seg.set_sform(subject.seg.affine)
         output_seg.set_data_dtype(np.uint8)
         nib.save(output_seg, output_seg_path)
 
@@ -206,8 +208,9 @@ def generate_resampled_images(
 
     # Make sure output directory exists and save with original image dtype
     output_image_path.parent.mkdir(parents=True, exist_ok=True)
-    output_image = nib.Nifti1Image(output_image_data.astype(image.get_data_dtype()), subject.image.affine, image.header)
-    output_image.set_data_dtype(image.get_data_dtype())
+    output_image = nib.Nifti1Image(output_image_data, subject.image.affine, image.header)
+    output_image.set_qform(subject.image.affine)
+    output_image.set_sform(subject.image.affine)
     nib.save(output_image, output_image_path)
 
 if __name__ == '__main__':

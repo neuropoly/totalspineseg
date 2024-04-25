@@ -6,6 +6,7 @@ from pathlib import Path
 import nibabel as nib
 import numpy as np
 import torchio as tio
+import gryds
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -16,14 +17,13 @@ def main():
     # Description and arguments
     parser = argparse.ArgumentParser(
         description=textwrap.dedent(f'''
-        This script processes NIfTI (Neuroimaging Informatics Technology Initiative) image and segmentation files.
-        It transform segmentations into the image space to have the same origin, spacing, direction and shape as the image.'''
+        This script processes NIfTI (Neuroimaging Informatics Technology Initiative) images and make sure affine is in sform and qform.'''
         ),
         epilog=textwrap.dedent('''
             Examples:
-            transform_labels2images -i images -s labels -o labels_transformed
+            transform_s2qform -i images -o images
             For BIDS:
-            transform_labels2images -i . -s derivatives/labels -o derivatives/labels --image-suffix "" --output-image-suffix "" --seg-suffix "_seg" --output-seg-suffix "_seg" -d "sub-" -u "anat"
+            transform_s2qform -i . -o . --image-suffix "" --output-image-suffix "" -d "sub-" -u "anat"
         '''),
         formatter_class=argparse.RawTextHelpFormatter
     )
@@ -32,12 +32,8 @@ def main():
         help='The folder where input NIfTI images files are located (required).'
     )
     parser.add_argument(
-        '--segs-dir', '-s', type=Path, required=True,
-        help='The folder where input NIfTI segmentation files are located (required).'
-    )
-    parser.add_argument(
         '--output-dir', '-o', type=Path, required=True,
-        help='The folder where output augmented images will be saved (required).'
+        help='The folder where output images will be saved (required).'
     )
     parser.add_argument(
         '--subject-dir', '-d', type=str, default=None, nargs='?', const='',
@@ -60,12 +56,8 @@ def main():
         help='Image suffix, defaults to "_0000".'
     )
     parser.add_argument(
-        '--seg-suffix', type=str, default='',
-        help='Segmentation suffix, defaults to "".'
-    )
-    parser.add_argument(
-        '--output-suffix', type=str, default='',
-        help='Image suffix for output, defaults to "".'
+        '--output-suffix', type=str, default='_0000',
+        help='Image suffix for output, defaults to "_0000".'
     )
     parser.add_argument(
         '--max-workers', '-w', type=int, default=mp.cpu_count(),
@@ -84,13 +76,11 @@ def main():
 
     # Get the command-line argument values
     images_path = args.images_dir
-    segs_path = args.segs_dir
     output_path = args.output_dir
     subject_dir = args.subject_dir
     subject_subdir = args.subject_subdir
     prefix = args.prefix
     image_suffix = args.image_suffix
-    seg_suffix = args.seg_suffix
     output_suffix = args.output_suffix
     max_workers = args.max_workers
     verbose = args.verbose
@@ -100,13 +90,11 @@ def main():
         print(textwrap.dedent(f''' 
             Running {Path(__file__).stem} with the following params:
             images_path = "{images_path}"
-            segs_path = "{segs_path}"
             output_path = "{output_path}"
             subject_dir = "{subject_dir}"
             subject_subdir = "{subject_subdir}"
             prefix = "{prefix}"
             image_suffix = "{image_suffix}"
-            seg_suffix = "{seg_suffix}"
             output_suffix = "{output_suffix}"
             max_workers = {max_workers}
             verbose = {verbose}
@@ -123,58 +111,40 @@ def main():
     images_path_list = list(images_path.glob(glob_pattern))
 
     # Create a partially-applied function with the extra arguments
-    partial_transform_labels2images = partial(
-        transform_labels2images,
+    partial_transform_s2qform = partial(
+        transform_s2qform,
         images_path=images_path,
-        segs_path=segs_path,
         output_path=output_path,
         image_suffix=image_suffix,
-        seg_suffix=seg_suffix,
         output_suffix=output_suffix,
     )
 
     with mp.Pool() as pool:
-        process_map(partial_transform_labels2images, images_path_list, max_workers=max_workers)
+        process_map(partial_transform_s2qform, images_path_list, max_workers=max_workers)
 
 
-def transform_labels2images(
+def transform_s2qform(
         image_path,
         images_path,
-        segs_path,
         output_path,
         image_suffix,
-        seg_suffix,
         output_suffix,
     ):
-    
-    seg_path = segs_path / image_path.relative_to(images_path).parent /  image_path.name.replace(f'{image_suffix}.nii.gz', f'{seg_suffix}.nii.gz')
-    
-    if not seg_path.is_file():
-        print(f'Segmentation file not found: {seg_path}')
-        return
-    
-    output_seg_path = output_path / image_path.relative_to(images_path).parent / seg_path.name.replace(f'{seg_suffix}.nii.gz', f'{output_suffix}.nii.gz')
 
+    output_image_path = output_path / image_path.relative_to(images_path).parent / image_path.name.replace(f'{image_suffix}.nii.gz', f'{output_suffix}.nii.gz')
+    
     image = nib.load(image_path)
-    seg = nib.load(seg_path)
 
-    image_data = image.get_fdata().astype(np.float64)
-    seg_data = seg.get_fdata().astype(np.uint8)
+    # Create result with original image dtype
+    output_image = nib.Nifti1Image(image.get_fdata(), image.affine, image.header)
+    output_image.set_qform(image.affine)
+    output_image.set_sform(image.affine)
 
-    # Create result
-    tio_img=tio.ScalarImage(tensor=image_data[None, ...], affine=image.affine)
-    tio_seg=tio.LabelMap(tensor=seg_data[None, ...], affine=seg.affine)
+    # Make sure output directory exists
+    output_image_path.parent.mkdir(parents=True, exist_ok=True)
     
-    tio_output_seg = tio.Resample(tio_img)(tio_seg)
-    output_seg_data = tio_output_seg.data.numpy()[0, ...].astype(np.uint8)
-    
-    # Make sure output directory exists and save
-    output_seg_path.parent.mkdir(parents=True, exist_ok=True)
-    output_seg = nib.Nifti1Image(output_seg_data, image.affine, seg.header)
-    output_seg.set_qform(image.affine)
-    output_seg.set_sform(image.affine)
-    output_seg.set_data_dtype(np.uint8)
-    nib.save(output_seg, output_seg_path)
+    # Save mapped segmentation
+    nib.save(output_image, output_image_path)
 
 if __name__ == '__main__':
     main()

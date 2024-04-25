@@ -263,9 +263,12 @@ def generate_augmentations(
             output_image_data, output_seg_data = a(output_image_data, output_seg_data)
 
         # Create result with original image dtype
-        output_image = nib.Nifti1Image(output_image_data.astype(image.get_data_dtype()), image.affine, image.header)
-        output_image.set_data_dtype(image.get_data_dtype())
+        output_image = nib.Nifti1Image(output_image_data, image.affine, image.header)
+        output_image.set_qform(image.affine)
+        output_image.set_sform(image.affine)
         output_seg = nib.Nifti1Image(output_seg_data, seg.affine, seg.header)
+        output_seg.set_qform(seg.affine)
+        output_seg.set_sform(seg.affine)
         output_seg.set_data_dtype(np.uint8)
 
         # Make sure output directory exists

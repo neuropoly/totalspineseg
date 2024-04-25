@@ -145,12 +145,14 @@ def generate_largest_labels(
         seg_data[mask_labeled == largest_label] = l
 
     # Create result segmentation
-    seg = nib.Nifti1Image(seg_data, seg.affine, seg.header)
-    seg.set_data_dtype(np.uint8)
+    output_seg = nib.Nifti1Image(seg_data, seg.affine, seg.header)
+    output_seg.set_qform(seg.affine)
+    output_seg.set_sform(seg.affine)
+    output_seg.set_data_dtype(np.uint8)
     # Make sure output directory exists
     output_seg_path.parent.mkdir(parents=True, exist_ok=True)
     # Save mapped segmentation
-    nib.save(seg, output_seg_path)
+    nib.save(output_seg, output_seg_path)
 
 if __name__ == '__main__':
     main()

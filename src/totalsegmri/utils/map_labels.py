@@ -190,6 +190,8 @@ def map_seg(seg_path, segs_path, map_dict, output_path, seg_suffix, output_seg_s
 
     # Create result segmentation 
     mapped_seg = nib.Nifti1Image(mapped_seg_data, seg.affine, seg.header)
+    mapped_seg.set_qform(seg.affine)
+    mapped_seg.set_sform(seg.affine)
     mapped_seg.set_data_dtype(np.uint8)
 
     # Make sure output directory exists

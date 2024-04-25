@@ -152,6 +152,8 @@ def fix_csf_label(seg_path, segs_path, cord_label, csf_label, output_path, seg_s
 
     # Create result segmentation 
     mapped_seg = nib.Nifti1Image(seg_data, seg.affine, seg.header)
+    mapped_seg.set_qform(seg.affine)
+    mapped_seg.set_sform(seg.affine)
     mapped_seg.set_data_dtype(np.uint8)
 
     # Make sure output directory exists
