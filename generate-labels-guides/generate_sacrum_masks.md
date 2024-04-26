@@ -36,7 +36,7 @@ python src/totalsegmri/utils/register_CT_seg_to_MR.py --path-img <PATH-TO-BIDS-F
 
 ## Generate a config file to select the data for training
 
-To select the data used for training, a config file was used. 
+To select the data used for training, a [config file](https://github.com/spinalcordtoolbox/disc-labeling-hourglass/issues/25#issuecomment-1695818382) was used. 
 
 First fetch the paths to all the sacrum masks that will be used for TRAINING/VALIDATION/TESTING
 
