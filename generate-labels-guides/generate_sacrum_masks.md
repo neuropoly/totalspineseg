@@ -8,14 +8,14 @@ The main idea was to use open-source datasets with "easy to make" sacrum masks o
 
 If you just want the labels they were already git-annexed on our private servers.
 
+
 ## I - Dowload the training datasets
 
 To generate the sacrum masks, 3 open-source datasets were used:
 
-| GoldAtlas | SynthRAD2023 | MRSpineSeg |
+| [GoldAtlas](https://zenodo.org/records/583096) | [SynthRAD2023](https://aapm.onlinelibrary.wiley.com/doi/full/10.1002/mp.16529) | [MRSpineSeg](https://paperswithcode.com/dataset/mrspineseg-challenge) |
 | :---: | :---: | :---: |
 | <img width="780" alt="Screenshot 2024-01-02 at 5 10 39 AM" src="https://github.com/neuropoly/totalsegmentator-mri/assets/68945192/a324ba05-1118-4eb3-bd4f-f9aabd077477">  | <img width="628" alt="Screenshot 2024-01-02 at 5 10 53 AM" src="https://github.com/neuropoly/totalsegmentator-mri/assets/68945192/10ddd780-ec42-4540-a091-19d2b2dc3e53"> | <img width="671" alt="Screenshot 2024-01-02 at 5 11 19 AM" src="https://github.com/neuropoly/totalsegmentator-mri/assets/68945192/a0069483-ad59-48bd-9c3e-a436888a39d7"> |
-| [link](https://zenodo.org/records/583096) | [link](https://aapm.onlinelibrary.wiley.com/doi/full/10.1002/mp.16529) | [link](https://paperswithcode.com/dataset/mrspineseg-challenge) |
 
 > These datasets were chosen because they had these sacrum masks available or because they had co-registered MRI and CT images that allowed us to rely on the [CT total segmentator network](https://github.com/wasserth/TotalSegmentator) to generate these labels.
 
@@ -23,6 +23,7 @@ These datasets were BIDSified and stored on our private google drive, under `reg
 - SynthRAD2023
 - MRSpineSeg.zip
 - GoldAtlas.zip
+
 
 ## II - Register CT labels to MRI
 
@@ -33,6 +34,7 @@ As specified before, some sacrum masks were generated using the [CT total segmen
 ```bash
 python <PATH-TO-MRITOTALSEG-REPO>/src/totalsegmri/utils/register_CT_seg_to_MR.py --path-img <PATH-TO-BIDS-FOLDER>
 ```
+
 
 ## III - Generate a config file to select the data for training
 
@@ -64,6 +66,7 @@ python src/totalsegmri/utils/convert_BIDS_config_to_nnunet_format.py --config <P
 
 `PATH-TO-NNUNET-DATASET` corresponds to the path where the generated nnUNetV2 dataset will be stored.
 
+
 ## IV - Train with nnUNetV2
 
 > Regarding nnUNetV2 installation and general usage, please check https://github.com/ivadomed/utilities/blob/main/quick_start_guides/nnU-Net_quick_start_guide.md
@@ -79,6 +82,7 @@ Then train using this command
 ```bash
 CUDA_VISIBLE_DEVICES=<GPU_ID> nnUNetv2_train 300 3d_fullres 0
 ```
+
 
 ## V - Run nnUNetV2 inference on whole-spine and spider dataset
 
