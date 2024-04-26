@@ -8,7 +8,7 @@ The main idea was to use open-source datasets with "easy to make" sacrum masks o
 
 If you just want the labels they were already git-annexed on our private servers.
 
-## Dowload the training datasets
+## I - Dowload the training datasets
 
 To generate the sacrum masks, 3 open-source datasets were used:
 
@@ -20,11 +20,11 @@ To generate the sacrum masks, 3 open-source datasets were used:
 > These datasets were chosen because they had these sacrum masks available or because they had co-registered MRI and CT images that allowed us to rely on the [CT total segmentator network](https://github.com/wasserth/TotalSegmentator) to generate these labels.
 
 These datasets were BIDSified and stored on our private google drive, under `reg2pam50`:
-- 
+- SynthRAD2023
 - MRSpineSeg.zip
 - GoldAtlas.zip
 
-## Register CT labels to MRI
+## II - Register CT labels to MRI
 
 As specified before, some sacrum masks were generated using the [CT total segmentator network](https://github.com/wasserth/TotalSegmentator) but due to slightly different image shape between MRI (T1w and T2w) and CT scans segmentations still needed to me registered. To do that, the script `src/totalsegmri/utils/register_CT_seg_to_MR.py` was used with `GoldAtlas.zip` and `SynthRAD2023_pelvis.zip`.
 
@@ -34,7 +34,7 @@ As specified before, some sacrum masks were generated using the [CT total segmen
 python src/totalsegmri/utils/register_CT_seg_to_MR.py --path-img <PATH-TO-BIDS-FOLDER>
 ```
 
-## Generate a config file to select the data for training
+## III - Generate a config file to select the data for training
 
 To select the data used for training, a [config file](https://github.com/spinalcordtoolbox/disc-labeling-hourglass/issues/25#issuecomment-1695818382) was used. 
 
@@ -63,7 +63,7 @@ python src/totalsegmri/utils/convert_BIDS_config_to_nnunet_format.py --config <P
 
 `PATH-TO-NNUNET-DATASET` corresponds to the path where the generated nnUNetV2 dataset will be stored.
 
-## Train with nnUNetV2
+## IV - Train with nnUNetV2
 
 > Regarding nnUNetV2 installation and general usage, please check https://github.com/ivadomed/utilities/blob/main/quick_start_guides/nnU-Net_quick_start_guide.md
 
@@ -79,7 +79,7 @@ Then train using this command
 CUDA_VISIBLE_DEVICES=<GPU_ID> nnUNetv2_train 300 3d_fullres 0
 ```
 
-## Run nnUNetV2 inference on whole-spine and spider dataset
+## V - Run nnUNetV2 inference on whole-spine and spider dataset
 
 To run nnUNetV2's inference, keep the largest component and store the data according to BIDS standard, the script `run/gen_sacrum_seg_BIDS_from_config.sh` was used with the config file `src/totalsegmri/resources/configs/test_sacrum.json`.
 
