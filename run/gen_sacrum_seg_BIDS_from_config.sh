@@ -22,7 +22,7 @@ trap "echo Caught Keyboard Interrupt within script. Exiting now.; exit" INT
 # ======================================================================================================================
 # SET DEFAULT VALUES FOR PARAMETERS.
 # ----------------------------------------------------------------------------------------------------------------------
-PATH_CONFIG="../src/totalsegmri/resources/configs/add_sacrum.json"
+PATH_CONFIG="../src/totalsegmri/resources/configs/test_sacrum.json"
 DERIVATIVE_FOLDER="labels"
 LABEL_SUFFIX="_label-sacrum_seg"
 AUTHOR="Nathan Molinier"
@@ -75,7 +75,7 @@ keep_largest_component(){
 
   # Call python function
   # TODO: the hard-coded path to the conda environment is not ideal.
-  "${PATH_NNUNET_ENV}"/bin/python3 "${PATH_REPO}"/scripts/keep_largest_component.py --seg-in "${seg_in}" --seg-out "${seg_out}"
+  "${PATH_NNUNET_ENV}"/bin/python3 "${PATH_REPO}"/src/totalsegmri/utils/keep_largest_component.py --seg-in "${seg_in}" --seg-out "${seg_out}"
 }
 
 
