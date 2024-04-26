@@ -1,5 +1,14 @@
 #!/bin/bash
 
+# This script calls nnUNetV2's inference to generate sacrum masks using a JSON config file (see src/ressources/configs) and saves labels following BIDS' convention.
+
+# The following variables and paths MUST be updated before running the script:
+#  - to the datasets (key: DATASETS_PATH) in the JSON config add_sacrum.json (src/totalsegmri/resources/configs/add_sacrum.json)
+#  - to the repository (Variable: PATH_REPO)
+#  - to the nnunet model (Variable: PATH_NNUNET_MODEL)
+#  - to the environment (Variable: PATH_NNUNET_ENV)
+#  - the author (Variable: AUTHOR)
+
 # Uncomment for full verbose
 # set -x
 
@@ -13,7 +22,7 @@ trap "echo Caught Keyboard Interrupt within script. Exiting now.; exit" INT
 # ======================================================================================================================
 # SET DEFAULT VALUES FOR PARAMETERS.
 # ----------------------------------------------------------------------------------------------------------------------
-PATH_CONFIG="/home/GRAMES.POLYMTL.CA/p118739/data/config_data/add_sacrum.json"
+PATH_CONFIG="../src/totalsegmri/resources/configs/add_sacrum.json"
 DERIVATIVE_FOLDER="labels"
 LABEL_SUFFIX="_label-sacrum_seg"
 AUTHOR="Nathan Molinier"
