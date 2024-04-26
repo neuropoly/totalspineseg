@@ -203,67 +203,85 @@ def generate_augmentations(
         output_image_path = output_images_path / image_path.relative_to(images_path).parent / image_path.name.replace(f'{image_suffix}.nii.gz', f'_a{i}{output_image_suffix}.nii.gz')
         output_seg_path = output_segs_path / image_path.relative_to(images_path).parent / seg_path.name.replace(f'{seg_suffix}.nii.gz', f'_a{i}{output_seg_suffix}.nii.gz')
 
-        augs = []
-
-        # Contrast augmentation
-        if np.random.rand() < 0.8:
-            _aug_redistribute_seg = partial(aug_redistribute_seg, classes=seg_classes)
-            augs.extend(np.random.choice([
-                _aug_redistribute_seg,
-                aug_gamma,
-                np.random.choice([
-                    aug_log,
-                    aug_sqrt,
-                    aug_exp,
-                    aug_sin,
-                    aug_sig,
-                ]),
-            ], p=[0.4, 0.3, 0.3], size=np.random.choice([1, 2]), replace=False))
-
-        # Image form segmentation augmentation in 1% of cases(0.5*(1-0.8))
-        elif labels2image and np.random.rand() < 0.5:
-            _aug_labels2image = partial(aug_labels2image, classes=seg_classes)
-            augs.append(_aug_labels2image)
-
-        # Inverse color augmentation
-        if np.random.rand() < 0.3:
-            augs.append(aug_inverse)
-
-        # Artifacts augmentation
-        if np.random.rand() < 0.7:
-            augs.append(np.random.choice([
-                aug_motion,
-                aug_ghosting,
-                aug_spike,
-                aug_bias_field,
-                aug_blur,
-                aug_noise,
-            ]))
-
-        # Spatial augmentation
-        if np.random.rand() < 0.3:
-            augs.append(aug_flip)
-
-        if np.random.rand() < 0.7:
-            augs.append(np.random.choice([
-                aug_bspline,
-                aug_aff,
-                aug_elastic,
-            ]))
-
-        # Anisotropy augmentation
+        _aug_redistribute_seg = partial(aug_redistribute_seg, classes=seg_classes)
+        _aug_labels2image = partial(aug_labels2image, classes=seg_classes)
         downsampling = max(1, 7 / max(image.header.get_zooms()))
         _aug_anisotropy = partial(aug_anisotropy, downsampling=(min(1.5, downsampling), downsampling))
-        if np.random.rand() < 0.7:
-            augs.append(_aug_anisotropy)
 
-        # Augment the images
-        output_image_data, output_seg_data = image_data, seg_data
-        for a in augs:
-            output_image_data, output_seg_data = a(output_image_data, output_seg_data)
+        # loop until valid augmentation is found
+        for cur_cycle in range(100):
+
+            augs = []
+
+            # Contrast augmentation
+            if np.random.rand() < 0.8:
+                augs.extend(np.random.choice([
+                    _aug_redistribute_seg,
+                    aug_gamma,
+                    np.random.choice([
+                        aug_log,
+                        aug_sqrt,
+                        aug_exp,
+                        aug_sin,
+                        aug_sig,
+                    ]),
+                ], p=[0.4, 0.3, 0.3], size=np.random.choice([1, 2]), replace=False))
+
+            # Image form segmentation augmentation in 1% of cases(0.5*(1-0.8))
+            elif labels2image and np.random.rand() < 0.5:
+                augs.append(_aug_labels2image)
+
+            # Inverse color augmentation
+            if np.random.rand() < 0.3:
+                augs.append(aug_inverse)
+
+            # Artifacts augmentation
+            if np.random.rand() < 0.7:
+                augs.append(np.random.choice([
+                    aug_motion,
+                    aug_ghosting,
+                    aug_spike,
+                    aug_bias_field,
+                    aug_blur,
+                    aug_noise,
+                ]))
+
+            # Spatial augmentation
+            if np.random.rand() < 0.3:
+                augs.append(aug_flip)
+
+            if np.random.rand() < 0.7:
+                augs.append(np.random.choice([
+                    aug_bspline,
+                    aug_aff,
+                    aug_elastic,
+                ]))
+
+            # Anisotropy augmentation
+            if np.random.rand() < 0.7:
+                augs.append(_aug_anisotropy)
+
+            # Augment the images
+            output_image_data, output_seg_data = image_data, seg_data
+            for a in augs:
+                output_image_data, output_seg_data = a(output_image_data, output_seg_data)
+
+            # Return to original range
+            image_min, image_max = image_data.min(), image_data.max()
+            output_image_min, output_image_max = output_image_data.min(), output_image_data.max()
+            output_image_data = image_min + (image_max - image_min) * (output_image_data - output_image_min) / (output_image_max - output_image_min)
+
+            # Validate augmentation results and break the loop if valid
+            output_image_min, output_image_max = output_image_data.min(), output_image_data.max()
+            output_image_range = output_image_max - output_image_min
+            output_image_iqr5 = np.percentile(output_image_data, 52.5) - np.percentile(output_image_data, 47.5)
+            output_image_iqr95 = np.percentile(output_image_data, 97.5) - np.percentile(output_image_data, 2.5)
+            if output_image_range > 0 and output_image_iqr5 < 0.99 * output_image_range and output_image_iqr95 > 0.01 * output_image_range:
+                break
+            # print("Invalid augmentation, retrying...")
 
         # Create result with original image dtype
-        output_image = nib.Nifti1Image(output_image_data, image.affine, image.header)
+        output_image = nib.Nifti1Image(output_image_data.astype(np.asanyarray(image.dataobj).dtype), image.affine, image.header)
         output_image.set_qform(image.affine)
         output_image.set_sform(image.affine)
         output_seg = nib.Nifti1Image(output_seg_data, seg.affine, seg.header)
@@ -295,7 +313,8 @@ def aug_redistribute_seg(img, seg, factor=(-1.3, 1.3), classes=None):
 
     # Normlize
     img = (img - original_mean) / original_std
-    img = (img - img.min()) / (img.max() - img.min())
+    img_min, img_max = img.min(), img.max()
+    img = (img - img_min) / (img_max - img_min)
 
     # Get the unique label values (excluding 0)
     labels = [_ for _ in np.unique(_seg) if _ != 0]
@@ -319,7 +338,8 @@ def aug_redistribute_seg(img, seg, factor=(-1.3, 1.3), classes=None):
     img += np.random.uniform(factor[0], factor[-1]) * (to_add - to_add.min()) / (to_add.max() - to_add.min())
 
     # Return to original range
-    img = original_min + (original_max - original_min) * (img - img.min()) / (img.max() - img.min())
+    img_min, img_max = img.min(), img.max()
+    img = original_min + (original_max - original_min) * (img - img_min) / (img_max - img_min)
 
     return img, seg
 
@@ -334,7 +354,8 @@ def aug_transform(img, seg, transform):
 
     # Normlize
     img = (img - original_mean) / original_std
-    img = (img - img.min()) / (img.max() - img.min())
+    img_min, img_max = img.min(), img.max()
+    img = (img - img_min) / (img_max - img_min)
 
     # Transform
     img = transform(img)
@@ -343,7 +364,8 @@ def aug_transform(img, seg, transform):
     img = img  * random_std + random_mean
 
     # Return to original range
-    img = original_min + (original_max - original_min) * (img - img.min()) / (img.max() - img.min())
+    img_min, img_max = img.min(), img.max()
+    img = original_min + (original_max - original_min) * (img - img_min) / (img_max - img_min)
 
     return img, seg
 
