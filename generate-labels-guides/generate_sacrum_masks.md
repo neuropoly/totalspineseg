@@ -31,7 +31,7 @@ As specified before, some sacrum masks were generated using the [CT total segmen
 > Registration could be needed aswell for some images of the dataset `MRSpineSeg`
 
 ```bash
-python src/totalsegmri/utils/register_CT_seg_to_MR.py --path-img <PATH-TO-BIDS-FOLDER>
+python <PATH-TO-MRITOTALSEG-REPO>/src/totalsegmri/utils/register_CT_seg_to_MR.py --path-img <PATH-TO-BIDS-FOLDER>
 ```
 
 ## III - Generate a config file to select the data for training
@@ -53,6 +53,7 @@ python src/totalsegmri/data_management/init_data_config.py --txt <PATH-TO-MRITOT
 ```
 
 `SPLIT_VAL` corresponds to the fraction of the data used for validation.
+
 `SPLIT_TEST` corresponds to the fraction of the data used for testing.
 
 Finally, to organize your data according to nnUNetV2 format, run this last command.
