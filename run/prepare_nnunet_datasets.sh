@@ -76,6 +76,9 @@ echo "Move the cropped images and segmentations to the main folder"
 for f in $nnUNet_raw/Dataset100_TotalSegMRI/*_PAM50/*.nii.gz; do mv $f ${f/_PAM50/}; done
 rm -r $nnUNet_raw/Dataset100_TotalSegMRI/*_PAM50
 
+echo "Transform images to canonical space and fix data type mismatch and sform qform mismatch"
+python $utils/transform_norm.py -i $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr -o $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr
+
 echo "Transform labels to images space"
 python $utils/transform_labels2images.py -i $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr -s $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr -o $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr
 

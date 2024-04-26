@@ -5,8 +5,6 @@ from tqdm.contrib.concurrent import process_map
 from pathlib import Path
 import nibabel as nib
 import numpy as np
-import torchio as tio
-import gryds
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -21,9 +19,9 @@ def main():
         ),
         epilog=textwrap.dedent('''
             Examples:
-            transform_s2qform -i images -o images
+            transform_norm -i images -o images
             For BIDS:
-            transform_s2qform -i . -o . --image-suffix "" --output-image-suffix "" -d "sub-" -u "anat"
+            transform_norm -i . -o . --image-suffix "" --output-image-suffix "" -d "sub-" -u "anat"
         '''),
         formatter_class=argparse.RawTextHelpFormatter
     )
@@ -111,8 +109,8 @@ def main():
     images_path_list = list(images_path.glob(glob_pattern))
 
     # Create a partially-applied function with the extra arguments
-    partial_transform_s2qform = partial(
-        transform_s2qform,
+    partial_transform_norm = partial(
+        transform_norm,
         images_path=images_path,
         output_path=output_path,
         image_suffix=image_suffix,
@@ -120,10 +118,10 @@ def main():
     )
 
     with mp.Pool() as pool:
-        process_map(partial_transform_s2qform, images_path_list, max_workers=max_workers)
+        process_map(partial_transform_norm, images_path_list, max_workers=max_workers)
 
 
-def transform_s2qform(
+def transform_norm(
         image_path,
         images_path,
         output_path,
@@ -134,11 +132,33 @@ def transform_s2qform(
     output_image_path = output_path / image_path.relative_to(images_path).parent / image_path.name.replace(f'{image_suffix}.nii.gz', f'{output_suffix}.nii.gz')
     
     image = nib.load(image_path)
+    
+    # Get the data type of the image
+    image_data_dtype = np.asanyarray(image.dataobj).dtype
+    image_header_dtype = getattr(np, image.get_data_dtype().name)
 
-    # Create result with original image dtype
-    output_image = nib.Nifti1Image(image.get_fdata(), image.affine, image.header)
+    # Transform the image to the closest canonical orientation
+    image = nib.as_closest_canonical(image)
+
+    image_data = image.get_fdata().astype(np.float64)
+
+    # Rescale the image to the output data type if necessary
+    # code from https://github.com/spinalcordtoolbox/spinalcordtoolbox/blob/6.3/spinalcordtoolbox/image.py#L1217
+    if image_header_dtype != image_data_dtype and "int" in np.dtype(image_header_dtype).name:
+        # get min/max from output type
+        min_out = np.iinfo(image_header_dtype).min
+        max_out = np.iinfo(image_header_dtype).max
+        min_in = image_data.min()
+        max_in = image_data.max()
+        if (min_in < min_out) or (max_in > max_out):
+            data_rescaled = image_data * (max_out - min_out) / (max_in - min_in)
+            image_data = data_rescaled - (data_rescaled.min() - min_out)
+
+    # Make the image with the orientation and data type
+    output_image = nib.Nifti1Image(image_data.astype(image_header_dtype), image.affine, image.header)
     output_image.set_qform(image.affine)
     output_image.set_sform(image.affine)
+    output_image.set_data_dtype(image_header_dtype)
 
     # Make sure output directory exists
     output_image_path.parent.mkdir(parents=True, exist_ok=True)

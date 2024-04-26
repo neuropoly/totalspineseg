@@ -208,7 +208,7 @@ def generate_resampled_images(
 
     # Make sure output directory exists and save with original image dtype
     output_image_path.parent.mkdir(parents=True, exist_ok=True)
-    output_image = nib.Nifti1Image(output_image_data, subject.image.affine, image.header)
+    output_image = nib.Nifti1Image(output_image_data.astype(np.asanyarray(image.dataobj).dtype), subject.image.affine, image.header)
     output_image.set_qform(subject.image.affine)
     output_image.set_sform(subject.image.affine)
     nib.save(output_image, output_image_path)
