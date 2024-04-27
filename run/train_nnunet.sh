@@ -26,6 +26,8 @@ JOBS_FOR_CPUS=$(( $(($(lscpu -p | egrep -v '^#' | wc -l) - $LEAVE_CPUS < 1 ? 1 :
 JOBS_FOR_RAMGB=$(( $(awk -v ram_req="$RAM_REQUIREMENT" '/MemTotal/ {print int($2/1024/1024/ram_req < 1 ? 1 : $2/1024/1024/ram_req)}' /proc/meminfo) ))
 # Get the minimum of JOBS_FOR_CPUS and JOBS_FOR_RAMGB
 JOBS=$(( JOBS_FOR_CPUS < JOBS_FOR_RAMGB ? JOBS_FOR_CPUS : JOBS_FOR_RAMGB ))
+GPU_MEM=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits | awk '{print $1/1024}')
+GPU_COUNT=$(nvidia-smi --query-gpu=name --format=csv,noheader | wc -l)
 
 export nnUNet_def_n_proc=$JOBS
 export nnUNet_n_proc_DA=$JOBS
@@ -38,6 +40,25 @@ export nnUNet_tests=data/nnUNet/tests
 export nnUNet_exports=data/nnUNet/exports
 
 nnUNetTrainer=nnUNetTrainer_8000epochs
+nnUNetPlanner=nnUNetPlannerResEncL
+nnUNetPlans=nnUNetResEncUNetLPlans
+configuration=3d_fullres
+
+echo ""
+echo "Running with the following parameters:"
+echo "nnUNet_raw=${nnUNet_raw}"
+echo "nnUNet_preprocessed=${nnUNet_preprocessed}"
+echo "nnUNet_results=${nnUNet_results}"
+echo "nnUNet_tests=${nnUNet_tests}"
+echo "nnUNet_exports=${nnUNet_exports}"
+echo "nnUNetTrainer=${nnUNetTrainer}"
+echo "nnUNetPlanner=${nnUNetPlanner}"
+echo "nnUNetPlans=${nnUNetPlans}"
+echo "configuration=${configuration}"
+echo "JOBS=${JOBS}"
+echo "GPU_MEM=${GPU_MEM}"
+echo "GPU_COUNT=${GPU_COUNT}"
+echo ""
 
 # Set the datasets to work with - default is 101 102 103
 DATASETS=${1:-101 102 103}
@@ -51,28 +72,32 @@ for d in ${DATASETS[@]}; do
 
     # Get the dataset name
     d_name=$(basename $(ls -d $nnUNet_raw/Dataset${d}_TotalSegMRI*))
-    
+
     if [ ! -d $nnUNet_preprocessed/$d_name ]; then
         echo "Preprocess dataset $d_name"
-        nnUNetv2_plan_and_preprocess -d $d -c 3d_fullres -npfp $JOBS -np $JOBS --verify_dataset_integrity
+        nnUNetv2_plan_and_preprocess -d $d -pl $nnUNetPlanner -c $configuration -gpu_memory_target $GPU_MEM -npfp $JOBS -np $JOBS --verify_dataset_integrity
+        if [ $GPU_COUNT -gt 1 ]; then
+            echo "Updating batch size in the plans file based on the number of GPUs"
+            jq --arg GPU_COUNT "$GPU_COUNT" '(.configurations[] | select(.batch_size != null) | .batch_size) |= . * ($GPU_COUNT|tonumber)' $nnUNet_preprocessed/$d_name/${nnUNetPlans}.json > $nnUNet_preprocessed/$d_name/${nnUNetPlans}_temp.json && mv $nnUNet_preprocessed/$d_name/${nnUNetPlans}_temp.json $nnUNet_preprocessed/$d_name/${nnUNetPlans}.json
+        fi
     fi
-    
-    if [ ! -d $nnUNet_results/$d_name/${nnUNetTrainer}__nnUNetPlans__3d_fullres/fold_$FOLD ]; then
+
+    if [ ! -d $nnUNet_results/$d_name/${nnUNetTrainer}__${nnUNetPlans}__${configuration}/fold_$FOLD ]; then
         echo "Train nnUNet model for dataset $d_name"
-        nnUNetv2_train $d 3d_fullres $FOLD -tr $nnUNetTrainer --npz
+        nnUNetv2_train $d $configuration $FOLD -tr $nnUNetTrainer -p $nnUNetPlans -num_gpus $GPU_COUNT --npz
     else
         echo "Continue training nnUNet model for dataset $d_name"
-        nnUNetv2_train $d 3d_fullres $FOLD -tr $nnUNetTrainer --npz --c
+        nnUNetv2_train $d $configuration $FOLD -tr $nnUNetTrainer -p $nnUNetPlans -num_gpus $GPU_COUNT --npz --c
     fi
 
     echo "Export the model for dataset $d_name in $nnUNet_exports"
     mkdir -p $nnUNet_exports
     mkdir -p $nnUNet_results/$d_name/ensembles
-    nnUNetv2_export_model_to_zip -d $d -o $nnUNet_exports/${d_name}_fold_$FOLD.zip -c 3d_fullres -f $FOLD -tr $nnUNetTrainer
+    nnUNetv2_export_model_to_zip -d $d -o $nnUNet_exports/${d_name}_fold_$FOLD.zip -c $configuration -f $FOLD -tr $nnUNetTrainer -p $nnUNetPlans
 
     echo "Testing nnUNet model for dataset $d_name"
     mkdir -p $nnUNet_tests/${d_name}_fold_$FOLD
-    nnUNetv2_predict -d $d -i $nnUNet_raw/$d_name/imagesTs -o $nnUNet_tests/${d_name}_fold_$FOLD -f $FOLD -c 3d_fullres -tr $nnUNetTrainer -npp $JOBS -nps $JOBS
-    nnUNetv2_evaluate_folder $nnUNet_raw/$d_name/labelsTs $nnUNet_tests/${d_name}_fold_$FOLD -djfile $nnUNet_results/$d_name/${nnUNetTrainer}__nnUNetPlans__3d_fullres/dataset.json -pfile $nnUNet_results/$d_name/${nnUNetTrainer}__nnUNetPlans__3d_fullres/plans.json -np $JOBS
+    nnUNetv2_predict -d $d -i $nnUNet_raw/$d_name/imagesTs -o $nnUNet_tests/${d_name}_fold_$FOLD -f $FOLD -c $configuration -tr $nnUNetTrainer -p $nnUNetPlans -npp $JOBS -nps $JOBS
+    nnUNetv2_evaluate_folder $nnUNet_raw/$d_name/labelsTs $nnUNet_tests/${d_name}_fold_$FOLD -djfile $nnUNet_results/$d_name/${nnUNetTrainer}__${nnUNetPlans}__${configuration}/dataset.json -pfile $nnUNet_results/$d_name/${nnUNetTrainer}__${nnUNetPlans}__${configuration}/plans.json -np $JOBS
 
 done

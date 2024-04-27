@@ -45,10 +45,20 @@ export nnUNet_raw=data/nnUNet/raw
 export nnUNet_preprocessed=data/nnUNet/preprocessed
 export nnUNet_results=data/nnUNet/results
 
+nnUNetTrainer=nnUNetTrainer_8000epochs
+nnUNetPlans=nnUNetResEncUNetLPlans
+configuration=3d_fullres
+
 echo ""
 echo "Running with the following parameters:"
 echo "INPUT_FOLDER=${INPUT_FOLDER}"
 echo "OUTPUT_FOLDER=${OUTPUT_FOLDER}"
+echo "nnUNet_raw=${nnUNet_raw}"
+echo "nnUNet_preprocessed=${nnUNet_preprocessed}"
+echo "nnUNet_results=${nnUNet_results}"
+echo "nnUNetTrainer=${nnUNetTrainer}"
+echo "nnUNetPlans=${nnUNetPlans}"
+echo "configuration=${configuration}"
 echo "JOBS=${JOBS}"
 echo ""
 
@@ -63,7 +73,7 @@ python $utils/generate_resampled_images.py -i ${INPUT_FOLDER} -o ${OUTPUT_FOLDER
 for f in ${OUTPUT_FOLDER}/input/*.nii.gz; do if [[ $f != *_0000.nii.gz ]]; then mv $f ${f/.nii.gz/_0000.nii.gz}; fi; done
 
 # Run step 1 model
-nnUNetv2_predict -d $step1_dataset -i ${OUTPUT_FOLDER}/input -o ${OUTPUT_FOLDER}/step1 -f $FOLD -c 3d_fullres -npp $JOBS -nps $JOBS
+nnUNetv2_predict -d $step1_dataset -i ${OUTPUT_FOLDER}/input -o ${OUTPUT_FOLDER}/step1 -f $FOLD -c $configuration -p $nnUNetPlans -tr $nnUNetTrainer -npp $JOBS -nps $JOBS
 
 # Distinguished odd and even IVDs based on the C2-C3, C7-T1 and L5-S1 IVD labels output by the first model:
 # First we will use an iterative algorithm to label IVDs with the definite labels
@@ -77,7 +87,7 @@ for i in ${OUTPUT_FOLDER}/step2_input/*; do
 done
 
 # Run step 2 model with postprocessing
-nnUNetv2_predict -d $step2_dataset -i ${OUTPUT_FOLDER}/step2_input -o ${OUTPUT_FOLDER}/step2 -f $FOLD -c 3d_fullres -npp $JOBS -nps $JOBS
+nnUNetv2_predict -d $step2_dataset -i ${OUTPUT_FOLDER}/step2_input -o ${OUTPUT_FOLDER}/step2 -f $FOLD -c $configuration -p $nnUNetPlans -tr $nnUNetTrainer -npp $JOBS -nps $JOBS
 
 # Use an iterative algorithm to to assign an individual label value to each vertebrae and IVD in the final segmentation mask.
 python $utils/generate_labels_sequential.py -s ${OUTPUT_FOLDER}/step2 -o ${OUTPUT_FOLDER}/output --csf-labels 16 --sc-labels 17 --disc-labels 2 3 4 5 6 7 --vertebrea-labels 9 10 11 12 13 --init-disc 4:224 5:219 6:207 7:202 --init-vertebrae 11:41 12:34 13:22 --vertebrae-sacrum-label 14:17:92 --step-diff-label --clip-to-init
