@@ -75,6 +75,9 @@ for f in ${OUTPUT_FOLDER}/input/*.nii.gz; do if [[ $f != *_0000.nii.gz ]]; then 
 # Run step 1 model
 nnUNetv2_predict -d $step1_dataset -i ${OUTPUT_FOLDER}/input -o ${OUTPUT_FOLDER}/step1 -f $FOLD -c $configuration -p $nnUNetPlans -tr $nnUNetTrainer -npp $JOBS -nps $JOBS
 
+# Transform labels to images space
+python $utils/transform_labels2images.py -i ${OUTPUT_FOLDER}/input -s ${OUTPUT_FOLDER}/step1 -o ${OUTPUT_FOLDER}/step1
+
 # Distinguished odd and even IVDs based on the C2-C3, C7-T1 and L5-S1 IVD labels output by the first model:
 # First we will use an iterative algorithm to label IVDs with the definite labels
 python $utils/generate_labels_sequential.py -s ${OUTPUT_FOLDER}/step1 -o ${OUTPUT_FOLDER}/step2_input --output-seg-suffix _0001 --disc-labels 1 2 3 4 5 --init-disc 2:224 3:219 4:207 5:202 --combine-before-label
