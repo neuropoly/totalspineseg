@@ -59,28 +59,28 @@ A hybrid approach integrating nnU-Net with an iterative algorithm for segmenting
 
 1. Get the required datasets from [Spine Generic Project](https://github.com/spine-generic/):
     ```
-    source totalsegmentator-mri/run/get_spine_generic_datasets.sh
+    source totalsegmentator-mri/scripts/get_spine_generic_datasets.sh
     ```
 
 1. Prepares SPIDER datasets in [BIDS](https://bids.neuroimaging.io/) structure:
     ```
-    source totalsegmentator-mri/run/prepare_spider_bids_datasets.sh
+    source totalsegmentator-mri/scripts/prepare_spider_bids_datasets.sh
     ```
 
 1. Prepares datasets in nnUNetv2 structure:
     ```
-    source totalsegmentator-mri/run/prepare_nnunet_datasets.sh
+    source totalsegmentator-mri/scripts/prepare_nnunet_datasets.sh
     ```
 
 1. Train the model:
     ```
-    source totalsegmentator-mri/run/train_nnunet.sh
+    source totalsegmentator-mri/scripts/train_nnunet.sh
     ```
 
 ## Inference
 Run the model on a folder containing the images in .nii.gz format (Make sure to train the model or extract the trained `results` into `data/nnUNet/results` befor running):
 ```
-source totalsegmentator-mri/run/inference_nnunet.sh INPUT_FOLDER OUTPUT_FOLDER
+source totalsegmentator-mri/scripts/inference_nnunet.sh INPUT_FOLDER OUTPUT_FOLDER
 ```
 
 ## List of class
