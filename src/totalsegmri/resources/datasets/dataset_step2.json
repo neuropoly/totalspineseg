@@ -24,6 +24,6 @@
         "cord": 17
     },
     "regions_class_order": [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17],
-    "numTraining": 8232,
+    "numTraining": 0,
     "file_ending": ".nii.gz"
 }

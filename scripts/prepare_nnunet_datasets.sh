@@ -117,6 +117,7 @@ python $utils/map_labels.py -m $resources/labels_maps/nnunet_full.json -s $nnUNe
 python $utils/map_labels.py -m $resources/labels_maps/nnunet_full.json -s $nnUNet_raw/Dataset103_TotalSegMRI_full/labelsTs -o $nnUNet_raw/Dataset103_TotalSegMRI_full/labelsTs
 
 echo "Copy dataset files"
-cp $resources/datasets/dataset_step1.json $nnUNet_raw/Dataset101_TotalSegMRI_step1/dataset.json
-cp $resources/datasets/dataset_step2.json $nnUNet_raw/Dataset102_TotalSegMRI_step2/dataset.json
-cp $resources/datasets/dataset_full.json $nnUNet_raw/Dataset103_TotalSegMRI_full/dataset.json
+numTraining=$(ls $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr | wc -l)
+jq --arg numTraining "$numTraining" '.numTraining = ($numTraining|tonumber)' $resources/datasets/dataset_step1.json > $nnUNet_raw/Dataset101_TotalSegMRI_step1/dataset.json
+jq --arg numTraining "$numTraining" '.numTraining = ($numTraining|tonumber)' $resources/datasets/dataset_step2.json > $nnUNet_raw/Dataset102_TotalSegMRI_step2/dataset.json
+jq --arg numTraining "$numTraining" '.numTraining = ($numTraining|tonumber)' $resources/datasets/dataset_full.json > $nnUNet_raw/Dataset103_TotalSegMRI_full/dataset.json
