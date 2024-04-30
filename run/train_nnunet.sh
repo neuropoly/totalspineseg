@@ -78,7 +78,8 @@ for d in ${DATASETS[@]}; do
         nnUNetv2_plan_and_preprocess -d $d -pl $nnUNetPlanner -c $configuration -gpu_memory_target $GPU_MEM -npfp $JOBS -np $JOBS --verify_dataset_integrity
         if [ $GPU_COUNT -gt 1 ]; then
             echo "Updating batch size in the plans file based on the number of GPUs"
-            jq --arg GPU_COUNT "$GPU_COUNT" '(.configurations[] | select(.batch_size != null) | .batch_size) |= . * ($GPU_COUNT|tonumber)' $nnUNet_preprocessed/$d_name/${nnUNetPlans}.json > $nnUNet_preprocessed/$d_name/${nnUNetPlans}_temp.json && mv $nnUNet_preprocessed/$d_name/${nnUNetPlans}_temp.json $nnUNet_preprocessed/$d_name/${nnUNetPlans}.json
+            mv $nnUNet_preprocessed/$d_name/${nnUNetPlans}.json $nnUNet_preprocessed/$d_name/${nnUNetPlans}_1gpu.json
+            jq --arg GPU_COUNT "$GPU_COUNT" '(.configurations[] | select(.batch_size != null) | .batch_size) |= . * ($GPU_COUNT|tonumber)' $nnUNet_preprocessed/$d_name/${nnUNetPlans}_1gpu.json > $nnUNet_preprocessed/$d_name/${nnUNetPlans}.json
         fi
     fi
 
