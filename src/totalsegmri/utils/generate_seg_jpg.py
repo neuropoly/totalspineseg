@@ -189,9 +189,9 @@ def generate_seg_jpg(image_path, segs_path, images_path, output_path, seg_suffix
     if segs_path:
 
         seg_path = segs_path / image_path.relative_to(images_path).parent / image_path.name.replace(f'{image_suffix}.{image_ext}', f'{seg_suffix}')
-        seg_path = [seg_path.parent / f'{seg_path.name}.{e}' for e in EXT if (seg_path.parent / f'{seg_path.name}.{e}').is_file()][0]
+        seg_path = ([seg_path.parent / f'{seg_path.name}.{e}' for e in EXT if (seg_path.parent / f'{seg_path.name}.{e}').is_file()] + [None])[0]
         
-        if seg_path.is_file():
+        if seg_path and seg_path.is_file():
             seg = nib.load(seg_path)
             seg_data = seg.get_fdata().astype(np.uint8)
             tio_seg = tio.LabelMap(tensor=seg_data[None, ...], affine=seg.affine)
