@@ -20,17 +20,22 @@ trap "echo Caught Keyboard Interrupt within script. Exiting now.; exit" INT
 # RAM requirement in GB
 RAM_REQUIREMENT=8
 # Get the number of CPUs, subtract some for system processes
-LEAVE_CPUS=1
-JOBS_FOR_CPUS=$(( $(($(lscpu -p | egrep -v '^#' | wc -l) - $LEAVE_CPUS < 1 ? 1 : $(lscpu -p | egrep -v '^#' | wc -l) - $LEAVE_CPUS )) ))
+LEAVE_CPUS=0
+# set CPU_COUNT to be min of $SLURM_JOB_CPUS_PER_NODE if defined and $(lscpu -p | egrep -v '^#' | wc -l)
+CPU_COUNT=${SLURM_JOB_CPUS_PER_NODE:-$(lscpu -p | egrep -v '^#' | wc -l)}
+JOBS_FOR_CPUS=$(($CPU_COUNT - $LEAVE_CPUS < 1 ? 1 : $CPU_COUNT - $LEAVE_CPUS ))
 # Get the total memory in GB divided by RAM_REQUIREMENT, rounded down to nearest integer, and ensure the value is at least 1
 JOBS_FOR_RAMGB=$(( $(awk -v ram_req="$RAM_REQUIREMENT" '/MemTotal/ {print int($2/1024/1024/ram_req < 1 ? 1 : $2/1024/1024/ram_req)}' /proc/meminfo) ))
 # Get the minimum of JOBS_FOR_CPUS and JOBS_FOR_RAMGB
 JOBS=$(( JOBS_FOR_CPUS < JOBS_FOR_RAMGB ? JOBS_FOR_CPUS : JOBS_FOR_RAMGB ))
 GPU_MEM=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits | awk '{print $1/1024}')
 GPU_COUNT=$(nvidia-smi --query-gpu=name --format=csv,noheader | wc -l)
+JOBS_TRAIN=$JOBS
+# Update the number of processes to use divide it by GPU_COUNT
+if [ $GPU_COUNT -gt 1 ]; then JOBS_TRAIN=$(( JOBS / GPU_COUNT )); fi
 
-export nnUNet_def_n_proc=$JOBS
-export nnUNet_n_proc_DA=$JOBS
+export nnUNet_def_n_proc=$JOBS_TRAIN
+export nnUNet_n_proc_DA=$JOBS_TRAIN
 
 # Set nnunet params
 export nnUNet_raw=data/nnUNet/raw
@@ -76,20 +81,16 @@ for d in ${DATASETS[@]}; do
     if [ ! -d $nnUNet_preprocessed/$d_name ]; then
         echo "Preprocess dataset $d_name"
         nnUNetv2_plan_and_preprocess -d $d -pl $nnUNetPlanner -c $configuration -gpu_memory_target $GPU_MEM -npfp $JOBS -np $JOBS --verify_dataset_integrity
-        if [ $GPU_COUNT -gt 1 ]; then
-            echo "Updating batch size in the plans file based on the number of GPUs"
-            mv $nnUNet_preprocessed/$d_name/${nnUNetPlans}.json $nnUNet_preprocessed/$d_name/${nnUNetPlans}_1gpu.json
-            jq --arg GPU_COUNT "$GPU_COUNT" '(.configurations[] | select(.batch_size != null) | .batch_size) |= . * ($GPU_COUNT|tonumber)' $nnUNet_preprocessed/$d_name/${nnUNetPlans}_1gpu.json > $nnUNet_preprocessed/$d_name/${nnUNetPlans}.json
-        fi
+        cp $nnUNet_preprocessed/$d_name/${nnUNetPlans}.json $nnUNet_preprocessed/$d_name/${nnUNetPlans}_1gpu.json
     fi
 
-    if [ ! -d $nnUNet_results/$d_name/${nnUNetTrainer}__${nnUNetPlans}__${configuration}/fold_$FOLD ]; then
-        echo "Train nnUNet model for dataset $d_name"
-        nnUNetv2_train $d $configuration $FOLD -tr $nnUNetTrainer -p $nnUNetPlans -num_gpus $GPU_COUNT --npz
-    else
-        echo "Continue training nnUNet model for dataset $d_name"
-        nnUNetv2_train $d $configuration $FOLD -tr $nnUNetTrainer -p $nnUNetPlans -num_gpus $GPU_COUNT --npz --c
+    if [ $GPU_COUNT -gt 1 ]; then
+        echo "Updating batch size in the plans file based on the number of GPUs"
+        jq --arg GPU_COUNT "$GPU_COUNT" '(.configurations[] | select(.batch_size != null) | .batch_size) |= . * ($GPU_COUNT|tonumber)' $nnUNet_preprocessed/$d_name/${nnUNetPlans}_1gpu.json > $nnUNet_preprocessed/$d_name/${nnUNetPlans}.json
     fi
+
+    echo "Training nnUNet model for dataset $d_name"
+    nnUNetv2_train $d $configuration $FOLD -tr $nnUNetTrainer -p $nnUNetPlans -num_gpus $GPU_COUNT --c
 
     echo "Export the model for dataset $d_name in $nnUNet_exports"
     mkdir -p $nnUNet_exports
