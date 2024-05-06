@@ -1,4 +1,4 @@
-import sys, argparse, textwrap
+import sys, argparse, textwrap, re
 import multiprocessing as mp
 from pathlib import Path
 from tqdm.contrib.concurrent import process_map
@@ -41,6 +41,13 @@ def main():
         help='Put files in destination folder directly without keeping the source subfolders, defaults to false (keep source subfolders).'
     )
     parser.add_argument(
+        '--replace', '-r', type=lambda x:x.split(':'), nargs='+', default=[],
+        help=textwrap.dedent('''
+            Replace string in the destination path befor copying using regex. (e.g. -r "_w.nii.gz:_w_0001.nii.gz").
+            Notic that the replacment is done on the full path.
+        ''')
+    )
+    parser.add_argument(
         '--max-workers', '-w', type=int, default=mp.cpu_count(),
         help='Max worker to run in parallel proccess, defaults to multiprocessing.cpu_count().'
     )
@@ -60,6 +67,7 @@ def main():
     dst = args.dst
     pattern = args.pattern
     flat = args.flat
+    replace = dict(args.replace)
     max_workers = args.max_workers
     verbose = args.verbose
 
@@ -71,6 +79,7 @@ def main():
             dst = "{dst}"
             pattern = {pattern}
             flat = {flat}
+            replace = {replace}
             max_workers = {max_workers}
             verbose = {verbose}
         '''))
@@ -84,18 +93,22 @@ def main():
         src=src,
         dst=dst,
         flat=flat,
+        replace=replace,
     )
 
     with mp.Pool() as pool:
         process_map(partial_cpdir, files_path_list, max_workers=max_workers)
 
 
-def cpdir(file_path, src, dst, flat):
+def cpdir(file_path, src, dst, flat, replace):
 
     if flat:
         dst_file_path = dst / file_path.name
     else:
         dst_file_path = dst / file_path.relative_to(src)
+    # Replace all regex patterns in replace list
+    for k, v in replace.items():
+        dst_file_path = Path(re.sub(k, v, str(dst_file_path)))
     # Make sure dst directory exists and copy
     dst_file_path.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(file_path, dst_file_path)
