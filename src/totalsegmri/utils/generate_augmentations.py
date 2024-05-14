@@ -7,10 +7,13 @@ import nibabel as nib
 import numpy as np
 import torchio as tio
 import gryds
+from scipy.ndimage import binary_dilation, generate_binary_structure, iterate_structure
+from scipy.stats import norm
 import warnings
 
 warnings.filterwarnings("ignore")
 
+rs = np.random.RandomState()
 
 def main():
 
@@ -213,31 +216,33 @@ def generate_augmentations(
 
             augs = []
 
-            # Contrast augmentation
-            if np.random.rand() < 0.8:
-                augs.extend(np.random.choice([
-                    _aug_redistribute_seg,
-                    aug_gamma,
-                    np.random.choice([
-                        aug_log,
-                        aug_sqrt,
-                        aug_exp,
-                        aug_sin,
-                        aug_sig,
-                    ]),
-                ], p=[0.4, 0.3, 0.3], size=np.random.choice([1, 2]), replace=False))
-
-            # Image form segmentation augmentation in 1% of cases(0.5*(1-0.8))
-            elif labels2image and np.random.rand() < 0.5:
+            # Image form segmentation augmentation
+            if labels2image and rs.rand() < 0.15:
                 augs.append(_aug_labels2image)
 
+            # Contrast augmentation
+            if rs.rand() < 0.8:
+                augs.append(_aug_redistribute_seg)
+
+            if rs.rand() < 0.3:
+                augs.append(aug_gamma)
+
+            if rs.rand() < 0.3:
+                augs.append(rs.choice([
+                    aug_log,
+                    aug_sqrt,
+                    aug_exp,
+                    aug_sin,
+                    aug_sig,
+                ]))
+
             # Inverse color augmentation
-            if np.random.rand() < 0.3:
+            if rs.rand() < 0.3:
                 augs.append(aug_inverse)
 
             # Artifacts augmentation
-            if np.random.rand() < 0.7:
-                augs.append(np.random.choice([
+            if rs.rand() < 0.7:
+                augs.append(rs.choice([
                     aug_motion,
                     aug_ghosting,
                     aug_spike,
@@ -247,18 +252,18 @@ def generate_augmentations(
                 ]))
 
             # Spatial augmentation
-            if np.random.rand() < 0.3:
+            if rs.rand() < 0.3:
                 augs.append(aug_flip)
 
-            if np.random.rand() < 0.7:
-                augs.append(np.random.choice([
+            if rs.rand() < 0.7:
+                augs.append(rs.choice([
                     aug_bspline,
                     aug_aff,
                     aug_elastic,
                 ]))
 
             # Anisotropy augmentation
-            if np.random.rand() < 0.7:
+            if rs.rand() < 0.7:
                 augs.append(_aug_anisotropy)
 
             # Augment the images
@@ -298,11 +303,10 @@ def generate_augmentations(
         nib.save(output_seg, output_seg_path)
         # print(f"\n{output_seg_path.name.replace('.nii.gz', '')}: {[a.func.__name__ if isinstance(a, partial) else a.__name__ for a in augs]}", end='')
 
-def aug_redistribute_seg(img, seg, factor=(-1.3, 1.3), classes=None):
+def aug_redistribute_seg(img, seg, classes=None, in_seg=0.2):
 
     _seg = seg
-    # Ensure factor is a list
-    factor=np.array([factor]).flat
+    in_seg_bool = 1 - rs.rand() <= in_seg
 
     if classes:
         _seg = combine_classes(_seg, classes)
@@ -324,18 +328,25 @@ def aug_redistribute_seg(img, seg, factor=(-1.3, 1.3), classes=None):
     for l in labels:
         # Get the mask for the current label
         l_mask = (_seg == l)
-        l_mean = np.mean(img[l_mask])
-        l_std = np.std(img[l_mask])
+        # Get mean and std of the current label
+        l_mean, l_std = np.mean(img[l_mask]), np.std(img[l_mask])
+        # Dilate the mask
+        l_mask_dilate = binary_dilation(l_mask, iterate_structure(generate_binary_structure(3, 1), 3))
+        # Create mask of the dilated mask excluding the original mask
+        l_mask_dilate_excl = l_mask_dilate & ~l_mask
+        # Get the mean and std of the substraction of mask from the dilated mask
+        l_mean_dilate, l_std_dilate = np.mean(img[l_mask_dilate_excl]), np.std(img[l_mask_dilate_excl])
 
-        # Change std
-        l_std *= np.random.uniform(0.9, 1.1)
+        redist_std = max(rs.uniform(0.4, 0.6) * abs((l_mean - l_mean_dilate) * l_std / l_std_dilate), 0.01)
 
-        # Calculate the normal distribution
-        exponent = -((img - l_mean) ** 2) / (2 * l_std ** 2)
-        coeff = 1 / (l_std * np.sqrt(2 * np.pi))
-        to_add += coeff * np.exp(exponent) * np.random.uniform(-1, 1)
+        redist = partial(norm.pdf, loc=l_mean, scale=redist_std)
 
-    img += np.random.uniform(factor[0], factor[-1]) * (to_add - to_add.min()) / (to_add.max() - to_add.min())
+        if in_seg_bool:
+            to_add[l_mask] += redist(img[l_mask]) * rs.uniform(-1, 1)
+        else:
+            to_add += redist(img) * rs.uniform(-1, 1)
+
+    img += 2 * (to_add - to_add.min()) / (to_add.max() - to_add.min())
 
     # Return to original range
     img_min, img_max = img.min(), img.max()
@@ -349,8 +360,8 @@ def aug_transform(img, seg, transform):
     original_min, original_max = np.min(img), np.max(img)
 
     # Generate random mean and std
-    random_mean = np.random.rand() * (original_max - original_min) + original_min
-    random_std = (np.random.rand() * 1.5 + 0.5) * original_std
+    random_mean = rs.rand() * (original_max - original_min) + original_min
+    random_std = (rs.rand() * 1.5 + 0.5) * original_std
 
     # Normlize
     img = (img - original_mean) / original_std
@@ -389,7 +400,7 @@ def aug_inverse(img, seg):
     return img, seg
 
 def aug_bspline(img, seg):
-    grid = np.random.rand(3, 3, 3, 3)
+    grid = rs.rand(3, 3, 3, 3)
 
     bspline = gryds.BSplineTransformation((grid-.5)/5)
     grid[:,0] += ((grid[:,0] > 0) * 2 - 1) * .9 # Increase the effect on the Y-axis
@@ -475,14 +486,27 @@ def aug_swap(img, seg):
     ))
     return subject.image.data.squeeze().numpy().astype(np.float64), subject.seg.data.squeeze().numpy().astype(np.uint8)
 
-def aug_labels2image(img, seg, classes=None):
+def aug_labels2image(img, seg, leave_background=0.5, classes=None):
     _seg = seg
     if classes:
         _seg = combine_classes(seg, classes)
     subject = tio.RandomLabelsToImage(label_key="seg", image_key="image")(tio.Subject(
         seg=tio.LabelMap(tensor=np.expand_dims(_seg, axis=0))
     ))
-    return subject.image.data.squeeze().numpy().astype(np.float64), seg
+    new_img = subject.image.data.squeeze().numpy().astype(np.float64)
+
+    if rs.rand() < leave_background:
+        img_min, img_max = np.min(img), np.max(img)
+        _img = (img - img_min) / (img_max - img_min)
+        
+        new_img_min, new_img_max = np.min(new_img), np.max(new_img)
+        new_img = (new_img - new_img_min) / (new_img_max - new_img_min)
+        new_img[_seg == 0] = _img[_seg == 0]
+        # Return to original range
+        new_img_min, new_img_max = np.min(new_img), np.max(new_img)
+        new_img = img_min + (img_max - img_min) * (new_img - new_img_min) / (new_img_max - new_img_min)
+
+    return new_img, seg
 
 def aug_gamma(img, seg):
     subject = tio.RandomGamma()(tio.Subject(
