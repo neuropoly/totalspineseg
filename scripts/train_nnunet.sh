@@ -80,7 +80,7 @@ for d in ${DATASETS[@]}; do
 
     if [ ! -d $nnUNet_preprocessed/$d_name ]; then
         echo "Preprocess dataset $d_name"
-        nnUNetv2_plan_and_preprocess -d $d -pl $nnUNetPlanner -c $configuration -gpu_memory_target $GPU_MEM -npfp $JOBS -np $JOBS --verify_dataset_integrity
+        nnUNetv2_plan_and_preprocess -d $d -pl $nnUNetPlanner -c $configuration -npfp $JOBS -np $JOBS --verify_dataset_integrity
         cp $nnUNet_preprocessed/$d_name/${nnUNetPlans}.json $nnUNet_preprocessed/$d_name/${nnUNetPlans}_1gpu.json
     fi
 
