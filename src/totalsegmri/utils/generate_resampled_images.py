@@ -77,7 +77,7 @@ def main():
         help='Segmentation suffix for output, defaults to "".'
     )
     parser.add_argument(
-        '--mm', '-m', type=int, nargs='+', default=[1],
+        '--mm', '-m', type=float, nargs='+', default=[1.0],
         help='The target voxel size in mm. Can accept 1 or 3 parameters for x, y, z. Default is 1mm.'
     )
     parser.add_argument(
