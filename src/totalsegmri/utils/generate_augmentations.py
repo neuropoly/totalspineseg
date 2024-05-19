@@ -7,7 +7,7 @@ import nibabel as nib
 import numpy as np
 import torchio as tio
 import gryds
-from scipy.ndimage import binary_dilation, generate_binary_structure, iterate_structure
+from scipy.ndimage import binary_dilation, generate_binary_structure, iterate_structure, laplace
 from scipy.stats import norm
 import warnings
 
@@ -80,8 +80,8 @@ def main():
         help='Segmentation suffix for output, defaults to "".'
     )
     parser.add_argument(
-        '--augmentations-per-image', '-n', type=int, default=7,
-        help='Number of augmentation images to generate. Default is 7.'
+        '--augmentations-per-image', '-n', type=int, default=9,
+        help='Number of augmentation images to generate. Default is 9.'
     )
     parser.add_argument(
         '--labels2image', action="store_true", default=False,
@@ -216,25 +216,39 @@ def generate_augmentations(
 
             augs = []
 
-            # Image form segmentation augmentation
-            if labels2image and rs.rand() < 0.15:
-                augs.append(_aug_labels2image)
-
             # Contrast augmentation
-            if rs.rand() < 0.8:
-                augs.append(_aug_redistribute_seg)
 
-            if rs.rand() < 0.3:
-                augs.append(aug_gamma)
+            if rs.rand() < 0.1:
+                augs.append(aug_laplace)
 
-            if rs.rand() < 0.3:
-                augs.append(rs.choice([
-                    aug_log,
-                    aug_sqrt,
-                    aug_exp,
-                    aug_sin,
-                    aug_sig,
-                ]))
+            else:
+
+                # Image form segmentation augmentation
+                if labels2image and rs.rand() < 0.15:
+                    augs.append(_aug_labels2image)
+                if rs.rand() < 0.8:
+                    augs.append(_aug_redistribute_seg)
+
+                if rs.rand() < 0.3:
+                    augs.append(aug_gamma)
+
+                if rs.rand() < 0.1:
+                    augs.append(aug_histogram_equalization)
+
+                if rs.rand() < 0.05:
+                    augs.append(aug_log)
+
+                if rs.rand() < 0.05:
+                    augs.append(aug_sqrt)
+
+                if rs.rand() < 0.05:
+                    augs.append(aug_exp)
+
+                if rs.rand() < 0.05:
+                    augs.append(aug_sin)
+
+                if rs.rand() < 0.05:
+                    augs.append(aug_sig)
 
             # Inverse color augmentation
             if rs.rand() < 0.3:
@@ -272,9 +286,7 @@ def generate_augmentations(
                 output_image_data, output_seg_data = a(output_image_data, output_seg_data)
 
             # Return to original range
-            image_min, image_max = image_data.min(), image_data.max()
-            output_image_min, output_image_max = output_image_data.min(), output_image_data.max()
-            output_image_data = image_min + (image_max - image_min) * (output_image_data - output_image_min) / (output_image_max - output_image_min)
+            output_image_data = np.interp(output_image_data, (output_image_data.min(), output_image_data.max()), (image_data.min(), image_data.max()))
 
             # Validate augmentation results and break the loop if valid
             output_image_min, output_image_max = output_image_data.min(), output_image_data.max()
@@ -349,34 +361,41 @@ def aug_redistribute_seg(img, seg, classes=None, in_seg=0.2):
     img += 2 * (to_add - to_add.min()) / (to_add.max() - to_add.min())
 
     # Return to original range
+    img = np.interp(img, (img.min(), img.max()), (original_min, original_max))
+
+    return img, seg
+
+def aug_histogram_equalization(img, seg):
     img_min, img_max = img.min(), img.max()
-    img = original_min + (original_max - original_min) * (img - img_min) / (img_max - img_min)
+
+    # Flatten the image and compute the histogram
+    img_flattened = img.flatten()
+    hist, bins = np.histogram(img_flattened, bins=256, range=[img_flattened.min(), img_flattened.max()])
+
+    # Compute the normalized cumulative distribution function (CDF) from the histogram
+    cdf = hist.cumsum()
+    cdf_normalized = cdf * (hist.max() / cdf.max())
+
+    # Perform histogram equalization using the normalized CDF
+    img = np.interp(img_flattened, bins[:-1], cdf_normalized).reshape(img.shape)
+
+    # Rescale the image to the original minimum and maximum values
+    img = np.interp(img, (img.min(), img.max()), (img_min, img_max))
 
     return img, seg
 
 def aug_transform(img, seg, transform):
     # Compute original mean, std and min/max values
-    original_mean, original_std = np.mean(img), np.std(img)
-    original_min, original_max = np.min(img), np.max(img)
-
-    # Generate random mean and std
-    random_mean = rs.rand() * (original_max - original_min) + original_min
-    random_std = (rs.rand() * 1.5 + 0.5) * original_std
-
-    # Normlize
-    img = (img - original_mean) / original_std
     img_min, img_max = img.min(), img.max()
-    img = (img - img_min) / (img_max - img_min)
+    # Normlize
+    img = (img - img.mean()) / img.std()
+    img = np.interp(img, (img.min(), img.max()), (0, 1))
 
     # Transform
     img = transform(img)
 
-    # Redistribution
-    img = img  * random_std + random_mean
-
     # Return to original range
-    img_min, img_max = img.min(), img.max()
-    img = original_min + (original_max - original_min) * (img - img_min) / (img_max - img_min)
+    img = np.interp(img, (img.min(), img.max()), (img_min, img_max))
 
     return img, seg
 
@@ -394,6 +413,9 @@ def aug_exp(img, seg):
 
 def aug_sig(img, seg):
     return aug_transform(img, seg, lambda x:1/(1 + np.exp(-x)))
+
+def aug_laplace(img, seg):
+    return aug_transform(img, seg, laplace)
 
 def aug_inverse(img, seg):
     img = img.min() + img.max() - img
@@ -503,8 +525,7 @@ def aug_labels2image(img, seg, leave_background=0.5, classes=None):
         new_img = (new_img - new_img_min) / (new_img_max - new_img_min)
         new_img[_seg == 0] = _img[_seg == 0]
         # Return to original range
-        new_img_min, new_img_max = np.min(new_img), np.max(new_img)
-        new_img = img_min + (img_max - img_min) * (new_img - new_img_min) / (new_img_max - new_img_min)
+        new_img = np.interp(new_img, (new_img.min(), new_img.max()), (img_min, img_max))
 
     return new_img, seg
 
