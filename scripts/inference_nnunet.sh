@@ -67,7 +67,7 @@ step1_dataset=101
 step2_dataset=102
 
 # Make output dir with copy of the input images resampled to 1x1x1mm
-python $utils/generate_resampled_images.py -i ${INPUT_FOLDER} -o ${OUTPUT_FOLDER}/input
+python $utils/generate_resampled_images.py -i ${INPUT_FOLDER} -o ${OUTPUT_FOLDER}/input --image-suffix "" --output-image-suffix ""
 
 # Add _0000 to inputs if not exists to run nnunet
 for f in ${OUTPUT_FOLDER}/input/*.nii.gz; do if [[ $f != *_0000.nii.gz ]]; then mv $f ${f/.nii.gz/_0000.nii.gz}; fi; done
