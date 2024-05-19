@@ -206,7 +206,7 @@ def generate_seg_jpg(image_path, segs_path, images_path, output_path, seg_suffix
             unique_labels = np.unique(slice_seg).astype(int)
             colors = {}
             for label in unique_labels:
-                rs = np.random.RandomState(np.random.MT19937(np.random.SeedSequence(label)))
+                rs = np.random.RandomState(np.random.MT19937(np.random.SeedSequence(label * 10)))
                 colors[label] = rs.randint(0, 255, 3)
 
             # Apply the segmentation mask to the image and assign colors
