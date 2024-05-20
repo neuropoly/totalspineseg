@@ -2,18 +2,20 @@
 
 Tool for automatic segmentation and labelling of all vertebrae and intervertebral discs (IVDs), spinal cord, and spinal canal. We follow [TotalSegmentator classes](https://github.com/wasserth/TotalSegmentator?tab=readme-ov-file#class-details) with an additional class for IVDs, spinal cord and spinal canal (See list of class [here](#list-of-class)). We used [nnUNet](https://github.com/MIC-DKFZ/nnUNet) as our backbone for model training and inference.
 
-- [Dependencies](#dependencies)
-- [Installation](#installation)
 - [Model description](#model-description)
+- [Installation](#installation)
 - [Training](#training)
 - [Inference](#inference)
 - [List of class](#list-of-class)
 
 ![Thumbnail](https://github.com/neuropoly/totalsegmentator-mri/assets/36595323/c7a4a951-fcb9-43a2-8c9c-9fafa33e4d67)
 
-## Dependencies
+## Model description
+A hybrid approach integrating nnU-Net with an iterative algorithm for segmenting vertebrae, IVDs, spinal cord, and spinal canal. To tackle the challenge of having many classes and class imbalance, we developed a two-step training process. A first model (Dataset206) was trained (single input channel: image) to identify 4 classes (IVDs, vertebrae, spinal cord and spinal canal) as well as specific IVDs (C2-C3, C7-T1 and L5-S1) representing key anatomical landmarks along the spine, so 7 classes in total (Figure 1A). The output segmentation was processed using an algorithm that distinguished odd and even IVDs based on the C2-C3, C7-T1 and L5-S1 IVD labels output by the model (Figure 1B). Then, a second nnU-Net model (Dataset210) was trained (two input channels: 1=image, 2=odd IVDs), to output 12 classes (Figure 1C). Finally, the output of the model was processed in order to assign an individual label value to each vertebrae and IVD in the final segmentation mask (Figure 1D).
 
-- [Spinal Cord Toolbox (SCT)](https://github.com/neuropoly/spinalcordtoolbox)
+![Figure 1](https://github.com/neuropoly/totalsegmentator-mri/assets/36595323/3958cbc6-a059-4ccf-b3b1-02dbc3a4a62d)
+
+**Figure 1**: Illustration of the hybrid method for automatic segmentation of the spine and spinal cord structures. T1w image (A) is used to train model 1, which outputs 7 classes (B). These output labels are processed to extract odd IVDs (C). The T1w and odd IVDs are used as two input channels to train model 2, which outputs 12 classes (D). These output labels are processed to extract individual IVDs and vertebrae (E).
 
 ## Installation
 
@@ -38,36 +40,23 @@ Tool for automatic segmentation and labelling of all vertebrae and intervertebra
     python -m pip install -r totalsegmentator-mri/requirements.txt
     ```
 
-## Model description
-A hybrid approach integrating nnU-Net with an iterative algorithm for segmenting vertebrae, IVDs, spinal cord, and spinal canal. To tackle the challenge of having many classes and class imbalance, we developed a two-step training process. A first model (Dataset206) was trained (single input channel: image) to identify 4 classes (IVDs, vertebrae, spinal cord and spinal canal) as well as specific IVDs (C2-C3, C7-T1 and L5-S1) representing key anatomical landmarks along the spine, so 7 classes in total (Figure 1A). The output segmentation was processed using an algorithm that distinguished odd and even IVDs based on the C2-C3, C7-T1 and L5-S1 IVD labels output by the model (Figure 1B). Then, a second nnU-Net model (Dataset210) was trained (two input channels: 1=image, 2=odd IVDs), to output 12 classes (Figure 1C). Finally, the output of the model was processed in order to assign an individual label value to each vertebrae and IVD in the final segmentation mask (Figure 1D).
-
-![Figure 1](https://github.com/neuropoly/totalsegmentator-mri/assets/36595323/3958cbc6-a059-4ccf-b3b1-02dbc3a4a62d)
-
-**Figure 1**: Illustration of the hybrid method for automatic segmentation of the spine and spinal cord structures. T1w image (A) is used to train model 1, which outputs 7 classes (B). These output labels are processed to extract odd IVDs (C). The T1w and odd IVDs are used as two input channels to train model 2, which outputs 12 classes (D). These output labels are processed to extract individual IVDs and vertebrae (E).
-
 ## Training
 
-1. Download the corresponding content from [SPIDER dataset](https://doi.org/10.5281/zenodo.10159290) into 'data/raw/spider/images' and 'data/raw/spider/masks' (you can use `mkdir -p data/raw/spider` to create the folder first).
-
-1. Make sure `git` and `git-annex` are installed (You can install with `sudo apt-get install git-annex -y`).
-
-1. Extract [data-multi-subject_PAM50_seg.zip](https://drive.google.com/file/d/1Sq38xLHnVxhLr0s1j27ywbeshNUjo3IP) into 'data/bids/data-multi-subject'.
-
-1. Extract [data-single-subject_PAM50_seg.zip](https://drive.google.com/file/d/1YvuFHL8GDJ5SXlMLORWDjR5SNkDL6TUU) into 'data/bids/data-single-subject'.
-
-1. Extract [whole-spine.zip](https://drive.google.com/file/d/143i0ODmeqohpc4vu5Aa5lnv8LLEyOU0F) (private dataset) into 'data/bids/whole-spine'.
-
-1. Get the required datasets from [Spine Generic Project](https://github.com/spine-generic/):
+1. Ensure training dependencies are installed:
     ```
-    source totalsegmentator-mri/scripts/get_spine_generic_datasets.sh
+    apt-get install git git-annex jq -y
     ```
 
-1. Prepares SPIDER datasets in [BIDS](https://bids.neuroimaging.io/) structure:
+1. Make sure you have access to `git@data.neuro.polymtl.ca:datasets/whole-spine.git` and `git@data.neuro.polymtl.ca:datasets/spider-challenge-2023.git`.
+
+1. Get the required datasets into `data/bids`:
     ```
-    source totalsegmentator-mri/scripts/prepare_spider_bids_datasets.sh
+    source totalsegmentator-mri/scripts/get_datasets.sh
     ```
 
-1. Prepares datasets in nnUNetv2 structure:
+1. Temporary!!! (untill all labels will be pushed into the repositories): Extract [labels.zip](https://labels.zip) into `data/bids`.
+
+1. Prepares datasets in nnUNetv2 structure into `data/nnUnet`:
     ```
     source totalsegmentator-mri/scripts/prepare_nnunet_datasets.sh
     ```

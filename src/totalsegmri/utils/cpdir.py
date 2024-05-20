@@ -44,7 +44,7 @@ def main():
         '--replace', '-r', type=lambda x:x.split(':'), nargs='+', default=[],
         help=textwrap.dedent('''
             Replace string in the destination path befor copying using regex. (e.g. -r "_w.nii.gz:_w_0001.nii.gz").
-            Notic that the replacment is done on the full path.
+            Notice that the replacment is done on the full path.
         ''')
     )
     parser.add_argument(

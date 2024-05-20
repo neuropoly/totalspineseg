@@ -30,54 +30,37 @@ bids=data/bids
 echo "Make nnUNet raw folders"
 mkdir -p $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr
 mkdir -p $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr
-mkdir -p $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr_PAM50
-mkdir -p $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr_PAM50
+
+# Init a list of dataset words
+datasets_words=()
 
 # Convert from BIDS to nnUNet dataset, loop over each dataset
-for ds in spider data-single-subject data-multi-subject whole-spine; do
-    echo "Working on $ds"
-    # Format dataset name by removing 'data-' and '-subject' or '-spine'
-    dsn=${ds/data-/}; dsn=${dsn/-subject/}; dsn=${dsn/-spine/}
+for dsp in $bids/*; do
+    # Get the dataset name
+    dsn=$(basename $dsp);
+    # Get dataset word from the dataset name
+    dsw=${dsn#data-}; dsw=${dsw%-*};
+
+    # Add the dataset word to the list of dataset words
+    datasets_words+=($dsw)
+
+    echo "Working on $dsn"
+    #label-spine_dseg\|label-SC_seg\|label-canal_seg
+
+    echo "Adding label-canal_seg and label-SC_seg to label-spine_dseg"
+    python $utils/map_labels.py -m 1:201 --add-input -s $bids/$dsn/derivatives/labels -o $bids/$dsn/derivatives/labels --seg-suffix "_label-canal_seg" --output-seg-suffix "_label-spine_dseg" -d "sub-" -u "anat"
+    python $utils/map_labels.py -m 1:200 --add-input -s $bids/$dsn/derivatives/labels -o $bids/$dsn/derivatives/labels --seg-suffix "_label-SC_seg" --output-seg-suffix "_label-spine_dseg" -d "sub-" -u "anat"
 
     echo "Copy images and labels into the nnUNet dataset folder"
-    python $utils/cpdir.py $bids/$ds $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr -p "sub-*/anat/sub-*.nii.gz" -f
-    python $utils/cpdir.py $bids/$ds/derivatives/labels $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr -p "sub-*/anat/sub-*_totalsegmri.nii.gz" -f
-    # For single and multi subject datasets, in which there are missing labels get also PAM50_seg
-    if [ "$dsn" = "single" ] || [ "$dsn" = "multi" ]; then
-        python $utils/cpdir.py $bids/$ds/derivatives/labels $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr_PAM50 -p "sub-*/anat/sub-*_PAM50_seg.nii.gz" -f
-    fi
-    echo "Replace 'sub-' with dataset name"
-    for f in $nnUNet_raw/Dataset100_TotalSegMRI/*/sub-*.nii.gz; do mv $f ${f/sub-/${dsn}_}; done
+    python $utils/cpdir.py $bids/$dsn $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr -p "sub-*/anat/sub-*.nii.gz" -f -r sub-:${dsw}_ .nii.gz:_0000.nii.gz
+    python $utils/cpdir.py $bids/$dsn/derivatives/labels $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr -p "sub-*/anat/sub-*_label-spine_dseg.nii.gz" -f -r sub-:${dsw}_ _label-spine_dseg.nii.gz:.nii.gz
 done
-
-echo "Remove _totalsegmri and PAM50_seg from files name"
-for f in $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr/*_totalsegmri.nii.gz; do mv $f ${f/_totalsegmri/}; done
-for f in $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr_PAM50/*_PAM50_seg.nii.gz; do mv $f ${f/_PAM50_seg/}; done
-
-echo "Copy images to imagesTr_PAM50 folder"
-for f in $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr_PAM50/*.nii.gz; do cp ${f/labelsTr_PAM50/imagesTr} ${f/labelsTr_PAM50/imagesTr_PAM50}; done
-
-echo "Remove images withot segmentation"
-for f in $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr*/*.nii.gz; do if [ ! -f ${f/imagesTr/labelsTr} ]; then rm $f; fi; done
-
-echo "Remove _PAM50_seg images and labels when _totalsegmri exists"
-for f in $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr/*.nii.gz; do rm -f ${f/labelsTr/labelsTr_PAM50}; rm -f ${f/labelsTr/imagesTr_PAM50}; done
-
-echo "Append '_0000' to the images names"
-for f in $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr*/*.nii.gz; do mv $f ${f/.nii.gz/_0000.nii.gz}; done
-
-echo "Fix csf label to include all non cord spinal canal, this will put the spinal canal label in all the voxels (labeled as a backgroupn) between the spinal canal and the spinal cord."
-python $utils/fix_csf_label.py -s $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr_PAM50 -o $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr_PAM50
-
-echo "Crop _PAM50 images and segmentations in the most anteior voxel of the lowest vertebrae in the image."
-python $utils/generate_croped_images.py -i $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr_PAM50 -s $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr_PAM50 -o $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr_PAM50 -g $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr_PAM50
-
-echo "Move the cropped images and segmentations to the main folder"
-for f in $nnUNet_raw/Dataset100_TotalSegMRI/*_PAM50/*.nii.gz; do mv $f ${f/_PAM50/}; done
-rm -r $nnUNet_raw/Dataset100_TotalSegMRI/*_PAM50
 
 echo "Transform images to canonical space and fix data type mismatch and sform qform mismatch"
 python $utils/transform_norm.py -i $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr -o $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr
+
+echo "Resample images to 1x1x1mm"
+python $utils/generate_resampled_images.py -i $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr -o $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr
 
 echo "Transform labels to images space"
 python $utils/transform_labels2images.py -i $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr -s $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr -o $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr
@@ -87,8 +70,8 @@ mkdir -p $nnUNet_raw/Dataset100_TotalSegMRI/imagesTs
 mkdir -p $nnUNet_raw/Dataset100_TotalSegMRI/labelsTs
 
 # Make sure each dataset and contrast has 10% of the data in the test folder
-for d in spider single multi whole; do
-    for c in T1w T2w T2Sw; do
+for d in ${datasets_words[@]}; do
+    for c in acq-lowresSag_T1w acq-lowresSag_T2w acq-highresSag_T2w; do
         files=($(for f in $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr/${d}_*${c}.nii.gz; do basename "${f/.nii.gz/}"; done))
         files_shuf=($(shuf -e "${files[@]}"))
         files_10p=(${files_shuf[@]:0:$((${#files_shuf[@]} * 10 / 100))})
