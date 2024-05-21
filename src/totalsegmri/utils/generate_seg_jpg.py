@@ -193,7 +193,7 @@ def generate_seg_jpg(image_path, segs_path, images_path, output_path, seg_suffix
         
         if seg_path and seg_path.is_file():
             seg = nib.load(seg_path)
-            seg_data = seg.get_fdata().astype(np.uint8)
+            seg_data = seg.get_fdata().round().astype(np.uint8)
             tio_seg = tio.LabelMap(tensor=seg_data[None, ...], affine=seg.affine)
             tio_seg = tio.ToCanonical()(tio_seg)
             tio_seg = tio.Resample(tio_image)(tio_seg)

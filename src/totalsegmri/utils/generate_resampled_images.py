@@ -178,7 +178,7 @@ def generate_resampled_images(
     if segs_path:
         seg_path = segs_path / image_path.relative_to(images_path).parent /  image_path.name.replace(f'{image_suffix}.nii.gz', f'{seg_suffix}.nii.gz')
         seg = nib.load(seg_path)
-        seg_data = seg.get_fdata().astype(np.uint8)
+        seg_data = seg.get_fdata().round().astype(np.uint8)
 
         # Create result
         subject = tio.Resample(mm)(tio.Subject(

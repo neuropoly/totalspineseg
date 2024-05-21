@@ -200,7 +200,7 @@ def generate_augmentations(
     image = nib.load(image_path)
     image_data = image.get_fdata().astype(np.float64)
     seg = nib.load(seg_path)
-    seg_data = seg.get_fdata().astype(np.uint8)
+    seg_data = seg.get_fdata().round().astype(np.uint8)
 
     for i in range(augmentations_per_image):
         output_image_path = output_images_path / image_path.relative_to(images_path).parent / image_path.name.replace(f'{image_suffix}.nii.gz', f'_a{i}{output_image_suffix}.nii.gz')

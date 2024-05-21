@@ -132,7 +132,7 @@ def generate_largest_labels(
 
     # Load segmentation
     seg = nib.load(seg_path)
-    seg_data_src = seg.get_fdata().astype(np.uint8)
+    seg_data_src = seg.get_fdata().round().astype(np.uint8)
 
     seg_data = np.zeros_like(seg_data_src)
 
