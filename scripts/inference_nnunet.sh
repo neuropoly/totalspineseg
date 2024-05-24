@@ -30,8 +30,10 @@ OUTPUT_FOLDER=$2
 # RAM requirement in GB
 RAM_REQUIREMENT=8
 # Get the number of CPUs, subtract some for system processes
-LEAVE_CPUS=1
-JOBS_FOR_CPUS=$(( $(($(lscpu -p | egrep -v '^#' | wc -l) - $LEAVE_CPUS < 1 ? 1 : $(lscpu -p | egrep -v '^#' | wc -l) - $LEAVE_CPUS )) ))
+LEAVE_CPUS=0
+# set CPU_COUNT to be min of $SLURM_JOB_CPUS_PER_NODE if defined and $(lscpu -p | egrep -v '^#' | wc -l)
+CPU_COUNT=${SLURM_JOB_CPUS_PER_NODE:-$(lscpu -p | egrep -v '^#' | wc -l)}
+JOBS_FOR_CPUS=$(($CPU_COUNT - $LEAVE_CPUS < 1 ? 1 : $CPU_COUNT - $LEAVE_CPUS ))
 # Get the total memory in GB divided by RAM_REQUIREMENT, rounded down to nearest integer, and ensure the value is at least 1
 JOBS_FOR_RAMGB=$(( $(awk -v ram_req="$RAM_REQUIREMENT" '/MemTotal/ {print int($2/1024/1024/ram_req < 1 ? 1 : $2/1024/1024/ram_req)}' /proc/meminfo) ))
 # Get the minimum of JOBS_FOR_CPUS and JOBS_FOR_RAMGB
@@ -44,6 +46,7 @@ export nnUNet_n_proc_DA=$JOBS
 export nnUNet_raw=data/nnUNet/raw
 export nnUNet_preprocessed=data/nnUNet/preprocessed
 export nnUNet_results=data/nnUNet/results
+export nnUNet_exports=data/nnUNet/exports
 
 nnUNetTrainer=nnUNetTrainer_8000epochs
 nnUNetPlans=nnUNetResEncUNetLPlans
@@ -56,6 +59,7 @@ echo "OUTPUT_FOLDER=${OUTPUT_FOLDER}"
 echo "nnUNet_raw=${nnUNet_raw}"
 echo "nnUNet_preprocessed=${nnUNet_preprocessed}"
 echo "nnUNet_results=${nnUNet_results}"
+echo "nnUNet_exports=${nnUNet_exports}"
 echo "nnUNetTrainer=${nnUNetTrainer}"
 echo "nnUNetPlans=${nnUNetPlans}"
 echo "configuration=${configuration}"
@@ -65,6 +69,14 @@ echo ""
 FOLD=0
 step1_dataset=101
 step2_dataset=102
+
+if [ ! -d $nnUNet_results/Dataset${step1_dataset}_TotalSegMRI* ]; then
+    nnUNetv2_install_pretrained_model_from_zip $nnUNet_exports/Dataset${step1_dataset}_TotalSegMRI*_fold_$FOLD.zip
+fi
+
+if [ ! -d $nnUNet_results/Dataset${step2_dataset}_TotalSegMRI* ]; then
+    nnUNetv2_install_pretrained_model_from_zip $nnUNet_exports/Dataset${step2_dataset}_TotalSegMRI*_fold_$FOLD.zip
+fi
 
 # Make output dir with copy of the input images resampled to 1x1x1mm
 python $utils/generate_resampled_images.py -i ${INPUT_FOLDER} -o ${OUTPUT_FOLDER}/input --image-suffix "" --output-image-suffix ""
@@ -93,7 +105,10 @@ done
 nnUNetv2_predict -d $step2_dataset -i ${OUTPUT_FOLDER}/step2_input -o ${OUTPUT_FOLDER}/step2 -f $FOLD -c $configuration -p $nnUNetPlans -tr $nnUNetTrainer -npp $JOBS -nps $JOBS
 
 # Use an iterative algorithm to to assign an individual label value to each vertebrae and IVD in the final segmentation mask.
-python $utils/generate_labels_sequential.py -s ${OUTPUT_FOLDER}/step2 -o ${OUTPUT_FOLDER}/output --csf-labels 16 --sc-labels 17 --disc-labels 2 3 4 5 6 7 --vertebrea-labels 9 10 11 12 13 --init-disc 4:224 5:219 6:207 7:202 --init-vertebrae 11:40 12:34 13:23 --vertebrae-sacrum-label 14:17:92 --step-diff-label --clip-to-init
+python $utils/generate_labels_sequential.py -s ${OUTPUT_FOLDER}/step2 -o ${OUTPUT_FOLDER}/output --csf-labels 16 --sc-labels 17 --disc-labels 2 3 4 5 6 7 --vertebrea-labels 9 10 11 12 13 --init-disc 4:224 5:219 6:207 7:202 --init-vertebrae 11:40 12:34 13:23 --vertebrae-sacrum-label 14:17:92 --step-diff-label --step-diff-disc --clip-to-init
 
 # Fix csf label to include all non cord spinal canal, this will put the spinal canal label in all the voxels (labeled as a backgroupn) between the spinal canal and the spinal cord.
 python $utils/fix_csf_label.py -s ${OUTPUT_FOLDER}/output -o ${OUTPUT_FOLDER}/output
+
+# Generate preview images
+python $utils/generate_seg_jpg.py -i ${OUTPUT_FOLDER}/input -s ${OUTPUT_FOLDER}/output -o ${OUTPUT_FOLDER}/preview

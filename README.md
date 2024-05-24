@@ -67,7 +67,7 @@ A hybrid approach integrating nnU-Net with an iterative algorithm for segmenting
     ```
 
 ## Inference
-Run the model on a folder containing the images in .nii.gz format (Make sure to train the model or extract the trained `results` into `data/nnUNet/results` befor running):
+Run the model on a folder containing the images in .nii.gz, if you didn't train the model you should download models zip from release into `data/nnUNet/exports` (You can run `mkdir -p data/nnUNet/exports` before):
 ```
 source totalsegmentator-mri/scripts/inference_nnunet.sh INPUT_FOLDER OUTPUT_FOLDER
 ```

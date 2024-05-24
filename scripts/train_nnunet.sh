@@ -41,7 +41,6 @@ export nnUNet_n_proc_DA=$JOBS_TRAIN
 export nnUNet_raw=data/nnUNet/raw
 export nnUNet_preprocessed=data/nnUNet/preprocessed
 export nnUNet_results=data/nnUNet/results
-export nnUNet_tests=data/nnUNet/tests
 export nnUNet_exports=data/nnUNet/exports
 
 nnUNetTrainer=nnUNetTrainer_8000epochs
@@ -54,7 +53,6 @@ echo "Running with the following parameters:"
 echo "nnUNet_raw=${nnUNet_raw}"
 echo "nnUNet_preprocessed=${nnUNet_preprocessed}"
 echo "nnUNet_results=${nnUNet_results}"
-echo "nnUNet_tests=${nnUNet_tests}"
 echo "nnUNet_exports=${nnUNet_exports}"
 echo "nnUNetTrainer=${nnUNetTrainer}"
 echo "nnUNetPlanner=${nnUNetPlanner}"
@@ -98,8 +96,20 @@ for d in ${DATASETS[@]}; do
     nnUNetv2_export_model_to_zip -d $d -o $nnUNet_exports/${d_name}_fold_$FOLD.zip -c $configuration -f $FOLD -tr $nnUNetTrainer -p $nnUNetPlans
 
     echo "Testing nnUNet model for dataset $d_name"
-    mkdir -p $nnUNet_tests/${d_name}_fold_$FOLD
-    nnUNetv2_predict -d $d -i $nnUNet_raw/$d_name/imagesTs -o $nnUNet_tests/${d_name}_fold_$FOLD -f $FOLD -c $configuration -tr $nnUNetTrainer -p $nnUNetPlans -npp $JOBS -nps $JOBS
-    nnUNetv2_evaluate_folder $nnUNet_raw/$d_name/labelsTs $nnUNet_tests/${d_name}_fold_$FOLD -djfile $nnUNet_results/$d_name/${nnUNetTrainer}__${nnUNetPlans}__${configuration}/dataset.json -pfile $nnUNet_results/$d_name/${nnUNetTrainer}__${nnUNetPlans}__${configuration}/plans.json -np $JOBS
+    mkdir -p $nnUNet_results/$d_name/${nnUNetTrainer}__${nnUNetPlans}__${configuration}/fold_${FOLD}/test
+    nnUNetv2_predict -d $d -i $nnUNet_raw/$d_name/imagesTs -o $nnUNet_results/$d_name/${nnUNetTrainer}__${nnUNetPlans}__${configuration}/fold_${FOLD}/test -f $FOLD -c $configuration -tr $nnUNetTrainer -p $nnUNetPlans -npp $JOBS -nps $JOBS
+    nnUNetv2_evaluate_folder $nnUNet_raw/$d_name/labelsTs $nnUNet_results/$d_name/${nnUNetTrainer}__${nnUNetPlans}__${configuration}/fold_${FOLD}/test -djfile $nnUNet_results/$d_name/${nnUNetTrainer}__${nnUNetPlans}__${configuration}/dataset.json -pfile $nnUNet_results/$d_name/${nnUNetTrainer}__${nnUNetPlans}__${configuration}/plans.json -np $JOBS
+
+    p=$(realpath .)
+    cd $nnUNet_results
+    zip $p/$nnUNet_exports/${d_name}_fold_$FOLD.zip $d_name/${nnUNetTrainer}__${nnUNetPlans}__${configuration}/fold_${FOLD}/test/summary.json
+    cd $p
+
+    echo "Export nnUNet dataset list for dataset $d_name"
+    cd $nnUNet_raw/$d_name
+    ls */ > $p/$nnUNet_results/$d_name/${nnUNetTrainer}__${nnUNetPlans}__${configuration}/fold_${FOLD}/dataset.txt
+    cd $p/$nnUNet_results
+    zip $p/$nnUNet_exports/${d_name}_fold_$FOLD.zip $d_name/${nnUNetTrainer}__${nnUNetPlans}__${configuration}/fold_${FOLD}/dataset.txt
+    cd $p
 
 done
