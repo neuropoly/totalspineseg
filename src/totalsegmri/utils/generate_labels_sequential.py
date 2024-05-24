@@ -123,6 +123,13 @@ def main():
         '''),
     )
     parser.add_argument(
+        '--step-diff-disc', action="store_true", default=False,
+        help=textwrap.dedent('''
+            Make step only for different discs. When looping on the labels on the z axis, it will give a new label to the next label only
+             if there is a disc between them. This exclude the first and last vertebrae since it can be C1 or only contain the spinous process.
+        '''),
+    )
+    parser.add_argument(
         '--clip-to-init', action="store_true", default=False,
         help=textwrap.dedent('''
             Clip the output labels to the init labels range. If the output label is out of the init labels range, it will be set to 0.
@@ -164,6 +171,7 @@ def main():
     dilation_size = args.dilation_size
     combine_before_label = args.combine_before_label
     step_diff_label = args.step_diff_label
+    step_diff_disc = args.step_diff_disc
     clip_to_init = args.clip_to_init
     max_workers = args.max_workers
     verbose = args.verbose
@@ -192,6 +200,7 @@ def main():
             dilation_size = {dilation_size}
             combine_before_label = {combine_before_label}
             step_diff_label = {step_diff_label}
+            step_diff_disc = {step_diff_disc}
             clip_to_init = {clip_to_init}
             max_workers = {max_workers}
             verbose = {verbose}
@@ -228,6 +237,7 @@ def main():
         dilation_size=dilation_size,
         combine_before_label=combine_before_label,
         step_diff_label=step_diff_label,
+        step_diff_disc=step_diff_disc,
         clip_to_init=clip_to_init,
    )
 
@@ -255,6 +265,7 @@ def generate_labels_sequential(
             dilation_size,
             combine_before_label,
             step_diff_label,
+            step_diff_disc,
             clip_to_init,
         ):
     
@@ -268,6 +279,8 @@ def generate_labels_sequential(
 
     binary_dilation_structure = iterate_structure(generate_binary_structure(3, 1), dilation_size)
 
+    disc_sorted_z_indexes = []
+
     for labels, step, init, is_vert in (
         (disc_labels, output_disc_step, init_disc, False),
         (vertebrea_labels, output_vertebrea_step, init_vertebrae, True)):
@@ -276,7 +289,8 @@ def generate_labels_sequential(
             continue
 
         # Get labeled
-        if combine_before_label:
+        if combine_before_label or not is_vert: # Always for discs
+            # Combine all labels before label continue voxels
             mask_labeled, num_labels = label(binary_dilation(np.isin(seg_data_src, labels), binary_dilation_structure), np.ones((3, 3, 3)))
         else:
             mask_labeled, num_labels = np.zeros_like(seg_data_src), 0
@@ -295,21 +309,48 @@ def generate_labels_sequential(
         mask_labeled_z_indexes = [_[-1] for _ in center_of_mass(canonical_mask_labeled != 0, canonical_mask_labeled, range(1, num_labels + 1))]
 
         # Sort the labels by their z-index (reversed)
-        sorted_labels = [x for _,x in sorted(zip(mask_labeled_z_indexes,range(1,num_labels+1)))][::-1]
+        sorted_z_indexes, sorted_labels = zip(*sorted(zip(mask_labeled_z_indexes,range(1,num_labels+1)))[::-1])
+        
+        if is_vert:
+            # Combine sequential vertebrae labels if they have the same value in the original segmentation
+            if step_diff_label and len(labels) - len(init) > 1:
+                new_sorted_labels = []
+                prev_l, prev_orig_label = 0, 0
+                for l in sorted_labels:
+                    curr_orig_label = seg_data_src[mask_labeled == l].flat[0]
+                    if curr_orig_label == prev_orig_label:
+                        mask_labeled[mask_labeled == l] = prev_l
+                        num_labels -= 1
+                    else:
+                        new_sorted_labels.append(l)
+                        prev_l, prev_orig_label = l, curr_orig_label
 
-        # Combine sequential labels if they have the same value in the original segmentation
-        if step_diff_label and len(labels) - len(init) > 1:
-            new_sorted_labels = []
-            prev = 0, 0 # Label, Previous label
-            for l in sorted_labels:
-                curr_orig_label = seg_data_src[mask_labeled == l].flat[0]
-                if curr_orig_label == prev[1]:
-                    mask_labeled[mask_labeled == l] = prev[0]
-                    num_labels -= 1
-                else:
-                    new_sorted_labels.append(l)
-                    prev = l, curr_orig_label
-            sorted_labels = new_sorted_labels
+                # Get the z index of the center of mass for each label
+                canonical_mask_labeled = nib.as_closest_canonical(nib.Nifti1Image(mask_labeled, seg.affine, seg.header)).get_fdata()
+                mask_labeled_z_indexes = [_[-1] for _ in center_of_mass(canonical_mask_labeled != 0, canonical_mask_labeled, new_sorted_labels)]
+
+                # Sort the labels by their z-index (reversed)
+                sorted_z_indexes, sorted_labels = zip(*sorted(zip(mask_labeled_z_indexes, new_sorted_labels))[::-1])
+
+            # Combine sequential vertebrae labels if there is no disc between them
+            if step_diff_disc and len(disc_sorted_z_indexes) > 0:
+                new_sorted_labels = []
+                prev_l, prev_z = 0, 0
+
+                for l, z in zip(sorted_labels, sorted_z_indexes):
+                    # Do not combine first and last vertebrae since it can be C1 or only contain the spinous process
+                    if l not in sorted_labels[:2] and l != sorted_labels[-1] and prev_l > 0 and not any(z < _ < prev_z for _ in disc_sorted_z_indexes):
+                        mask_labeled[mask_labeled == l] = prev_l
+                        num_labels -= 1
+                    else:
+                        new_sorted_labels.append(l)
+                        prev_l, prev_z = l, z
+
+                sorted_labels = new_sorted_labels
+
+        else:
+            # Save the z indexes of the discs
+            disc_sorted_z_indexes = sorted_z_indexes
 
         # Set the first label
         first_label = 0
