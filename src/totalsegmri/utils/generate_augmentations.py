@@ -80,8 +80,8 @@ def main():
         help='Segmentation suffix for output, defaults to "".'
     )
     parser.add_argument(
-        '--augmentations-per-image', '-n', type=int, default=9,
-        help='Number of augmentation images to generate. Default is 9.'
+        '--augmentations-per-image', '-n', type=int, default=7,
+        help='Number of augmentation images to generate. Default is 7.'
     )
     parser.add_argument(
         '--labels2image', action="store_true", default=False,
