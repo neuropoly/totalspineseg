@@ -39,7 +39,7 @@ for dsp in $bids/*; do
     # Get the dataset name
     dsn=$(basename $dsp);
     # Get dataset word from the dataset name
-    dsw=${dsn#data-}; dsw=${dsw%-*};
+    dsw=${dsn#data-}; dsw=${dsw%-*}; dsw=${dsw^^};
 
     # Add the dataset word to the list of dataset words
     datasets_words+=($dsw)
@@ -52,8 +52,8 @@ for dsp in $bids/*; do
     python $utils/map_labels.py -m 1:200 --add-input -s $bids/$dsn/derivatives/labels -o $bids/$dsn/derivatives/labels --seg-suffix "_label-SC_seg" --output-seg-suffix "_label-spine_dseg" -d "sub-" -u "anat"
 
     echo "Copy images and labels into the nnUNet dataset folder"
-    python $utils/cpdir.py $bids/$dsn $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr -p "sub-*/anat/sub-*.nii.gz" -f -r sub-:${dsw}_ .nii.gz:_0000.nii.gz
-    python $utils/cpdir.py $bids/$dsn/derivatives/labels $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr -p "sub-*/anat/sub-*_label-spine_dseg.nii.gz" -f -r sub-:${dsw}_ _label-spine_dseg.nii.gz:.nii.gz
+    python $utils/cpdir.py $bids/$dsn $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr -p "sub-*/anat/sub-*.nii.gz" -f -r sub-:sub-${dsw} .nii.gz:_0000.nii.gz
+    python $utils/cpdir.py $bids/$dsn/derivatives/labels $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr -p "sub-*/anat/sub-*_label-spine_dseg.nii.gz" -f -r sub-:sub-${dsw} _label-spine_dseg.nii.gz:.nii.gz
 done
 
 echo "Transform images to canonical space and fix data type mismatch and sform qform mismatch"
@@ -71,8 +71,12 @@ mkdir -p $nnUNet_raw/Dataset100_TotalSegMRI/labelsTs
 
 # Make sure each dataset and contrast has 10% of the data in the test folder
 for d in ${datasets_words[@]}; do
-    for c in acq-lowresSag_T1w acq-lowresSag_T2w acq-highresSag_T2w; do
-        files=($(for f in $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr/${d}_*${c}.nii.gz; do basename "${f/.nii.gz/}"; done))
+    contrasts=(T1w T2w)
+    if [ -n "$(ls $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr/sub-${d}*_acq-highresSag_T2w.nii.gz 2>/dev/null)" ]; then
+        contrasts=(acq-lowresSag_T1w acq-lowresSag_T2w acq-highresSag_T2w)
+    fi
+    for c in ${contrasts[@]}; do
+        files=($(for f in $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr/sub-${d}*_${c}.nii.gz; do basename "${f/.nii.gz/}"; done))
         files_shuf=($(shuf -e "${files[@]}"))
         files_10p=(${files_shuf[@]:0:$((${#files_shuf[@]} * 10 / 100))})
         for f in ${files_10p[@]}; do
