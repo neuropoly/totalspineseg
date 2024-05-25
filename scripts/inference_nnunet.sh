@@ -92,7 +92,7 @@ python $utils/transform_labels2images.py -i ${OUTPUT_FOLDER}/input -s ${OUTPUT_F
 
 # Distinguished odd and even IVDs based on the C2-C3, C7-T1 and L5-S1 IVD labels output by the first model:
 # First we will use an iterative algorithm to label IVDs with the definite labels
-python $utils/generate_labels_sequential.py -s ${OUTPUT_FOLDER}/step1 -o ${OUTPUT_FOLDER}/step2_input --output-seg-suffix _0001 --disc-labels 1 2 3 4 5 --init-disc 2:224 3:219 4:207 5:202 --combine-before-label
+python $utils/generate_labels_sequential.py -s ${OUTPUT_FOLDER}/step1 -o ${OUTPUT_FOLDER}/step2_input --output-seg-suffix _0001 --disc-labels 1 2 3 4 5 --init-disc 2:224 5:202 3:219 4:207 --combine-before-label
 # Then, we map the IVDs labels to the odd and even IVDs to use as the 2'nd channel of step 2 model.
 python $utils/map_labels.py -s ${OUTPUT_FOLDER}/step2_input -o ${OUTPUT_FOLDER}/step2_input -m $resources/labels_maps/nnunet_step2_input.json --seg-suffix _0001 --output-seg-suffix _0001
 
@@ -105,7 +105,7 @@ done
 nnUNetv2_predict -d $step2_dataset -i ${OUTPUT_FOLDER}/step2_input -o ${OUTPUT_FOLDER}/step2 -f $FOLD -c $configuration -p $nnUNetPlans -tr $nnUNetTrainer -npp $JOBS -nps $JOBS
 
 # Use an iterative algorithm to to assign an individual label value to each vertebrae and IVD in the final segmentation mask.
-python $utils/generate_labels_sequential.py -s ${OUTPUT_FOLDER}/step2 -o ${OUTPUT_FOLDER}/output --csf-labels 16 --sc-labels 17 --disc-labels 2 3 4 5 6 7 --vertebrea-labels 9 10 11 12 13 --init-disc 4:224 5:219 6:207 7:202 --init-vertebrae 11:40 12:34 13:23 --vertebrae-sacrum-label 14:17:92 --step-diff-label --step-diff-disc --clip-to-init
+python $utils/generate_labels_sequential.py -s ${OUTPUT_FOLDER}/step2 -o ${OUTPUT_FOLDER}/output --sacrum-labels 14 --csf-labels 16 --sc-labels 17 --disc-labels 2 3 4 5 6 7 --vertebrea-labels 9 10 11 12 13 14 --init-disc 4:224 7:202 5:219 6:207 --init-vertebrae 11:40 14:17 12:34 13:23 --step-diff-label --step-diff-disc
 
 # Fix csf label to include all non cord spinal canal, this will put the spinal canal label in all the voxels (labeled as a backgroupn) between the spinal canal and the spinal cord.
 python $utils/fix_csf_label.py -s ${OUTPUT_FOLDER}/output -o ${OUTPUT_FOLDER}/output

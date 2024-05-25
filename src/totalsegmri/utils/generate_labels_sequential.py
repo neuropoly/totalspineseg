@@ -19,9 +19,9 @@ def main():
         '''),
         epilog=textwrap.dedent('''
             Examples:
-            generate_labels_sequential -s labels_init -o labels --disc-labels 2 3 4 5 6 --vertebrea-labels 8 9 10 11 12 --init-disc 4:224 5:219 6:202 --init-vertebrae 10:41 11:34 12:18
+            generate_labels_sequential -s labels_init -o labels --sacrum-labels 14 --csf-labels 16 --sc-labels 17 --disc-labels 2 3 4 5 6 7 --vertebrea-labels 9 10 11 12 13 14 --init-disc 4:224 7:202 5:219 6:207 --init-vertebrae 11:40 14:17 12:34 13:23 --step-diff-label --step-diff-disc
             For BIDS:
-            generate_labels_sequential -s derivatives/labels -o derivatives/labels --disc-labels 2 3 4 5 6 --vertebrea-labels 8 9 10 11 12 --init-disc 4:224 5:219 6:202 --init-vertebrae 10:41 11:34 12:18 --seg-suffix "_seg" --output-seg-suffix "_seg_seq" -d "sub-" -u "anat"
+            generate_labels_sequential -s derivatives/labels -o derivatives/labels --sacrum-labels 14 --csf-labels 16 --sc-labels 17 --disc-labels 2 3 4 5 6 7 --vertebrea-labels 9 10 11 12 13 14 --init-disc 4:224 7:202 5:219 6:207 --init-vertebrae 11:40 14:17 12:34 13:23 --step-diff-label --step-diff-disc --seg-suffix "_seg" --output-seg-suffix "_seg_seq" -d "sub-" -u "anat"
         '''),
         formatter_class=argparse.RawTextHelpFormatter
     )
@@ -83,12 +83,12 @@ def main():
         help='The step to take between vertebrae labels in the output, defaults to -1.'
     )
     parser.add_argument(
-        '--vertebrae-sacrum-label', type=lambda x:tuple(map(int, x.split(':'))), default=(),
-        help=textwrap.dedent('''
-            The sacrum label, the vertebrae label from which the sacrum begine and the output sacrum label.
-             It will map all the subsequence label in the vertebrae labeling loop to the sacrum
-             (input_sacrum_label:output_vert_label:output_sacrum_label !!without space!!). for example 14:17:92
-        '''),
+        '--sacrum-labels', type=int, nargs='+', default=[],
+        help='The sacrum label.'
+    )
+    parser.add_argument(
+        '--output-sacrum-label', type=int, default=92,
+        help='The sacrum label in the output, defaults to 92.'
     )
     parser.add_argument(
         '--csf-labels', type=int, nargs='+', default=[],
@@ -130,12 +130,6 @@ def main():
         '''),
     )
     parser.add_argument(
-        '--clip-to-init', action="store_true", default=False,
-        help=textwrap.dedent('''
-            Clip the output labels to the init labels range. If the output label is out of the init labels range, it will be set to 0.
-        '''),
-    )
-    parser.add_argument(
         '--max-workers', '-w', type=int, default=mp.cpu_count(),
         help='Max worker to run in parallel proccess, defaults to multiprocessing.cpu_count().'
     )
@@ -163,8 +157,9 @@ def main():
     vertebrea_labels = args.vertebrea_labels
     init_vertebrae = dict(args.init_vertebrae)
     output_vertebrea_step = args.output_vertebrea_step
+    sacrum_labels = args.sacrum_labels
+    output_sacrum_label = args.output_sacrum_label
     csf_labels = args.csf_labels
-    vertebrae_sacrum_label = args.vertebrae_sacrum_label
     output_csf_label = args.output_csf_label
     sc_labels = args.sc_labels
     output_sc_label = args.output_sc_label
@@ -172,7 +167,6 @@ def main():
     combine_before_label = args.combine_before_label
     step_diff_label = args.step_diff_label
     step_diff_disc = args.step_diff_disc
-    clip_to_init = args.clip_to_init
     max_workers = args.max_workers
     verbose = args.verbose
 
@@ -192,7 +186,8 @@ def main():
             vertebrea_labels = {vertebrea_labels}
             init_vertebrae = {init_vertebrae}
             output_vertebrea_step = {output_vertebrea_step}
-            vertebrae_sacrum_label = {vertebrae_sacrum_label}
+            sacrum_labels = {sacrum_labels}
+            output_sacrum_label = {output_sacrum_label}
             csf_labels = {csf_labels}
             output_csf_label = {output_csf_label}
             sc_labels = {sc_labels}
@@ -201,7 +196,6 @@ def main():
             combine_before_label = {combine_before_label}
             step_diff_label = {step_diff_label}
             step_diff_disc = {step_diff_disc}
-            clip_to_init = {clip_to_init}
             max_workers = {max_workers}
             verbose = {verbose}
         '''))
@@ -229,7 +223,8 @@ def main():
         vertebrea_labels=vertebrea_labels,
         init_vertebrae=init_vertebrae,
         output_vertebrea_step=output_vertebrea_step,
-        vertebrae_sacrum_label=vertebrae_sacrum_label,
+        sacrum_labels=sacrum_labels,
+        output_sacrum_label=output_sacrum_label,
         csf_labels=csf_labels,
         output_csf_label=output_csf_label,
         sc_labels=sc_labels,
@@ -238,7 +233,6 @@ def main():
         combine_before_label=combine_before_label,
         step_diff_label=step_diff_label,
         step_diff_disc=step_diff_disc,
-        clip_to_init=clip_to_init,
    )
 
     with mp.Pool() as pool:
@@ -257,7 +251,8 @@ def generate_labels_sequential(
             vertebrea_labels,
             init_vertebrae,
             output_vertebrea_step,
-            vertebrae_sacrum_label,
+            sacrum_labels,
+            output_sacrum_label,
             csf_labels,
             output_csf_label,
             sc_labels,
@@ -266,7 +261,6 @@ def generate_labels_sequential(
             combine_before_label,
             step_diff_label,
             step_diff_disc,
-            clip_to_init,
         ):
     
     output_seg_path = output_path / seg_path.relative_to(segs_path).parent / seg_path.name.replace(f'{seg_suffix}.nii.gz', f'{output_seg_suffix}.nii.gz')
@@ -359,49 +353,34 @@ def generate_labels_sequential(
                 first_label = v - step * sorted_labels.index(mask_labeled[seg_data_src == k].flat[0])
                 break
 
-        # If no init label found, and sacrum present, set first label such that the last vertebrae is L5
-        if first_label == 0 and is_vert and vertebrae_sacrum_label[0] in seg_data_src:
-            first_label = (vertebrae_sacrum_label[1] - step) - step * (len(sorted_labels) - 1)
-
         # If no init label found, print error
         if first_label == 0:
             print(f"Error: {seg_path}, some initiation label must be in the segmentation (init: {list(init.keys())})")
             return
 
-        # Set the range for clipping
-        init_values = list(init.values())
-        if is_vert and len(vertebrae_sacrum_label) == 3:
-            init_values.append(vertebrae_sacrum_label[1] - step)
-        init_range = (min(init_values), max(init_values))
-
-        # Set the labels
-        is_sacrum = False
+        # Set the output value for the current label
         for i in range(num_labels):
-            target_label = first_label + step * i
+            seg_data[mask_labeled == sorted_labels[i]] = first_label + step * i
 
-            # Check if we are in the sacrum
-            if is_vert and len(vertebrae_sacrum_label) == 3 and vertebrae_sacrum_label[1] == target_label:
-                is_sacrum = True
+    # Set sacrum label
+    if len(sacrum_labels) > 0:
+        seg_data[seg_data == output_sacrum_label] = 0
+        seg_data[np.isin(seg_data_src, sacrum_labels)] = output_sacrum_label
 
-            # Set the target label to the sacrum label if we are in the sacrum
-            if is_sacrum:
-                target_label = vertebrae_sacrum_label[2]
+        # If no sacrum_labels in input try to use the init_vertebrae map of the sacrum
+        sacrum_output_labels = [init_vertebrae[_] for _ in sacrum_labels if _ in init_vertebrae]
+        if output_sacrum_label not in seg_data and len(sacrum_output_labels) > 0:
+            seg_data[np.isin(seg_data, sacrum_output_labels)] = output_sacrum_label
 
-            # Set the output value for the current label
-            if is_sacrum or (not clip_to_init) or (init_range[0] <= target_label and target_label <= init_range[1]):
-                seg_data[mask_labeled == sorted_labels[i]] = target_label
+    # Set CSF label
+    if len(csf_labels) > 0:
+        seg_data[seg_data == output_csf_label] = 0
+        seg_data[np.isin(seg_data_src, csf_labels)] = output_csf_label
 
     # Set cord label
     if len(sc_labels) > 0:
         seg_data[seg_data == output_sc_label] = 0
         seg_data[np.isin(seg_data_src, sc_labels)] = output_sc_label
-    # Set CSF label
-    if len(csf_labels) > 0:
-        seg_data[seg_data == output_csf_label] = 0
-        seg_data[np.isin(seg_data_src, csf_labels)] = output_csf_label
-    # Set sacrum label
-    if len(vertebrae_sacrum_label) == 3:
-        seg_data[seg_data_src == vertebrae_sacrum_label[0]] = vertebrae_sacrum_label[2]
 
     # Create result segmentation
     output_seg = nib.Nifti1Image(seg_data, seg.affine, seg.header)
