@@ -5,6 +5,7 @@ from functools import partial
 from pathlib import Path
 import numpy as np
 import nibabel as nib
+from scipy.ndimage import label
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -66,6 +67,14 @@ def main():
         help='Label used for csf, defaults to 201.'
     )
     parser.add_argument(
+        '--largest-cord', action="store_true", default=False,
+        help='Take the largest spinal cord component.'
+    )
+    parser.add_argument(
+        '--largest-canal', action="store_true", default=False,
+        help='Take the largest spinal canal component.'
+    )
+    parser.add_argument(
         '--max-workers', '-w', type=int, default=mp.cpu_count(),
         help='Max worker to run in parallel proccess, defaults to multiprocessing.cpu_count().'
     )
@@ -89,6 +98,8 @@ def main():
     output_seg_suffix = args.output_seg_suffix
     cord_label = args.cord_label
     csf_label = args.csf_label
+    largest_cord = args.largest_cord
+    largest_canal = args.largest_canal
     max_workers = args.max_workers
     verbose = args.verbose
 
@@ -104,6 +115,8 @@ def main():
             output_seg_suffix = "{output_seg_suffix}"
             cord_label = {cord_label}
             csf_label = {csf_label}
+            largest_cord = {largest_cord}
+            largest_canal = {largest_canal}
             max_workers = {max_workers}
             verbose = {verbose}
         '''))
@@ -119,13 +132,33 @@ def main():
     segs_path_list = list(segs_path.glob(glob_pattern))
 
     # Create a partially-applied function with the extra arguments
-    partial_fix_csf_label = partial(fix_csf_label, segs_path=segs_path, cord_label=cord_label, csf_label=csf_label, output_path=output_path, seg_suffix=seg_suffix, output_seg_suffix=output_seg_suffix)
+    partial_fix_csf_label = partial(
+        fix_csf_label,
+        segs_path=segs_path,
+        output_path=output_path,
+        seg_suffix=seg_suffix,
+        output_seg_suffix=output_seg_suffix,
+        cord_label=cord_label,
+        csf_label=csf_label,
+        largest_cord=largest_cord,
+        largest_canal=largest_canal,
+    )
 
     with mp.Pool() as pool:
         process_map(partial_fix_csf_label, segs_path_list, max_workers=max_workers)
     
 
-def fix_csf_label(seg_path, segs_path, cord_label, csf_label, output_path, seg_suffix, output_seg_suffix):
+def fix_csf_label(
+            seg_path,
+            segs_path,
+            output_path,
+            seg_suffix,
+            output_seg_suffix,
+            cord_label,
+            csf_label,
+            largest_cord,
+            largest_canal
+        ):
     
     output_seg_path = output_path / seg_path.relative_to(segs_path).parent / seg_path.name.replace(f'{seg_suffix}.nii.gz', f'{output_seg_suffix}.nii.gz')
 
@@ -133,22 +166,36 @@ def fix_csf_label(seg_path, segs_path, cord_label, csf_label, output_path, seg_s
     seg = nib.load(seg_path)
     seg_data = seg.get_fdata().round().astype(np.uint8)
 
-    # Create an array of x indices
-    x_indices = np.broadcast_to(np.arange(seg_data.shape[0])[..., np.newaxis, np.newaxis], seg_data.shape)
-    # Create an array of y indices
-    y_indices = np.broadcast_to(np.arange(seg_data.shape[1])[..., np.newaxis], seg_data.shape)
+    # Take the largest spinal cord component
+    if largest_cord and cord_label in seg_data:
+        cord_mask = seg_data == cord_label
+        cord_mask_largest = largest(cord_mask)
+        seg_data[cord_mask & ~cord_mask_largest] = csf_label
 
-    canal_mask = np.isin(seg_data, [cord_label, csf_label])
-    canal_mask_min_x = np.min(np.where(canal_mask, x_indices, np.inf), axis=0)[np.newaxis, ...]
-    canal_mask_max_x = np.max(np.where(canal_mask, x_indices, -np.inf), axis=0)[np.newaxis, ...]
-    canal_mask_min_y = np.min(np.where(canal_mask, y_indices, np.inf), axis=1)[:, np.newaxis, :]
-    canal_mask_max_y = np.max(np.where(canal_mask, y_indices, -np.inf), axis=1)[:, np.newaxis, :]
-    canal_mask = \
-        (canal_mask_min_x <= x_indices) & \
-            (x_indices <= canal_mask_max_x) & \
-            (canal_mask_min_y <= y_indices) & \
-            (y_indices <= canal_mask_max_y)
-    seg_data[canal_mask & (seg_data != cord_label)] = csf_label
+    if csf_label in seg_data:
+        
+        # Take the largest spinal canal component
+        if largest_canal:
+            canal_mask = np.isin(seg_data, [cord_label, csf_label])
+            canal_mask_largest = largest(canal_mask)
+            seg_data[canal_mask & ~canal_mask_largest] = 0
+
+        # Create an array of x indices
+        x_indices = np.broadcast_to(np.arange(seg_data.shape[0])[..., np.newaxis, np.newaxis], seg_data.shape)
+        # Create an array of y indices
+        y_indices = np.broadcast_to(np.arange(seg_data.shape[1])[..., np.newaxis], seg_data.shape)
+
+        canal_mask = np.isin(seg_data, [cord_label, csf_label])
+        canal_mask_min_x = np.min(np.where(canal_mask, x_indices, np.inf), axis=0)[np.newaxis, ...]
+        canal_mask_max_x = np.max(np.where(canal_mask, x_indices, -np.inf), axis=0)[np.newaxis, ...]
+        canal_mask_min_y = np.min(np.where(canal_mask, y_indices, np.inf), axis=1)[:, np.newaxis, :]
+        canal_mask_max_y = np.max(np.where(canal_mask, y_indices, -np.inf), axis=1)[:, np.newaxis, :]
+        canal_mask = \
+            (canal_mask_min_x <= x_indices) & \
+                (x_indices <= canal_mask_max_x) & \
+                (canal_mask_min_y <= y_indices) & \
+                (y_indices <= canal_mask_max_y)
+        seg_data[canal_mask & (seg_data != cord_label)] = csf_label
 
     # Create result segmentation 
     mapped_seg = nib.Nifti1Image(seg_data, seg.affine, seg.header)
@@ -161,6 +208,13 @@ def fix_csf_label(seg_path, segs_path, cord_label, csf_label, output_path, seg_s
     
     # Save mapped segmentation
     nib.save(mapped_seg, output_seg_path)
+
+def largest(mask):
+    mask_labeled, num_labels = label(mask, np.ones((3, 3, 3)))
+    # Find the label of the largest component
+    label_sizes = np.bincount(mask_labeled.ravel())[1:]  # Skip 0 label size
+    largest_label = label_sizes.argmax() + 1  # +1 because bincount labels start at 0
+    return mask_labeled == largest_label
 
 if __name__ == '__main__':
     main()
