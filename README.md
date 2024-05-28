@@ -1,6 +1,6 @@
 # TotalSegMRI
 
-Tool for automatic segmentation and labelling of all vertebrae and intervertebral discs (IVDs), spinal cord, and spinal canal. We follow [TotalSegmentator classes](https://github.com/wasserth/TotalSegmentator?tab=readme-ov-file#class-details) with an additional class for IVDs, spinal cord and spinal canal (See list of class [here](#list-of-class)). We used [nnUNet](https://github.com/MIC-DKFZ/nnUNet) as our backbone for model training and inference.
+Tool for automatic segmentation and labelling of all vertebrae and intervertebral discs (IVDs), spinal cord, and spinal canal. We follow [TotalSegmentator classes](https://github.com/wasserth/TotalSegmentator/tree/v1.5.7#class-details) with an additional class for IVDs, spinal cord and spinal canal (See list of class [here](#list-of-class)). We used [nnUNet](https://github.com/MIC-DKFZ/nnUNet) as our backbone for model training and inference.
 
 - [Model description](#model-description)
 - [Installation](#installation)
