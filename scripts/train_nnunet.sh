@@ -76,7 +76,7 @@ for d in ${DATASETS[@]}; do
     # Get the dataset name
     d_name=$(basename $(ls -d $nnUNet_raw/Dataset${d}_TotalSegMRI*))
 
-    if [ ! -d $nnUNet_preprocessed/$d_name ]; then
+    if [ ! -f $nnUNet_preprocessed/$d_name/${nnUNetPlans}_1gpu.json ]; then
         echo "Preprocess dataset $d_name"
         nnUNetv2_plan_and_preprocess -d $d -pl $nnUNetPlanner -c $configuration -npfp $JOBS -np $JOBS --verify_dataset_integrity
         cp $nnUNet_preprocessed/$d_name/${nnUNetPlans}.json $nnUNet_preprocessed/$d_name/${nnUNetPlans}_1gpu.json
