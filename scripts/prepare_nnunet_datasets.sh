@@ -39,13 +39,12 @@ for dsp in $bids/*; do
     # Get the dataset name
     dsn=$(basename $dsp);
     # Get dataset word from the dataset name
-    dsw=${dsn#data-}; dsw=${dsw%-*}; dsw=${dsw^^};
+    dsw=${dsn#data-}; dsw=${dsw%%-*}; dsw=${dsw^^};
 
     # Add the dataset word to the list of dataset words
     datasets_words+=($dsw)
 
     echo "Working on $dsn"
-    #label-spine_dseg\|label-SC_seg\|label-canal_seg
 
     echo "Adding label-canal_seg and label-SC_seg to label-spine_dseg"
     python $utils/map_labels.py -m 1:201 --add-input -s $bids/$dsn/derivatives/labels -o $bids/$dsn/derivatives/labels --seg-suffix "_label-canal_seg" --output-seg-suffix "_label-spine_dseg" -d "sub-" -u "anat"
@@ -88,6 +87,9 @@ done
 
 echo "Generate augmentations"
 python $utils/generate_augmentations.py -i $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr -s $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr -o $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr -g $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr --labels2image --seg-classes 202-224 18-41,92 200 201
+
+echo "Transform labels to images space"
+python $utils/transform_labels2images.py -i $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr -s $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr -o $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr
 
 echo "Map labels form TotalSegMRI labels to the datasets specific label"
 python $utils/cpdir.py $nnUNet_raw/Dataset100_TotalSegMRI $nnUNet_raw/Dataset101_TotalSegMRI_step1 -p "imagesT*/*.nii.gz"
