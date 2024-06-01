@@ -48,7 +48,7 @@ export nnUNet_preprocessed=data/nnUNet/preprocessed
 export nnUNet_results=data/nnUNet/results
 export nnUNet_exports=data/nnUNet/exports
 
-nnUNetTrainer=nnUNetTrainer_16000epochs
+nnUNetTrainer=nnUNetTrainer_8000epochs
 nnUNetPlans=nnUNetPlans
 configuration=3d_fullres
 
@@ -66,7 +66,7 @@ echo "configuration=${configuration}"
 echo "JOBS=${JOBS}"
 echo ""
 
-FOLD=0
+FOLD=all
 step1_dataset=101
 step2_dataset=102
 
@@ -105,7 +105,7 @@ done
 nnUNetv2_predict -d $step2_dataset -i ${OUTPUT_FOLDER}/step2_input -o ${OUTPUT_FOLDER}/step2 -f $FOLD -c $configuration -p $nnUNetPlans -tr $nnUNetTrainer -npp $JOBS -nps $JOBS
 
 # Use an iterative algorithm to to assign an individual label value to each vertebrae and IVD in the final segmentation mask.
-python $utils/generate_labels_sequential.py -s ${OUTPUT_FOLDER}/step2 -o ${OUTPUT_FOLDER}/output --sacrum-labels 14 --csf-labels 16 --sc-labels 17 --disc-labels 2 3 4 5 6 7 --vertebrea-labels 9 10 11 12 13 14 --init-disc 4:224 7:202 5:219 6:207 --init-vertebrae 11:40 14:17 12:34 13:23 --step-diff-label --step-diff-disc
+python $utils/generate_labels_sequential.py -s ${OUTPUT_FOLDER}/step2 -o ${OUTPUT_FOLDER}/output --sacrum-labels 14 --csf-labels 16 --sc-labels 17 --disc-labels 2 3 4 5 6 7 --vertebrea-labels 9 10 11 12 13 14 --init-disc 4:224 7:202 5:219 6:207 --init-vertebrae 11:41 14:17 12:34 13:23 --step-diff-label --step-diff-disc
 
 # Fix csf label to include all non cord spinal canal, this will put the spinal canal label in all the voxels (labeled as a backgroupn) between the spinal canal and the spinal cord.
 python $utils/fix_csf_label.py -s ${OUTPUT_FOLDER}/output -o ${OUTPUT_FOLDER}/output --largest-cord --largest-canal
