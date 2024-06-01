@@ -51,12 +51,11 @@ for ds in ${datasets[@]}; do
     #   sub-*/anat/sub-*_{T1,T2}w.nii.gz
     #   derivatives/labels/sub-*/anat/sub-*_{T1,T2}w_{label-spine_dseg,label-SC_seg,label-canal_seg}.nii.gz
     find . ! -path '.' ! -path './.*' \
-        ! -regex '^\./sub-[^/]*\(/anat\(/sub-[^/]*_\(T1\|T2\)w\.nii\.gz\)?\)?$' \
+        ! -regex '^\./sub-[^/]*\(/anat\(/sub-[^/]*_\(T1w\|T2w\|T2star\|flip-1_mt-on_MTS\|flip-2_mt-off_MTS\)\.nii\.gz\)?\)?$' \
         ! -regex '^\./derivatives\(/labels\(/sub-[^/]*\(/anat\(/sub-[^/]*_\(T1\|T2\)w_\(label-spine_dseg\|label-SC_seg\|label-canal_seg\)\.nii\.gz\)?\)?\)?\)?$' \
         -delete
 
-    # Initialize the current dataset directory as a git-annex repository and download the necessary files
-    git annex init
+    # Ddownload the necessary files from git-annex
     git annex get
 
     # Move back to the parent directory to process the next dataset

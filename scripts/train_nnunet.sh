@@ -43,9 +43,9 @@ export nnUNet_preprocessed=data/nnUNet/preprocessed
 export nnUNet_results=data/nnUNet/results
 export nnUNet_exports=data/nnUNet/exports
 
-nnUNetTrainer=nnUNetTrainer_8000epochs
-nnUNetPlanner=nnUNetPlannerResEncL
-nnUNetPlans=nnUNetResEncUNetLPlans
+nnUNetTrainer=nnUNetTrainer_16000epochs
+nnUNetPlanner=ExperimentPlanner
+nnUNetPlans=nnUNetPlans
 configuration=3d_fullres
 
 echo ""
@@ -62,6 +62,9 @@ echo "JOBS=${JOBS}"
 echo "GPU_MEM=${GPU_MEM}"
 echo "GPU_COUNT=${GPU_COUNT}"
 echo ""
+
+# ensure nnUNetTrainer_16000epochs is defined in the nnUNet library and add it if it is not
+source "$(dirname "$(realpath "${BASH_SOURCE[0]}")")/add_nnunet_trainer.sh"
 
 # Set the datasets to work with - default is 101 102 103
 DATASETS=${1:-101 102 103}

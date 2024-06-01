@@ -55,6 +55,10 @@ for dsp in $bids/*; do
     python $utils/cpdir.py $bids/$dsn/derivatives/labels $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr -p "sub-*/anat/sub-*_label-spine_dseg.nii.gz" -f -r sub-:sub-${dsw} _label-spine_dseg.nii.gz:.nii.gz
 done
 
+echo "Remove images withot segmentation and segmentation without images"
+for f in $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr/*.nii.gz; do if [ ! -f $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr/$(basename ${f/_0000.nii.gz/.nii.gz}) ]; then rm $f; fi; done
+for f in $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr/*.nii.gz; do if [ ! -f $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr/$(basename ${f/.nii.gz/_0000.nii.gz}) ]; then rm $f; fi; done
+
 echo "Transform images to canonical space and fix data type mismatch and sform qform mismatch"
 python $utils/transform_norm.py -i $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr -o $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr
 
@@ -70,18 +74,20 @@ mkdir -p $nnUNet_raw/Dataset100_TotalSegMRI/labelsTs
 
 # Make sure each dataset and contrast has 10% of the data in the test folder
 for d in ${datasets_words[@]}; do
-    contrasts=(T1w T2w)
+    contrasts=(T1w T2w T2star flip-1_mt-on_MTS flip-2_mt-off_MTS)
     if [ -n "$(ls $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr/sub-${d}*_acq-highresSag_T2w.nii.gz 2>/dev/null)" ]; then
         contrasts=(acq-lowresSag_T1w acq-lowresSag_T2w acq-highresSag_T2w)
     fi
     for c in ${contrasts[@]}; do
-        files=($(for f in $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr/sub-${d}*_${c}.nii.gz; do basename "${f/.nii.gz/}"; done))
-        files_shuf=($(shuf -e "${files[@]}"))
-        files_10p=(${files_shuf[@]:0:$((${#files_shuf[@]} * 10 / 100))})
-        for f in ${files_10p[@]}; do
-            mv $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr/${f}_0000.nii.gz $nnUNet_raw/Dataset100_TotalSegMRI/imagesTs;
-            mv $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr/${f}.nii.gz $nnUNet_raw/Dataset100_TotalSegMRI/labelsTs;
-        done
+        if [ -n "$(ls $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr/sub-${d}*_${c}.nii.gz 2>/dev/null)" ]; then
+            files=($(for f in $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr/sub-${d}*_${c}.nii.gz; do basename "${f/.nii.gz/}"; done))
+            files_shuf=($(shuf -e "${files[@]}"))
+            files_10p=(${files_shuf[@]:0:$((${#files_shuf[@]} * 10 / 100))})
+            for f in ${files_10p[@]}; do
+                mv $nnUNet_raw/Dataset100_TotalSegMRI/imagesTr/${f}_0000.nii.gz $nnUNet_raw/Dataset100_TotalSegMRI/imagesTs;
+                mv $nnUNet_raw/Dataset100_TotalSegMRI/labelsTr/${f}.nii.gz $nnUNet_raw/Dataset100_TotalSegMRI/labelsTs;
+            done
+        fi
     done
 done
 

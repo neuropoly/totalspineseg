@@ -48,8 +48,8 @@ export nnUNet_preprocessed=data/nnUNet/preprocessed
 export nnUNet_results=data/nnUNet/results
 export nnUNet_exports=data/nnUNet/exports
 
-nnUNetTrainer=nnUNetTrainer_8000epochs
-nnUNetPlans=nnUNetResEncUNetLPlans
+nnUNetTrainer=nnUNetTrainer_16000epochs
+nnUNetPlans=nnUNetPlans
 configuration=3d_fullres
 
 echo ""
