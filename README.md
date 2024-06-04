@@ -52,7 +52,7 @@ A hybrid approach integrating nnU-Net with an iterative algorithm for segmenting
     source totalsegmentator-mri/scripts/get_datasets.sh
     ```
 
-1. Temporary!!! (untill all labels will be pushed into the repositories): Extract [labels.zip](https://labels.zip) into `data/bids`.
+1. Temporary!!! (untill all labels will be pushed into the repositories): Extract [labels_iso_bids_0524.zip](https://github.com/neuropoly/totalsegmentator-mri/releases/download/labels/labels_iso_bids_0524.zip) into `data/bids`.
 
 1. Prepares datasets in nnUNetv2 structure into `data/nnUnet`:
     ```
