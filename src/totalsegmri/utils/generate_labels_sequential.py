@@ -298,6 +298,11 @@ def generate_labels_sequential(
                     mask_labeled[tmp_mask_labeled != 0] = tmp_mask_labeled[tmp_mask_labeled != 0] + num_labels
                     num_labels += tmp_num_labels
 
+        # If no label found, print error
+        if num_labels == 0:
+            print(f"Error: {seg_path}, some label must be in the segmentation (labels: {labels})")
+            return
+
         # Get the z index of the center of mass for each label
         canonical_mask_labeled = nib.as_closest_canonical(nib.Nifti1Image(mask_labeled, seg.affine, seg.header)).get_fdata()
         mask_labeled_z_indexes = [_[-1] for _ in center_of_mass(canonical_mask_labeled != 0, canonical_mask_labeled, range(1, num_labels + 1))]
