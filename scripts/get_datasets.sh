@@ -48,11 +48,11 @@ for ds in ${datasets[@]}; do
 
     # Remove all files and folders not in this formats:
     #   .*
-    #   sub-*/anat/sub-*_{T1,T2}w.nii.gz
-    #   derivatives/labels/sub-*/anat/sub-*_{T1,T2}w_{label-spine_dseg,label-SC_seg,label-canal_seg}.nii.gz
+    #   sub-*/anat/sub-*_{T1,T2,T2star,MTS}.nii.gz
+    #   derivatives/labels/sub-*/anat/sub-*_{T1w,T2w,T2star,MTS}_{label-spine_dseg,label-SC_seg,label-canal_seg}.nii.gz
     find . ! -path '.' ! -path './.*' \
-        ! -regex '^\./sub-[^/]*\(/anat\(/sub-[^/]*_\(T1w\|T2w\|T2star\|flip-1_mt-on_MTS\|flip-2_mt-off_MTS\)\.nii\.gz\)?\)?$' \
-        ! -regex '^\./derivatives\(/labels\(/sub-[^/]*\(/anat\(/sub-[^/]*_\(T1\|T2\)w_\(label-spine_dseg\|label-SC_seg\|label-canal_seg\)\.nii\.gz\)?\)?\)?\)?$' \
+        ! -regex '^\./sub-[^/]*\(/anat\(/sub-[^/]*_\(T1w\|T2w\|T2star\|MTS\)\.nii\.gz\)?\)?$' \
+        ! -regex '^\./derivatives\(/labels\(/sub-[^/]*\(/anat\(/sub-[^/]*_\(T1w\|T2w\|T2star\|MTS\)_\(label-spine_dseg\|label-SC_seg\|label-canal_seg\)\.nii\.gz\)?\)?\)?\)?$' \
         -delete
 
     # Ddownload the necessary files from git-annex
