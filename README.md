@@ -49,25 +49,25 @@ A hybrid approach integrating nnU-Net with an iterative algorithm for segmenting
 
 1. Get the required datasets into `data/bids` (make sure you have access to `git@data.neuro.polymtl.ca:datasets/whole-spine.git` and `git@data.neuro.polymtl.ca:datasets/spider-challenge-2023.git`):
     ```
-    source totalsegmentator-mri/scripts/get_datasets.sh
+    bash totalsegmentator-mri/scripts/get_datasets.sh
     ```
 
 1. Temporary!!! (untill all labels will be pushed into the repositories): Extract [labels_iso_bids_0524.zip](https://github.com/neuropoly/totalsegmentator-mri/releases/download/labels/labels_iso_bids_0524.zip) into `data/bids`.
 
 1. Prepares datasets in nnUNetv2 structure into `data/nnUnet`:
     ```
-    source totalsegmentator-mri/scripts/prepare_nnunet_datasets.sh
+    bash totalsegmentator-mri/scripts/prepare_nnunet_datasets.sh
     ```
 
 1. Train the model:
     ```
-    source totalsegmentator-mri/scripts/train_nnunet.sh
+    bash totalsegmentator-mri/scripts/train_nnunet.sh
     ```
 
 ## Inference
 Run the model on a folder containing the images in .nii.gz format, if you didn't train the model you should download models zip from release into `data/nnUNet/exports` (You can run `mkdir -p data/nnUNet/exports` before):
 ```
-source totalsegmentator-mri/scripts/inference_nnunet.sh INPUT_FOLDER OUTPUT_FOLDER
+bash totalsegmentator-mri/scripts/inference_nnunet.sh INPUT_FOLDER OUTPUT_FOLDER
 ```
 
 ## List of class
