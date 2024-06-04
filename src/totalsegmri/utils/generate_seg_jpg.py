@@ -3,7 +3,6 @@ from PIL import Image
 import multiprocessing as mp
 from functools import partial
 from pathlib import Path
-import nibabel as nib
 import numpy as np
 from tqdm.contrib.concurrent import process_map
 import torchio as tio
@@ -67,6 +66,10 @@ def main():
         help='Image suffix, defaults to "_0000".'
     )
     parser.add_argument(
+        '--output-suffix', type=str, default='',
+        help='Suffix to add to the output jpg, defaults to "".'
+    )
+    parser.add_argument(
         '--orient', '-t', type=str, choices=['sag', 'ax', 'cor'], default='sag',
         help='Orientation of the output slice (sagittal, axial, or coronal). Default is "sag".'
     )
@@ -102,6 +105,7 @@ def main():
     prefix = args.prefix
     seg_suffix = args.seg_suffix
     image_suffix = args.image_suffix
+    output_suffix = args.output_suffix
     orient = args.orient
     sliceloc = args.sliceloc
     override = args.override
@@ -120,6 +124,7 @@ def main():
             prefix = "{prefix}"
             seg_suffix = "{seg_suffix}"
             image_suffix = "{image_suffix}"
+            output_suffix = "{output_suffix}"
             orient = "{orient}"
             sliceloc = {sliceloc}
             override = {override}
@@ -145,6 +150,7 @@ def main():
         output_path=output_path,
         seg_suffix=seg_suffix,
         image_suffix=image_suffix,
+        output_suffix=output_suffix,
         orient=orient,
         sliceloc=sliceloc,
         override=override,
@@ -154,23 +160,20 @@ def main():
         process_map(partial_generate_seg_jpg, images_path_list, max_workers=max_workers)
     
 
-def generate_seg_jpg(image_path, segs_path, images_path, output_path, seg_suffix, image_suffix, orient, sliceloc, override):
+def generate_seg_jpg(image_path, segs_path, images_path, output_path, seg_suffix, image_suffix, output_suffix, orient, sliceloc, override):
 
     image_ext = [e for e in EXT if image_path.name.endswith(e)][0]
-    output_image_path = output_path / image_path.relative_to(images_path).parent / image_path.name.replace(f'{image_suffix}.{image_ext}', f'_{orient}_{sliceloc}.jpg')
+    output_image_path = output_path / image_path.relative_to(images_path).parent / image_path.name.replace(f'{image_suffix}.{image_ext}', f'_{orient}_{sliceloc}{output_suffix}.jpg')
 
     # Check if the output file exists and if the override flag is set to 0
     if output_image_path.exists() and not override:
         return
-    
-    image = nib.load(image_path)
-    image_data = image.get_fdata().astype(np.float64)
 
-    tio_image = tio.ScalarImage(tensor=image_data[None, ...], affine=image.affine)
-    tio_image = tio.ToCanonical()(tio_image)
-    tio_image = tio.Resample((1, 1, 1))(tio_image)
+    image = tio.ScalarImage(image_path)
+    image = tio.ToCanonical()(image)
+    image = tio.Resample((1, 1, 1))(image)
 
-    image_data = tio_image.data.squeeze().numpy().astype(np.float64)
+    image_data = image.data.squeeze().numpy().astype(np.float64)
 
     # Find the specified slice
     axis={'sag': 0, 'cor': 1, 'ax': 2}[orient]
@@ -192,13 +195,11 @@ def generate_seg_jpg(image_path, segs_path, images_path, output_path, seg_suffix
         seg_path = ([seg_path.parent / f'{seg_path.name}.{e}' for e in EXT if (seg_path.parent / f'{seg_path.name}.{e}').is_file()] + [None])[0]
         
         if seg_path and seg_path.is_file():
-            seg = nib.load(seg_path)
-            seg_data = seg.get_fdata().round().astype(np.uint8)
-            tio_seg = tio.LabelMap(tensor=seg_data[None, ...], affine=seg.affine)
-            tio_seg = tio.ToCanonical()(tio_seg)
-            tio_seg = tio.Resample(tio_image)(tio_seg)
+            seg = tio.LabelMap(seg_path)
+            seg = tio.ToCanonical()(seg)
+            seg = tio.Resample(image)(seg)
 
-            seg_data = tio_seg.data.squeeze().numpy().astype(np.uint8)
+            seg_data = seg.data.squeeze().numpy().astype(np.uint8)
 
             slice_seg = seg_data.take(slice_index, axis=axis)
 
