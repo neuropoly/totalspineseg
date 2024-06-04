@@ -3,6 +3,7 @@ from PIL import Image
 import multiprocessing as mp
 from functools import partial
 from pathlib import Path
+from nibabel import freesurfer
 import numpy as np
 from tqdm.contrib.concurrent import process_map
 import torchio as tio
@@ -169,7 +170,12 @@ def generate_seg_jpg(image_path, segs_path, images_path, output_path, seg_suffix
     if output_image_path.exists() and not override:
         return
 
-    image = tio.ScalarImage(image_path)
+    try:
+        image = tio.ScalarImage(image_path)
+        image.affine
+    except:
+        image = freesurfer.load(image_path)
+        image = tio.ScalarImage(tensor=image.get_fdata()[None, ...], affine=image.affine)
     image = tio.ToCanonical()(image)
     image = tio.Resample((1, 1, 1))(image)
 
@@ -195,7 +201,12 @@ def generate_seg_jpg(image_path, segs_path, images_path, output_path, seg_suffix
         seg_path = ([seg_path.parent / f'{seg_path.name}.{e}' for e in EXT if (seg_path.parent / f'{seg_path.name}.{e}').is_file()] + [None])[0]
         
         if seg_path and seg_path.is_file():
-            seg = tio.LabelMap(seg_path)
+            try:
+                seg = tio.LabelMap(seg_path)
+                seg.affine
+            except:
+                seg = freesurfer.load(seg_path)
+                seg = tio.LabelMap(tensor=seg.get_fdata()[None, ...], affine=seg.affine)
             seg = tio.ToCanonical()(seg)
             seg = tio.Resample(image)(seg)
 
