@@ -144,7 +144,7 @@ def transform_norm(
 
     # Rescale the image to the output data type if necessary
     # code from https://github.com/spinalcordtoolbox/spinalcordtoolbox/blob/6.3/spinalcordtoolbox/image.py#L1217
-    if image_header_dtype != image_data_dtype and "int" in np.dtype(image_header_dtype).name:
+    if "int" in np.dtype(image_header_dtype).name:
         # get min/max from output type
         min_out = np.iinfo(image_header_dtype).min
         max_out = np.iinfo(image_header_dtype).max
