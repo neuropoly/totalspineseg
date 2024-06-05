@@ -29,7 +29,8 @@ JOBS_FOR_RAMGB=$(( $(awk -v ram_req="$RAM_REQUIREMENT" '/MemTotal/ {print int($2
 # Get the minimum of JOBS_FOR_CPUS and JOBS_FOR_RAMGB
 JOBS=$(( JOBS_FOR_CPUS < JOBS_FOR_RAMGB ? JOBS_FOR_CPUS : JOBS_FOR_RAMGB ))
 GPU_MEM=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits | awk '{print $1/1024}')
-GPU_COUNT=$(nvidia-smi --query-gpu=name --format=csv,noheader | wc -l)
+# GPU_COUNT=$(nvidia-smi --query-gpu=name --format=csv,noheader | wc -l)
+GPU_COUNT=1
 JOBS_TRAIN=$JOBS
 # Update the number of processes to use divide it by GPU_COUNT
 if [ $GPU_COUNT -gt 1 ]; then JOBS_TRAIN=$(( JOBS / GPU_COUNT )); fi
