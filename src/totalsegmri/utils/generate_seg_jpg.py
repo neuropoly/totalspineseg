@@ -11,7 +11,7 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
-EXT = ['nii.gz', 'mgz']
+EXT = ['nii.gz', 'mgz', 'nii', 'mgh', 'nrrd', 'nhdr']
 
 def main():
 
