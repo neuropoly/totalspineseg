@@ -111,4 +111,5 @@ python $utils/generate_labels_sequential.py -s ${OUTPUT_FOLDER}/step2 -o ${OUTPU
 python $utils/fix_csf_label.py -s ${OUTPUT_FOLDER}/output -o ${OUTPUT_FOLDER}/output --largest-cord --largest-canal
 
 # Generate preview images
-python $utils/generate_seg_jpg.py -i ${OUTPUT_FOLDER}/input -s ${OUTPUT_FOLDER}/output -o ${OUTPUT_FOLDER}/preview
+python $utils/generate_seg_jpg.py -i ${OUTPUT_FOLDER}/input -s ${OUTPUT_FOLDER}/output -o ${OUTPUT_FOLDER}/preview --output-suffix _seg
+python $utils/generate_seg_jpg.py -i ${OUTPUT_FOLDER}/input -o ${OUTPUT_FOLDER}/preview --output-suffix _img
