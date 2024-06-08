@@ -415,7 +415,7 @@ def aug_sig(img, seg):
     return aug_transform(img, seg, lambda x:1/(1 + np.exp(-x)))
 
 def aug_laplace(img, seg):
-    return aug_transform(img, seg, laplace)
+    return aug_transform(img, seg, lambda x:np.abs(laplace(x)))
 
 def aug_inverse(img, seg):
     img = img.min() + img.max() - img

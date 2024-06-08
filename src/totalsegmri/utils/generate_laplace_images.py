@@ -138,7 +138,7 @@ def generate_laplace_images(
 
     image_data = image.get_fdata().astype(np.float64)
 
-    output_image_data = laplace(image_data)
+    output_image_data = np.abs(laplace(image_data))
 
     # Rescale the image to the output data type if necessary
     # code from https://github.com/spinalcordtoolbox/spinalcordtoolbox/blob/6.3/spinalcordtoolbox/image.py#L1217
