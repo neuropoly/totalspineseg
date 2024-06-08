@@ -44,7 +44,7 @@ export nnUNet_preprocessed=data/nnUNet/preprocessed
 export nnUNet_results=data/nnUNet/results
 export nnUNet_exports=data/nnUNet/exports
 
-nnUNetTrainer=nnUNetTrainer_16000epochs
+nnUNetTrainer=nnUNetTrainer_DASegOrd0_NoMirroring_16000epochs
 nnUNetPlanner=ExperimentPlanner
 nnUNetPlans=nnUNetPlans
 configuration=3d_fullres

@@ -48,7 +48,7 @@ export nnUNet_preprocessed=data/nnUNet/preprocessed
 export nnUNet_results=data/nnUNet/results
 export nnUNet_exports=data/nnUNet/exports
 
-nnUNetTrainer=nnUNetTrainer_16000epochs
+nnUNetTrainer=nnUNetTrainer_DASegOrd0_NoMirroring_16000epochs
 nnUNetPlans=nnUNetPlans
 configuration=3d_fullres
 
@@ -111,5 +111,7 @@ python $utils/generate_labels_sequential.py -s ${OUTPUT_FOLDER}/step2 -o ${OUTPU
 python $utils/fix_csf_label.py -s ${OUTPUT_FOLDER}/output -o ${OUTPUT_FOLDER}/output --largest-cord --largest-canal
 
 # Generate preview images
-python $utils/generate_seg_jpg.py -i ${OUTPUT_FOLDER}/input -s ${OUTPUT_FOLDER}/output -o ${OUTPUT_FOLDER}/preview --output-suffix _seg
-python $utils/generate_seg_jpg.py -i ${OUTPUT_FOLDER}/input -o ${OUTPUT_FOLDER}/preview --output-suffix _img
+python $utils/generate_seg_jpg.py -i ${OUTPUT_FOLDER}/input -o ${OUTPUT_FOLDER}/preview --output-suffix _input
+python $utils/generate_seg_jpg.py -i ${OUTPUT_FOLDER}/input -s ${OUTPUT_FOLDER}/step1 -o ${OUTPUT_FOLDER}/preview --output-suffix _step1
+python $utils/generate_seg_jpg.py -i ${OUTPUT_FOLDER}/input -s ${OUTPUT_FOLDER}/step2 -o ${OUTPUT_FOLDER}/preview --output-suffix _step2
+python $utils/generate_seg_jpg.py -i ${OUTPUT_FOLDER}/input -s ${OUTPUT_FOLDER}/output -o ${OUTPUT_FOLDER}/preview --output-suffix _output
