@@ -158,8 +158,8 @@ def transform_labels2images(
     image = nib.load(image_path)
     seg = nib.load(seg_path)
 
-    image_data = image.get_fdata().astype(np.float64)
-    seg_data = seg.get_fdata().round().astype(np.uint8)
+    image_data = np.asanyarray(image.dataobj).astype(np.float64)
+    seg_data = np.asanyarray(seg.dataobj).round().astype(np.uint8)
 
     # Create result
     tio_img=tio.ScalarImage(tensor=image_data[None, ...], affine=image.affine)

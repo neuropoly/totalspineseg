@@ -267,7 +267,7 @@ def generate_labels_sequential(
 
     # Load segmentation
     seg = nib.load(seg_path)
-    seg_data_src = seg.get_fdata().round().astype(np.uint8)
+    seg_data_src = np.asanyarray(seg.dataobj).round().astype(np.uint8)
 
     seg_data = np.zeros_like(seg_data_src)
 
@@ -304,7 +304,7 @@ def generate_labels_sequential(
             return
 
         # Get the z index of the center of mass for each label
-        canonical_mask_labeled = nib.as_closest_canonical(nib.Nifti1Image(mask_labeled, seg.affine, seg.header)).get_fdata()
+        canonical_mask_labeled = np.asanyarray(nib.as_closest_canonical(nib.Nifti1Image(mask_labeled, seg.affine, seg.header)).dataobj).round().astype(np.uint8)
         mask_labeled_z_indexes = [_[-1] for _ in center_of_mass(canonical_mask_labeled != 0, canonical_mask_labeled, range(1, num_labels + 1))]
 
         # Sort the labels by their z-index (reversed)
@@ -325,7 +325,7 @@ def generate_labels_sequential(
                         prev_l, prev_orig_label = l, curr_orig_label
 
                 # Get the z index of the center of mass for each label
-                canonical_mask_labeled = nib.as_closest_canonical(nib.Nifti1Image(mask_labeled, seg.affine, seg.header)).get_fdata()
+                canonical_mask_labeled = np.asanyarray(nib.as_closest_canonical(nib.Nifti1Image(mask_labeled, seg.affine, seg.header)).dataobj).round().astype(np.uint8)
                 mask_labeled_z_indexes = [_[-1] for _ in center_of_mass(canonical_mask_labeled != 0, canonical_mask_labeled, new_sorted_labels)]
 
                 # Sort the labels by their z-index (reversed)

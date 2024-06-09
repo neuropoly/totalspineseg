@@ -191,7 +191,7 @@ def generate_croped_images(
         run_command(f'sct_register_multimodal -i {temp_path}/seg.nii.gz -d {temp_path}/img.nii.gz -identity 1 -x nn -o {temp_path}/seg.nii.gz')
         
         seg = nib.load(f'{temp_path}/seg.nii.gz')
-        seg_data = seg.get_fdata().round().astype(np.uint8)
+        seg_data = np.asanyarray(seg.dataobj).round().astype(np.uint8)
         
         # Create an array of z indices
         z_indices = np.tile(np.arange(seg_data.shape[2]), (seg_data.shape[0], seg_data.shape[1], 1))

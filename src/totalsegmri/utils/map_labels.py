@@ -162,7 +162,7 @@ def map_seg(seg_path, segs_path, map_dict, output_path, seg_suffix, output_seg_s
 
     # Load segmentation
     seg = nib.load(seg_path)
-    seg_data = seg.get_fdata().round().astype(np.uint8)
+    seg_data = np.asanyarray(seg.dataobj).round().astype(np.uint8)
 
     # Apply label mapping
     mapped_seg_data = np.copy(seg_data) if default_input else np.zeros_like(seg_data)
@@ -175,10 +175,7 @@ def map_seg(seg_path, segs_path, map_dict, output_path, seg_suffix, output_seg_s
     if (add_output or add_input) and output_seg_path.is_file():
         # Load segmentation
         output_seg = nib.load(output_seg_path)
-        output_seg_data = output_seg.get_fdata()
-
-        # Convert data to uint8 to avoid issues with segmentation IDs
-        output_seg_data = output_seg_data.astype(np.uint8)
+        output_seg_data = np.asanyarray(output_seg.dataobj).round().astype(np.uint8)
 
         if add_output:
             # Update output from existing output file

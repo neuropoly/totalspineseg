@@ -134,20 +134,19 @@ def transform_norm(
     image = nib.load(image_path)
     
     # Get the data type of the image
-    image_data_dtype = np.asanyarray(image.dataobj).dtype
-    image_header_dtype = getattr(np, image.get_data_dtype().name)
+    image_data_dtype = getattr(np, np.asanyarray(image.dataobj).dtype.name)
 
     # Transform the image to the closest canonical orientation
     image = nib.as_closest_canonical(image)
 
-    image_data = image.get_fdata().astype(np.float64)
+    image_data = np.asanyarray(image.dataobj).astype(np.float64)
 
     # Rescale the image to the output data type if necessary
     # code from https://github.com/spinalcordtoolbox/spinalcordtoolbox/blob/6.3/spinalcordtoolbox/image.py#L1217
-    if "int" in np.dtype(image_header_dtype).name:
+    if "int" in np.dtype(image_data_dtype).name:
         # get min/max from output type
-        min_out = np.iinfo(image_header_dtype).min
-        max_out = np.iinfo(image_header_dtype).max
+        min_out = np.iinfo(image_data_dtype).min
+        max_out = np.iinfo(image_data_dtype).max
         min_in = image_data.min()
         max_in = image_data.max()
         if (min_in < min_out) or (max_in > max_out):
@@ -155,10 +154,10 @@ def transform_norm(
             image_data = data_rescaled - (data_rescaled.min() - min_out)
 
     # Make the image with the orientation and data type
-    output_image = nib.Nifti1Image(image_data.astype(image_header_dtype), image.affine, image.header)
+    output_image = nib.Nifti1Image(image_data.astype(image_data_dtype), image.affine, image.header)
     output_image.set_qform(image.affine)
     output_image.set_sform(image.affine)
-    output_image.set_data_dtype(image_header_dtype)
+    output_image.set_data_dtype(image_data_dtype)
 
     # Make sure output directory exists
     output_image_path.parent.mkdir(parents=True, exist_ok=True)

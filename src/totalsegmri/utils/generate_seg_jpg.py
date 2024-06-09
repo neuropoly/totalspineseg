@@ -206,11 +206,11 @@ def generate_seg_jpg(image_path, segs_path, images_path, output_path, seg_suffix
                 seg.affine
             except:
                 seg = freesurfer.load(seg_path)
-                seg = tio.LabelMap(tensor=seg.get_fdata()[None, ...], affine=seg.affine)
+                seg = tio.LabelMap(tensor=np.asanyarray(seg.dataobj)[None, ...], affine=seg.affine)
             seg = tio.ToCanonical()(seg)
             seg = tio.Resample(image)(seg)
 
-            seg_data = seg.data.squeeze().numpy().astype(np.uint8)
+            seg_data = seg.data.squeeze().numpy().round().astype(np.uint8)
 
             slice_seg = seg_data.take(slice_index, axis=axis)
 

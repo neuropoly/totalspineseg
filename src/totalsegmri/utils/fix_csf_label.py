@@ -164,7 +164,7 @@ def fix_csf_label(
 
     # Load segmentation
     seg = nib.load(seg_path)
-    seg_data = seg.get_fdata().round().astype(np.uint8)
+    seg_data = np.asanyarray(seg.dataobj).round().astype(np.uint8)
 
     # Take the largest spinal cord component
     if largest_cord and cord_label in seg_data:

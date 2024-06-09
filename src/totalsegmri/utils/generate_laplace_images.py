@@ -133,19 +133,18 @@ def generate_laplace_images(
     image = nib.load(image_path)
     
     # Get the data type of the image
-    image_data_dtype = np.asanyarray(image.dataobj).dtype
-    image_header_dtype = getattr(np, image.get_data_dtype().name)
-
-    image_data = image.get_fdata().astype(np.float64)
+    image_data = np.asanyarray(image.dataobj)
+    image_data_dtype = getattr(np, image_data.dtype.name)
+    image_data = image_data.astype(np.float64)
 
     output_image_data = np.abs(laplace(image_data))
 
     # Rescale the image to the output data type if necessary
     # code from https://github.com/spinalcordtoolbox/spinalcordtoolbox/blob/6.3/spinalcordtoolbox/image.py#L1217
-    if "int" in np.dtype(image_header_dtype).name:
+    if "int" in np.dtype(image_data_dtype).name:
         # get min/max from output type
-        min_out = np.iinfo(image_header_dtype).min
-        max_out = np.iinfo(image_header_dtype).max
+        min_out = np.iinfo(image_data_dtype).min
+        max_out = np.iinfo(image_data_dtype).max
         min_in = output_image_data.min()
         max_in = output_image_data.max()
         if (min_in < min_out) or (max_in > max_out):
@@ -156,10 +155,10 @@ def generate_laplace_images(
 
     # Make sure output directory exists and save with original header image dtype
     output_image_path.parent.mkdir(parents=True, exist_ok=True)
-    output_image = nib.Nifti1Image(output_image_data.astype(image_header_dtype), image.affine, image.header)
+    output_image = nib.Nifti1Image(output_image_data.astype(image_data_dtype), image.affine, image.header)
     output_image.set_qform(image.affine)
     output_image.set_sform(image.affine)
-    output_image.set_data_dtype(image_header_dtype)
+    output_image.set_data_dtype(image_data_dtype)
     nib.save(output_image, output_image_path)
 
 if __name__ == '__main__':

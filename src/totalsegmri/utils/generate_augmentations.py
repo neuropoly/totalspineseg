@@ -198,9 +198,11 @@ def generate_augmentations(
         return
     
     image = nib.load(image_path)
-    image_data = image.get_fdata().astype(np.float64)
+    image_data = np.asanyarray(image.dataobj)
+    image_data_dtype = getattr(np, image_data.dtype.name)
+    image_data = image_data.astype(np.float64)
     seg = nib.load(seg_path)
-    seg_data = seg.get_fdata().round().astype(np.uint8)
+    seg_data = np.asanyarray(seg.dataobj).round().astype(np.uint8)
 
     for i in range(augmentations_per_image):
         output_image_path = output_images_path / image_path.relative_to(images_path).parent / image_path.name.replace(f'{image_suffix}.nii.gz', f'_a{i}{output_image_suffix}.nii.gz')
@@ -297,10 +299,23 @@ def generate_augmentations(
                 break
             # print("Invalid augmentation, retrying...")
 
+        # Rescale the image to the output data type if necessary
+        # code from https://github.com/spinalcordtoolbox/spinalcordtoolbox/blob/6.3/spinalcordtoolbox/image.py#L1217
+        if "int" in np.dtype(image_data_dtype).name:
+            # get min/max from output type
+            min_out = np.iinfo(image_data_dtype).min
+            max_out = np.iinfo(image_data_dtype).max
+            min_in = output_image_data.min()
+            max_in = output_image_data.max()
+            if (min_in < min_out) or (max_in > max_out):
+                data_rescaled = output_image_data * (max_out - min_out) / (max_in - min_in)
+                output_image_data = data_rescaled - (data_rescaled.min() - min_out)
+
         # Create result with original image dtype
-        output_image = nib.Nifti1Image(output_image_data.astype(np.asanyarray(image.dataobj).dtype), image.affine, image.header)
+        output_image = nib.Nifti1Image(output_image_data.astype(image_data_dtype), image.affine, image.header)
         output_image.set_qform(image.affine)
         output_image.set_sform(image.affine)
+        output_image.set_data_dtype(image_data_dtype)
         output_seg = nib.Nifti1Image(output_seg_data, seg.affine, seg.header)
         output_seg.set_qform(seg.affine)
         output_seg.set_sform(seg.affine)
