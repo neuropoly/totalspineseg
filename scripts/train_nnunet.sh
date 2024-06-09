@@ -64,7 +64,7 @@ echo "GPU_MEM=${GPU_MEM}"
 echo "GPU_COUNT=${GPU_COUNT}"
 echo ""
 
-# ensure nnUNetTrainer_16000epochs is defined in the nnUNet library and add it if it is not
+# ensure the custom nnUNetTrainer is defined in the nnUNet library and add it if it is not
 source "$(dirname "$(realpath "${BASH_SOURCE[0]}")")/add_nnunet_trainer.sh"
 
 # Set the datasets to work with - default is 101 102 103

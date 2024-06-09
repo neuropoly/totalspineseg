@@ -66,6 +66,9 @@ echo "configuration=${configuration}"
 echo "JOBS=${JOBS}"
 echo ""
 
+# ensure the custom nnUNetTrainer is defined in the nnUNet library and add it if it is not
+source "$(dirname "$(realpath "${BASH_SOURCE[0]}")")/add_nnunet_trainer.sh"
+
 FOLD=0
 step1_dataset=101
 step2_dataset=102
