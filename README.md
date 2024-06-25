@@ -11,11 +11,29 @@ Tool for automatic segmentation and labelling of all vertebrae and intervertebra
 ![Thumbnail](https://github.com/neuropoly/totalsegmentator-mri/assets/36595323/c7a4a951-fcb9-43a2-8c9c-9fafa33e4d67)
 
 ## Model description
-A hybrid approach integrating nnU-Net with an iterative algorithm for segmenting vertebrae, IVDs, spinal cord, and spinal canal. To tackle the challenge of having many classes and class imbalance, we developed a two-step training process. A first model (Dataset206) was trained (single input channel: image) to identify 4 classes (IVDs, vertebrae, spinal cord and spinal canal) as well as specific IVDs (C2-C3, C7-T1 and L5-S1) representing key anatomical landmarks along the spine, so 7 classes in total (Figure 1A). The output segmentation was processed using an algorithm that distinguished odd and even IVDs based on the C2-C3, C7-T1 and L5-S1 IVD labels output by the model (Figure 1B). Then, a second nnU-Net model (Dataset210) was trained (two input channels: 1=image, 2=odd IVDs), to output 12 classes (Figure 1C). Finally, the output of the model was processed in order to assign an individual label value to each vertebrae and IVD in the final segmentation mask (Figure 1D).
+
+A hybrid approach integrates nnU-Net with an iterative algorithm for segmenting vertebrae, intervertebral discs (IVDs), spinal cord, and spinal canal. To tackle the challenge of having many classes and class imbalance, we developed a two-step training process:
+
+1. The first model (Dataset101) was trained using a single input channel (image) to identify 8 classes in total (Figure 1A):
+
+   - 4 main classes: spinal cord, spinal canal, IVDs, and vertebrae
+   - 4 specific IVDs: C2-C3, C7-T1, T12-L1, and L5-S, representing key anatomical landmarks along the spine
+
+1. The output segmentation was processed using an algorithm that distinguished odd and even IVDs based on the C2-C3, C7-T1, T12-L1, and L5-S IVD labels produced by the model (Figure 1B).
+
+1. A second nnU-Net model was trained using two input channels: MRI image and odd IVDs extracted from the first step. This model outputs 14 classes in total (Figure 1C):
+
+   - 6 main classes: spinal cord, spinal canal, odd IVDs, even IVDs, odd vertebrae, and even vertebrae.
+   - 4 specific IVDs: C2-C3, C7-T1, T12-L1, and L5-S.
+   - 4 specific vertebrae: C2, T1, T12, and Sacrum.
+
+1. Finally, the model's output was processed to assign an individual label value to each vertebra and IVD in the final segmentation mask (Figure 1D).
+
+For comparison, we also trained a single model (Dataset103) that output all the final labels in a single step.
 
 ![Figure 1](https://github.com/neuropoly/totalsegmentator-mri/assets/36595323/3958cbc6-a059-4ccf-b3b1-02dbc3a4a62d)
 
-**Figure 1**: Illustration of the hybrid method for automatic segmentation of the spine and spinal cord structures. T1w image (A) is used to train model 1, which outputs 7 classes (B). These output labels are processed to extract odd IVDs (C). The T1w and odd IVDs are used as two input channels to train model 2, which outputs 12 classes (D). These output labels are processed to extract individual IVDs and vertebrae (E).
+**Figure 1**: Illustration of the hybrid method for automatic segmentation of the spine and spinal cord structures. T1w image (A) is used to train model 1, which outputs 8 classes (B). These output labels are processed to extract odd IVDs (C). The T1w and odd IVDs are used as two input channels to train model 2, which outputs 16 classes (D). These output labels are processed to extract individual IVDs and vertebrae (E).
 
 ## Installation
 
