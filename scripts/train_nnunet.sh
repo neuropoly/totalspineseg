@@ -1,6 +1,8 @@
 #!/bin/bash
 
 # This script train the TotalSegMRI nnUNet models.
+# It get also optional parameters DATASET and FOLD.
+# By default, it trains the models for datasets 101, 102, and 103 with fold 0.
 
 # BASH SETTINGS
 # ======================================================================================================================
@@ -28,15 +30,9 @@ JOBS_FOR_CPUS=$(($CPU_COUNT - $LEAVE_CPUS < 1 ? 1 : $CPU_COUNT - $LEAVE_CPUS ))
 JOBS_FOR_RAMGB=$(( $(awk -v ram_req="$RAM_REQUIREMENT" '/MemTotal/ {print int($2/1024/1024/ram_req < 1 ? 1 : $2/1024/1024/ram_req)}' /proc/meminfo) ))
 # Get the minimum of JOBS_FOR_CPUS and JOBS_FOR_RAMGB
 JOBS=$(( JOBS_FOR_CPUS < JOBS_FOR_RAMGB ? JOBS_FOR_CPUS : JOBS_FOR_RAMGB ))
-GPU_MEM=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits | awk '{print $1/1024}')
-# GPU_COUNT=$(nvidia-smi --query-gpu=name --format=csv,noheader | wc -l)
-GPU_COUNT=1
-JOBS_TRAIN=$JOBS
-# Update the number of processes to use divide it by GPU_COUNT
-if [ $GPU_COUNT -gt 1 ]; then JOBS_TRAIN=$(( JOBS / GPU_COUNT )); fi
 
-export nnUNet_def_n_proc=$JOBS_TRAIN
-export nnUNet_n_proc_DA=$JOBS_TRAIN
+export nnUNet_def_n_proc=$JOBS
+export nnUNet_n_proc_DA=$JOBS
 
 # Set nnunet params
 export nnUNet_raw=data/nnUNet/raw
@@ -44,7 +40,7 @@ export nnUNet_preprocessed=data/nnUNet/preprocessed
 export nnUNet_results=data/nnUNet/results
 export nnUNet_exports=data/nnUNet/exports
 
-nnUNetTrainer=nnUNetTrainer_DASegOrd0_NoMirroring_16000epochs
+nnUNetTrainer=nnUNetTrainer_16000epochs
 nnUNetPlanner=ExperimentPlanner
 nnUNetPlans=nnUNetPlans
 configuration=3d_fullres
@@ -60,8 +56,6 @@ echo "nnUNetPlanner=${nnUNetPlanner}"
 echo "nnUNetPlans=${nnUNetPlans}"
 echo "configuration=${configuration}"
 echo "JOBS=${JOBS}"
-echo "GPU_MEM=${GPU_MEM}"
-echo "GPU_COUNT=${GPU_COUNT}"
 echo ""
 
 # ensure the custom nnUNetTrainer is defined in the nnUNet library and add it if it is not
@@ -80,15 +74,11 @@ for d in ${DATASETS[@]}; do
     # Get the dataset name
     d_name=$(basename $(ls -d $nnUNet_raw/Dataset${d}_TotalSegMRI*))
 
-    if [ ! -f $nnUNet_preprocessed/$d_name/${nnUNetPlans}_1gpu.json ]; then
+    if [ ! -f $nnUNet_preprocessed/$d_name/${nnUNetPlans}.json ]; then
         echo "Preprocess dataset $d_name"
         nnUNetv2_plan_and_preprocess -d $d -pl $nnUNetPlanner -c $configuration -npfp $JOBS -np $JOBS --verify_dataset_integrity
-        cp $nnUNet_preprocessed/$d_name/${nnUNetPlans}.json $nnUNet_preprocessed/$d_name/${nnUNetPlans}_1gpu.json
-    fi
-
-    if [ $GPU_COUNT -gt 1 ]; then
-        echo "Updating batch size in the plans file based on the number of GPUs"
-        jq --arg GPU_COUNT "$GPU_COUNT" '(.configurations[] | select(.batch_size != null) | .batch_size) |= . * ($GPU_COUNT|tonumber)' $nnUNet_preprocessed/$d_name/${nnUNetPlans}_1gpu.json > $nnUNet_preprocessed/$d_name/${nnUNetPlans}.json
+        jq '.configurations["3d_fullres"].patch_size = [224, 160, 80]' $nnUNet_preprocessed/$d_name/${nnUNetPlans}.json > $nnUNet_preprocessed/$d_name/${nnUNetPlans}_new.json
+        mv $nnUNet_preprocessed/$d_name/${nnUNetPlans}_new.json $nnUNet_preprocessed/$d_name/${nnUNetPlans}.json
     fi
 
     echo "Training nnUNet model for dataset $d_name"
