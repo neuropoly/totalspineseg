@@ -77,14 +77,10 @@ For comparison, we also trained a single model (Dataset103) that output all the 
     bash totalsegmentator-mri/scripts/prepare_nnunet_datasets.sh
     ```
 
-1. Train the model:
+1. Train the model. By default, this will train all datasets using fold 0. You can specify DATASET_ID (101, 102, or 103) and optionally a fold (only if DATASET_ID is specified, can be one of: 0, 1, 2, 3, 4, 5 or `all`):
     ```
     bash totalsegmentator-mri/scripts/train_nnunet.sh [DATASET_ID [FOLD]]
     ```
-   - `DATASET_ID` (optional): Specifies which dataset(s) to train on. Can be 101, 102 or 103. If omitted, all datasets (101 102 103) will be trained.
-   - `FOLD` (optional): Specifies which fold to use for training. Can only be provided if DATASET_ID is specified.
-
-   By default, this will train all datasets using fold 0. You can specify DATASET_ID (101, 102, or 103) and optionally a fold (0 to 5 or `all`).
 
 ## Inference
 Run the model. If you didn't train the model yourself, you should download models zip from release into `data/nnUNet/exports` (You can run `mkdir -p data/nnUNet/exports` before). This will process all .nii.gz files in the INPUT_FOLDER and save the results in the OUTPUT_FOLDER:
