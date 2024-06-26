@@ -1,6 +1,6 @@
 # TotalSegMRI
 
-Tool for automatic segmentation and labelling of all vertebrae and intervertebral discs (IVDs), spinal cord, and spinal canal. We follow [TotalSegmentator classes](https://github.com/wasserth/TotalSegmentator/tree/v1.5.7#class-details) with an additional class for IVDs, spinal cord and spinal canal (See list of class [here](#list-of-class)). We used [nnUNet](https://github.com/MIC-DKFZ/nnUNet) as our backbone for model training and inference.
+TotalSegMRI is a tool for automatic instance segmentation and labelling of all vertebrae and intervertebral discs (IVDs), spinal cord, and spinal canal. We follow [TotalSegmentator classes](https://github.com/wasserth/TotalSegmentator/tree/v1.5.7#class-details) with an additional class for IVDs, spinal cord and spinal canal (See list of class [here](#list-of-class)). The model is based on [nnUNet](https://github.com/MIC-DKFZ/nnUNet) as the backbone for training and inference.
 
 - [Model description](#model-description)
 - [Installation](#installation)
@@ -12,7 +12,7 @@ Tool for automatic segmentation and labelling of all vertebrae and intervertebra
 
 ## Model description
 
-A hybrid approach integrates nnU-Net with an iterative algorithm for segmenting vertebrae, intervertebral discs (IVDs), spinal cord, and spinal canal. To tackle the challenge of having many classes and class imbalance, we developed a two-step training process:
+TotalSegMRI uses a hybrid approach that integrates nnU-Net with an iterative algorithm for instance segmentation and labeling of vertebrae, intervertebral discs (IVDs), spinal cord, and spinal canal. The process involves two main steps:
 
 1. The first model (Dataset101) was trained using a single input channel (image) to identify 8 classes in total (Figure 1A):
 
@@ -39,7 +39,7 @@ For comparison, we also trained a single model (Dataset103) that output all the 
 
 1. Open Terminal in a directory you want to work on.
 
-1. Create and activate Virtual Environment (Highly recommanded):
+1. Create and activate Virtual Environment (Highly recommended):
     ```
     python -m venv venv
     source venv/bin/activate
@@ -70,20 +70,24 @@ For comparison, we also trained a single model (Dataset103) that output all the 
     bash totalsegmentator-mri/scripts/get_datasets.sh
     ```
 
-1. Temporary!!! (untill all labels will be pushed into the repositories): Extract [labels_iso_bids_0524.zip](https://github.com/neuropoly/totalsegmentator-mri/releases/download/labels/labels_iso_bids_0524.zip) and merge the `bids` folder (containing the labels) into `data/bids`.
+1. Temporary!!! (until all labels will be pushed into the repositories): Extract [labels_iso_bids_0524.zip](https://github.com/neuropoly/totalsegmentator-mri/releases/download/labels/labels_iso_bids_0524.zip) and merge the `bids` folder (containing the labels) into `data/bids`.
 
-1. Prepares datasets in nnUNetv2 structure into `data/nnUnet`:
+1. Prepare datasets in nnUNetv2 structure into `data/nnUnet`:
     ```
     bash totalsegmentator-mri/scripts/prepare_nnunet_datasets.sh
     ```
 
 1. Train the model:
     ```
-    bash totalsegmentator-mri/scripts/train_nnunet.sh
+    bash totalsegmentator-mri/scripts/train_nnunet.sh [DATASET_ID [FOLD]]
     ```
+   - `DATASET_ID` (optional): Specifies which dataset(s) to train on. Can be 101, 102 or 103. If omitted, all datasets (101 102 103) will be trained.
+   - `FOLD` (optional): Specifies which fold to use for training. Can only be provided if DATASET_ID is specified.
+
+   By default, this will train all datasets using fold 0. You can specify DATASET_ID (101, 102, or 103) and optionally a fold (0 to 5 or `all`).
 
 ## Inference
-Run the model on a folder containing the images in .nii.gz format, if you didn't train the model you should download models zip from release into `data/nnUNet/exports` (You can run `mkdir -p data/nnUNet/exports` before):
+Run the model. If you didn't train the model yourself, you should download models zip from release into `data/nnUNet/exports` (You can run `mkdir -p data/nnUNet/exports` before). This will process all .nii.gz files in the INPUT_FOLDER and save the results in the OUTPUT_FOLDER:
 ```
 bash totalsegmentator-mri/scripts/inference_nnunet.sh INPUT_FOLDER OUTPUT_FOLDER
 ```
