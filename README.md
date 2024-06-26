@@ -1,8 +1,11 @@
-# TotalSegMRI
+# TotalSpineSeg
 
 TotalSegMRI is a tool for automatic instance segmentation and labelling of all vertebrae and intervertebral discs (IVDs), spinal cord, and spinal canal. We follow [TotalSegmentator classes](https://github.com/wasserth/TotalSegmentator/tree/v1.5.7#class-details) with an additional class for IVDs, spinal cord and spinal canal (See list of class [here](#list-of-class)). The model is based on [nnUNet](https://github.com/MIC-DKFZ/nnUNet) as the backbone for training and inference.
 
-- [Model description](#model-description)
+If you use this model, please cite our work:
+> Warszawer Y, Molinier N, Valošek J, Shirbint E, Benveniste PL, Achiron A, Eshaghi A and Cohen-Adad J. _Fully Automatic Vertebrae and Spinal Cord Segmentation Using a Hybrid Approach Combining nnU-Net and Iterative Algorithm_.	Proceedings of the 32th Annual Meeting of ISMRM. 2024
+
+- [Dependencies](#dependencies)
 - [Installation](#installation)
 - [Training](#training)
 - [Inference](#inference)
