@@ -83,7 +83,7 @@ For comparison, we also trained a single model (Dataset103) that output all the 
     ```
 
 ## Inference
-Run the model. If you didn't train the model yourself, you should download models zip from release into `data/nnUNet/exports` (Witout extracting, you can run `mkdir -p data/nnUNet/exports` before). This will process all .nii.gz files in the INPUT_FOLDER and save the results in the OUTPUT_FOLDER:
+Run the model. If you didn't train the model yourself, you should download models zip from release into `data/nnUNet/exports` (Without extracting, you can run `mkdir -p data/nnUNet/exports` before). This will process all .nii.gz files in the INPUT_FOLDER and save the results in the OUTPUT_FOLDER:
 ```
 bash totalsegmentator-mri/scripts/inference_nnunet.sh INPUT_FOLDER OUTPUT_FOLDER
 ```
