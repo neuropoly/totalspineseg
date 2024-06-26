@@ -226,8 +226,12 @@ def generate_augmentations(
             else:
 
                 # Image form segmentation augmentation
+                if rs.rand() < 0.2:
+                    augs.append(aug_clip_values)
+
                 if labels2image and rs.rand() < 0.15:
                     augs.append(_aug_labels2image)
+
                 if rs.rand() < 0.8:
                     augs.append(_aug_redistribute_seg)
 
@@ -330,8 +334,32 @@ def generate_augmentations(
         nib.save(output_seg, output_seg_path)
         # print(f"\n{output_seg_path.name.replace('.nii.gz', '')}: {[a.func.__name__ if isinstance(a, partial) else a.__name__ for a in augs]}", end='')
 
-def aug_redistribute_seg(img, seg, classes=None, in_seg=0.2):
+def aug_clip_values(img, seg, clip_max_fraction=0.4):
+    """
+    Augment the image by clipping its values to a random range.
+    """
+    # Calculate the minimum and maximum values of the input image
+    min_val, max_val = img.min(), img.max()
+    
+    # Compute the range of values in the image
+    range_val = max_val - min_val
+    
+    # Set a random lower clipping threshold
+    clip_min = rs.uniform(0, clip_max_fraction / 2) * range_val + min_val
+    
+    # Set a random upper clipping threshold
+    clip_max = rs.uniform(1 - clip_max_fraction / 2, 1) * range_val + min_val
+    
+    # Clip the image to the new thresholds
+    img_clipped = np.clip(img, clip_min, clip_max)
+    
+    return img_clipped, seg
 
+def aug_redistribute_seg(img, seg, classes=None, in_seg=0.2):
+    """
+    Augment the image by redistributing the values of the image within the
+    regions defined by the segmentation.
+    """
     _seg = seg
     in_seg_bool = 1 - rs.rand() <= in_seg
 
@@ -400,6 +428,9 @@ def aug_histogram_equalization(img, seg):
     return img, seg
 
 def aug_transform(img, seg, transform):
+    """
+    Augment the image by applying a given transformation function.
+    """
     # Compute original mean, std and min/max values
     img_min, img_max = img.min(), img.max()
     # Normlize
