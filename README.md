@@ -45,6 +45,12 @@ For comparison, we also trained a single model (`Dataset103`) that outputs indiv
    python -m pip install -e totalspineseg
    ```
 
+1. Set the path to TotalSpineSeg and data folders:
+   ```
+   export TOTALSPINESEG="$(realpath totalspineseg)"
+   export TOTALSPINESEG_DATA="$(realpath data)"
+   ```
+
 ## Training
 
 1. Ensure training dependencies are installed:
@@ -52,29 +58,29 @@ For comparison, we also trained a single model (`Dataset103`) that outputs indiv
    apt-get install git git-annex jq -y
    ```
 
-1. Get the required datasets into `data/bids` (make sure you have access to the specified repositories):
+1. Get the required datasets into `$TOTALSPINESEG_DATA/bids` (make sure you have access to the specified repositories):
    ```
-   bash totalspineseg/scripts/get_datasets.sh
+   bash "$TOTALSPINESEG"/scripts/get_datasets.sh
    ```
 
-1. Temporary step (until all labels are pushed into the repositories): Extract [labels_iso_bids_0524.zip](https://github.com/neuropoly/totalspineseg/releases/download/labels/labels_iso_bids_0524.zip) and merge the `bids` folder (containing the labels) into `data/bids`.
+1. Temporary step (until all labels are pushed into the repositories): Extract [labels_iso_bids_0524.zip](https://github.com/neuropoly/totalspineseg/releases/download/labels/labels_iso_bids_0524.zip) and merge the `bids` folder (containing the labels) into `$TOTALSPINESEG_DATA/bids`.
 
-1. Prepare datasets in nnUNetv2 structure into `data/nnUnet`:
+1. Prepare datasets in nnUNetv2 structure into `$TOTALSPINESEG_DATA/nnUnet`:
    ```
-   bash totalspineseg/scripts/prepare_nnunet_datasets.sh
+   bash "$TOTALSPINESEG"/scripts/prepare_nnunet_datasets.sh
    ```
 
 1. Train the model. By default, this will train all datasets using fold 0. You can specify DATASET_ID (101, 102, or 103) and optionally a fold (only if DATASET_ID is specified, can be one of: 0, 1, 2, 3, 4, 5 or all):
    ```
-   bash totalspineseg/scripts/train_nnunet.sh [DATASET_ID [FOLD]]
+   bash "$TOTALSPINESEG"/scripts/train_nnunet.sh [DATASET_ID [FOLD]]
    ```
 
 ## Inference
 
-Run the model on a folder containing the images in .nii.gz format. If you didn't train the model yourself, you should download the model zip file from the release into `data/nnUNet/exports` (without extracting, you can run `mkdir -p data/nnUNet/exports` before):
+Run the model on a folder containing the images in .nii.gz format. If you didn't train the model yourself, you should download the model zip file from the release into `$TOTALSPINESEG_DATA/nnUNet/exports` (without extracting, you can run `mkdir -p "$TOTALSPINESEG_DATA"/nnUNet/exports` before):
 
 ```
-bash totalspineseg/scripts/inference_nnunet.sh INPUT_FOLDER OUTPUT_FOLDER
+bash "$TOTALSPINESEG"/scripts/inference_nnunet.sh INPUT_FOLDER OUTPUT_FOLDER
 ```
 
 This will process all .nii.gz files in the INPUT_FOLDER and save the results in the OUTPUT_FOLDER.

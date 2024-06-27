@@ -23,11 +23,12 @@ trap "echo Caught Keyboard Interrupt within script. Exiting now.; exit" INT
 
 
 # Set the paths to the BIDS data folders
-bids=data/bids
+bids="$TOTALSPINESEG_DATA"/bids
 
-# Make sure data/bids exists and enter it
-mkdir -p $bids
-cd $bids
+# Make sure $TOTALSPINESEG_DATA/bids exists and enter it
+mkdir -p "$bids"
+CURR_DIR="$(realpath .)"
+cd "$bids"
 
 datasets=(
     git@data.neuro.polymtl.ca:datasets/whole-spine.git
@@ -63,4 +64,4 @@ for ds in ${datasets[@]}; do
 done
 
 # Return to the original working directory
-cd ../..
+cd "$CURR_DIR"
