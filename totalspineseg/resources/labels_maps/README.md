@@ -8,12 +8,12 @@ The JSON map files are used by the [`utils/map_labels.py`](../../utils/map_label
 
 ## Usage
 
-The mapping process is part of the overall dataset preparation workflow. For detailed information on how these map files are used in the context of dataset preparation, please refer to the [`scripts/prepare_nnunet_datasets.sh`](../../../../scripts/prepare_nnunet_datasets.sh) script.
+The mapping process is part of the overall dataset preparation workflow. For detailed information on how these map files are used in the context of dataset preparation, please refer to the [`scripts/prepare_nnunet_datasets.sh`](../../../scripts/prepare_nnunet_datasets.sh) script.
 
 ## Additional Information
 
-- For comprehensive information about the different datasets (Dataset101, Dataset102, Dataset103) and their specific label structures, please consult the main project [README](../../../../README.md).
+- For comprehensive information about the different datasets (Dataset101, Dataset102, Dataset103) and their specific label structures, please consult the main project [README](../../../README.md).
 
 - To understand the exact mapping process and how these JSON files are utilized, review the [`utils/map_labels.py`](../../utils/map_labels.py) script.
 
-- The [`scripts/prepare_nnunet_datasets.sh`](../../../../scripts/prepare_nnunet_datasets.sh) script provides the overall context of how these map files fit into the dataset preparation workflow.
+- The [`scripts/prepare_nnunet_datasets.sh`](../../../scripts/prepare_nnunet_datasets.sh) script provides the overall context of how these map files fit into the dataset preparation workflow.

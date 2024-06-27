@@ -37,7 +37,7 @@ For comparison, we also trained a single model (`Dataset103`) that outputs indiv
    source venv/bin/activate
    ```
 
-1. Install [PyTorch](https://pytorch.org/get-started/locally/) as described on their website.
+1. Install [PyTorch](https://pytorch.org/) as described on their website.
 
 1. Clone and install this repository:
    ```
