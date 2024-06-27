@@ -19,7 +19,7 @@ trap "echo Caught Keyboard Interrupt within script. Exiting now.; exit" INT
 # SCRIPT STARTS HERE
 # ======================================================================================================================
 
-# set TOTALSPINESEG and TOTALSPINESEG_DATA to data if not set
+# set TOTALSPINESEG and TOTALSPINESEG_DATA if not set
 TOTALSPINESEG=${TOTALSPINESEG:-totalspineseg}
 TOTALSPINESEG_DATA=${TOTALSPINESEG_DATA:-data}
 
