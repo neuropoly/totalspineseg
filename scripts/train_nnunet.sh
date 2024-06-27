@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# This script train the TotalSegMRI nnUNet models.
+# This script train the TotalSpineSeg nnUNet models.
 # It get also optional parameters DATASET and FOLD.
 # By default, it trains the models for datasets 101, 102, and 103 with fold 0.
 
@@ -72,7 +72,7 @@ echo "Working with datasets: ${DATASETS[@]}, fold: $FOLD"
 for d in ${DATASETS[@]}; do
 
     # Get the dataset name
-    d_name=$(basename $(ls -d $nnUNet_raw/Dataset${d}_TotalSegMRI*))
+    d_name=$(basename $(ls -d $nnUNet_raw/Dataset${d}_*))
 
     if [ ! -f $nnUNet_preprocessed/$d_name/${nnUNetPlans}.json ]; then
         echo "Preprocess dataset $d_name"

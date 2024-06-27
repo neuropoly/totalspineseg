@@ -1,8 +1,76 @@
-[build-system]
-requires = ["setuptools"]
-build-backend = "setuptools.build_meta"
-
 [project]
-name = "totalsegmri"
+name = "totalspineseg"
 version = "0.0.1"
-dependencies = []
+requires-python = ">=3.9"
+description = "TotalSpineSeg is a tool for automatic instance segmentation and labeling of all vertebrae, intervertebral discs (IVDs), spinal cord, and spinal canal in MRI images."
+readme = "README.md"
+authors = [
+    { name = "Yehuda Warszawer", email = "yehuda.warszawer@sheba.health.gov.il"},
+    { name = "Nathan Molinier"},
+    { name = "Jan Valosek"},
+    { name = "Emanuel Shirbint"},
+    { name = "Pierre-Louis Benveniste"},
+    { name = "Anat Achiron"},
+    { name = "Arman Eshaghi"},
+    { name = "Julien Cohen-Adad"}
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Image Recognition",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+    "Topic :: Scientific/Engineering :: MRI Images.",
+    "Topic :: Scientific/Engineering :: Spinal Cord.",
+    "Topic :: Scientific/Engineering :: Spine."
+]
+keywords = [
+    'deep learning',
+    'image segmentation',
+    'semantic segmentation',
+    'medical image analysis',
+    'medical image segmentation',
+    'nnU-Net',
+    'nnunet',
+    'mri',
+    'spine',
+    'ivd',
+    'intervertebral disc',
+    'spinal cord'
+]
+dependencies = [
+    "tqdm",
+    "numpy<2",
+    "nibabel",
+    "gryds",
+    "torchio",
+    "scipy",
+    "Pillow",
+    "nilearn",
+    "SimpleITK",
+    "nnunetv2"
+]
+
+[project.urls]
+homepage = "https://github.com/neuropoly/totalspineseg"
+repository = "https://github.com/neuropoly/totalspineseg"
+
+[project.scripts]
+totalspineseg_cpdir = "funseg.utils.cpdir:main"
+totalspineseg_fix_csf_label = "funseg.utils.fix_csf_label:main"
+totalspineseg_generate_augmentations = "funseg.utils.generate_augmentations:main"
+totalspineseg_generate_croped_images = "funseg.utils.generate_croped_images:main"
+totalspineseg_generate_labels_sequential = "funseg.utils.generate_labels_sequential:main"
+totalspineseg_generate_laplace_images = "funseg.utils.generate_laplace_images:main"
+totalspineseg_generate_largest_labels = "funseg.utils.generate_largest_labels:main"
+totalspineseg_generate_resampled_images = "funseg.utils.generate_resampled_images:main"
+totalspineseg_generate_seg_jpg = "funseg.utils.generate_seg_jpg:main"
+totalspineseg_map_labels = "funseg.utils.map_labels:main"
+totalspineseg_mha2nii = "funseg.utils.mha2nii:main"
+totalspineseg_transform_labels2images = "funseg.utils.transform_labels2images:main"
+totalspineseg_transform_norm = "funseg.utils.transform_norm:main"
+
+[build-system]
+requires = ["setuptools>=67.8.0"]
+build-backend = "setuptools.build_meta"

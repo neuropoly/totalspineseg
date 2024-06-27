@@ -4,9 +4,9 @@ This folder contains JSON files for nn-UNet datasets used in training the model.
 
 ## Dataset Files
 
-1. `dataset_step1.json`: Configuration for Dataset101_TotalSegMRI_step1 (First step of segmentation)
-2. `dataset_step2.json`: Configuration for Dataset102_TotalSegMRI_step2 (Second step of segmentation)
-3. `dataset_full.json`: Configuration for Dataset103_TotalSegMRI_full (Single-step full segmentation)
+1. `dataset_step1.json`: Configuration for Dataset101 (First step of segmentation)
+2. `dataset_step2.json`: Configuration for Dataset102 (Second step of segmentation)
+3. `dataset_full.json`: Configuration for Dataset103 (Single-step full segmentation)
 
 These files are copied to their respective folders in `data/nnUnet/nnUNet_raw/DatasetXXX/dataset.json`.
 

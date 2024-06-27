@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# This script inference tha trained TotalSegMRI nnUNet model.
+# This script inference tha trained TotalSpineSeg nnUNet model.
 # this script get the following parameters in the terminal:
 #   1'st param: The input folder containing the .nii.gz images to run the model on.
 #   2'nd param: The output folder where the models outputs will be stored.
@@ -20,9 +20,8 @@ trap "echo Caught Keyboard Interrupt within script. Exiting now.; exit" INT
 # SCRIPT STARTS HERE
 # ======================================================================================================================
 
-# Set the path to the utils folder
-utils=totalsegmentator-mri/src/totalsegmri/utils
-resources=totalsegmentator-mri/src/totalsegmri/resources
+# Set the path to the resources folder
+resources=totalspineseg/totalspineseg/resources
 
 INPUT_FOLDER=$1
 OUTPUT_FOLDER=$2
@@ -73,16 +72,16 @@ FOLD=0
 step1_dataset=101
 step2_dataset=102
 
-if [ ! -d $nnUNet_results/Dataset${step1_dataset}_TotalSegMRI* ]; then
-    nnUNetv2_install_pretrained_model_from_zip $nnUNet_exports/Dataset${step1_dataset}_TotalSegMRI*_fold_$FOLD.zip
+if [ ! -d $nnUNet_results/Dataset${step1_dataset}_* ]; then
+    nnUNetv2_install_pretrained_model_from_zip $nnUNet_exports/Dataset${step1_dataset}_*_fold_$FOLD.zip
 fi
 
-if [ ! -d $nnUNet_results/Dataset${step2_dataset}_TotalSegMRI* ]; then
-    nnUNetv2_install_pretrained_model_from_zip $nnUNet_exports/Dataset${step2_dataset}_TotalSegMRI*_fold_$FOLD.zip
+if [ ! -d $nnUNet_results/Dataset${step2_dataset}_* ]; then
+    nnUNetv2_install_pretrained_model_from_zip $nnUNet_exports/Dataset${step2_dataset}_*_fold_$FOLD.zip
 fi
 
 # Make output dir with copy of the input images resampled to 1x1x1mm
-python $utils/generate_resampled_images.py -i ${INPUT_FOLDER} -o ${OUTPUT_FOLDER}/input --image-suffix "" --output-image-suffix ""
+totalspineseg_generate_resampled_images -i ${INPUT_FOLDER} -o ${OUTPUT_FOLDER}/input --image-suffix "" --output-image-suffix ""
 
 # Add _0000 to inputs if not exists to run nnunet
 for f in ${OUTPUT_FOLDER}/input/*.nii.gz; do if [[ $f != *_0000.nii.gz ]]; then mv $f ${f/.nii.gz/_0000.nii.gz}; fi; done
@@ -91,13 +90,13 @@ for f in ${OUTPUT_FOLDER}/input/*.nii.gz; do if [[ $f != *_0000.nii.gz ]]; then 
 nnUNetv2_predict -d $step1_dataset -i ${OUTPUT_FOLDER}/input -o ${OUTPUT_FOLDER}/step1 -f $FOLD -c $configuration -p $nnUNetPlans -tr $nnUNetTrainer -npp $JOBS -nps $JOBS
 
 # Transform labels to images space
-python $utils/transform_labels2images.py -i ${OUTPUT_FOLDER}/input -s ${OUTPUT_FOLDER}/step1 -o ${OUTPUT_FOLDER}/step1
+totalspineseg_transform_labels2images -i ${OUTPUT_FOLDER}/input -s ${OUTPUT_FOLDER}/step1 -o ${OUTPUT_FOLDER}/step1
 
 # Distinguished odd and even IVDs based on the C2-C3, C7-T1 and L5-S1 IVD labels output by the first model:
 # First we will use an iterative algorithm to label IVDs with the definite labels
-python $utils/generate_labels_sequential.py -s ${OUTPUT_FOLDER}/step1 -o ${OUTPUT_FOLDER}/step2_input --output-seg-suffix _0001 --disc-labels 1 2 3 4 5 --init-disc 2:224 5:202 3:219 4:207 --combine-before-label
+totalspineseg_generate_labels_sequential -s ${OUTPUT_FOLDER}/step1 -o ${OUTPUT_FOLDER}/step2_input --output-seg-suffix _0001 --disc-labels 1 2 3 4 5 --init-disc 2:224 5:202 3:219 4:207 --combine-before-label
 # Then, we map the IVDs labels to the odd and even IVDs to use as the 2'nd channel of step 2 model.
-python $utils/map_labels.py -s ${OUTPUT_FOLDER}/step2_input -o ${OUTPUT_FOLDER}/step2_input -m $resources/labels_maps/nnunet_step2_input.json --seg-suffix _0001 --output-seg-suffix _0001
+totalspineseg_map_labels -s ${OUTPUT_FOLDER}/step2_input -o ${OUTPUT_FOLDER}/step2_input -m $resources/labels_maps/nnunet_step2_input.json --seg-suffix _0001 --output-seg-suffix _0001
 
 # For each of the created odd and even IVDs segmentation, copy the original image to use as the 1'st channel in step 2 model input folder
 for i in ${OUTPUT_FOLDER}/step2_input/*; do
@@ -108,13 +107,13 @@ done
 nnUNetv2_predict -d $step2_dataset -i ${OUTPUT_FOLDER}/step2_input -o ${OUTPUT_FOLDER}/step2 -f $FOLD -c $configuration -p $nnUNetPlans -tr $nnUNetTrainer -npp $JOBS -nps $JOBS
 
 # Use an iterative algorithm to to assign an individual label value to each vertebrae and IVD in the final segmentation mask.
-python $utils/generate_labels_sequential.py -s ${OUTPUT_FOLDER}/step2 -o ${OUTPUT_FOLDER}/output --sacrum-labels 14 --csf-labels 16 --sc-labels 17 --disc-labels 2 3 4 5 6 7 --vertebrea-labels 9 10 11 12 13 14 --init-disc 4:224 7:202 5:219 6:207 --init-vertebrae 11:40 14:17 12:34 13:23 --step-diff-label --step-diff-disc
+totalspineseg_generate_labels_sequential -s ${OUTPUT_FOLDER}/step2 -o ${OUTPUT_FOLDER}/output --sacrum-labels 14 --csf-labels 16 --sc-labels 17 --disc-labels 2 3 4 5 6 7 --vertebrea-labels 9 10 11 12 13 14 --init-disc 4:224 7:202 5:219 6:207 --init-vertebrae 11:40 14:17 12:34 13:23 --step-diff-label --step-diff-disc
 
 # Fix csf label to include all non cord spinal canal, this will put the spinal canal label in all the voxels (labeled as a backgroupn) between the spinal canal and the spinal cord.
-python $utils/fix_csf_label.py -s ${OUTPUT_FOLDER}/output -o ${OUTPUT_FOLDER}/output --largest-cord --largest-canal
+totalspineseg_fix_csf_label -s ${OUTPUT_FOLDER}/output -o ${OUTPUT_FOLDER}/output --largest-cord --largest-canal
 
 # Generate preview images
-python $utils/generate_seg_jpg.py -i ${OUTPUT_FOLDER}/input -o ${OUTPUT_FOLDER}/preview --output-suffix _input
-python $utils/generate_seg_jpg.py -i ${OUTPUT_FOLDER}/input -s ${OUTPUT_FOLDER}/step1 -o ${OUTPUT_FOLDER}/preview --output-suffix _step1
-python $utils/generate_seg_jpg.py -i ${OUTPUT_FOLDER}/input -s ${OUTPUT_FOLDER}/step2 -o ${OUTPUT_FOLDER}/preview --output-suffix _step2
-python $utils/generate_seg_jpg.py -i ${OUTPUT_FOLDER}/input -s ${OUTPUT_FOLDER}/output -o ${OUTPUT_FOLDER}/preview --output-suffix _output
+totalspineseg_generate_seg_jpg -i ${OUTPUT_FOLDER}/input -o ${OUTPUT_FOLDER}/preview --output-suffix _input
+totalspineseg_generate_seg_jpg -i ${OUTPUT_FOLDER}/input -s ${OUTPUT_FOLDER}/step1 -o ${OUTPUT_FOLDER}/preview --output-suffix _step1
+totalspineseg_generate_seg_jpg -i ${OUTPUT_FOLDER}/input -s ${OUTPUT_FOLDER}/step2 -o ${OUTPUT_FOLDER}/preview --output-suffix _step2
+totalspineseg_generate_seg_jpg -i ${OUTPUT_FOLDER}/input -s ${OUTPUT_FOLDER}/output -o ${OUTPUT_FOLDER}/preview --output-suffix _output

@@ -17,9 +17,9 @@ If you use this model, please cite our work:
 
 TotalSpineSeg uses a hybrid approach that integrates nnU-Net with an iterative algorithm for instance segmentation and labeling of vertebrae, intervertebral discs (IVDs), spinal cord, and spinal canal. The process involves two main steps:
 
-**First step**: An nnUnet model (`Dataset101`) was trained to identify 8 classes in total (Figure 1A). This includes 4 main classes: spinal cord, spinal canal, IVDs, and vertebrae. Additionally, it identifies 4 specific IVDs: C2-C3, C7-T1, T12-L1, and L5-S, which represent key anatomical landmarks along the spine. The output segmentation was then processed using an iterative algorithm. This algorithm extracts odd IVDs segmentation based on the C2-C3, C7-T1, T12-L1, and L5-S IVD labels produced by the model (Figure 1B).
+**Step 1**: An nnUnet model (`Dataset101`) was trained to identify 8 classes in total (Figure 1A). This includes 4 main classes: spinal cord, spinal canal, IVDs, and vertebrae. Additionally, it identifies 4 specific IVDs: C2-C3, C7-T1, T12-L1, and L5-S, which represent key anatomical landmarks along the spine. The output segmentation was then processed using an iterative algorithm. This algorithm extracts odd IVDs segmentation based on the C2-C3, C7-T1, T12-L1, and L5-S IVD labels produced by the model (Figure 1B).
 
-**Second step:** A second nnUNet model (`Dataset102`) was trained to identify 14 classes in total (Figure 1C). This includes 6 main classes: spinal cord, spinal canal, odd IVDs, even IVDs, odd vertebrae, and even vertebrae. Additionally, it identifies 4 specific IVDs: C2-C3, C7-T1, T12-L1, and L5-S, and 4 specific vertebrae: C2, T1, T12, and Sacrum. This model uses two input channels: the MRI image and the odd IVDs extracted from the first step. The output segmentation was then processed using an algorithm that assigns an individual label value to each vertebra and IVD in the final segmentation mask (Figure 1D).
+**Step 2:** A second nnUNet model (`Dataset102`) was trained to identify 14 classes in total (Figure 1C). This includes 6 main classes: spinal cord, spinal canal, odd IVDs, even IVDs, odd vertebrae, and even vertebrae. Additionally, it identifies 4 specific IVDs: C2-C3, C7-T1, T12-L1, and L5-S, and 4 specific vertebrae: C2, T1, T12, and Sacrum. This model uses two input channels: the MRI image and the odd IVDs extracted from the first step. The output segmentation was then processed using an algorithm that assigns an individual label value to each vertebra and IVD in the final segmentation mask (Figure 1D).
 
 For comparison, we also trained a single model (`Dataset103`) that outputs individual label values for each vertebra and IVD in a single step.
 
@@ -41,13 +41,8 @@ For comparison, we also trained a single model (`Dataset103`) that outputs indiv
 
 1. Clone and install this repository:
    ```
-   git clone https://github.com/neuropoly/totalsegmentator-mri.git
-   python -m pip install -e totalsegmentator-mri
-   ```
-
-1. Install requirements:
-   ```
-   python -m pip install -r totalsegmentator-mri/requirements.txt
+   git clone https://github.com/neuropoly/totalspineseg.git
+   python -m pip install -e totalspineseg
    ```
 
 ## Training
@@ -59,19 +54,19 @@ For comparison, we also trained a single model (`Dataset103`) that outputs indiv
 
 1. Get the required datasets into `data/bids` (make sure you have access to the specified repositories):
    ```
-   bash totalsegmentator-mri/scripts/get_datasets.sh
+   bash totalspineseg/scripts/get_datasets.sh
    ```
 
-1. Temporary step (until all labels are pushed into the repositories): Extract [labels_iso_bids_0524.zip](https://github.com/neuropoly/totalsegmentator-mri/releases/download/labels/labels_iso_bids_0524.zip) and merge the `bids` folder (containing the labels) into `data/bids`.
+1. Temporary step (until all labels are pushed into the repositories): Extract [labels_iso_bids_0524.zip](https://github.com/neuropoly/totalspineseg/releases/download/labels/labels_iso_bids_0524.zip) and merge the `bids` folder (containing the labels) into `data/bids`.
 
 1. Prepare datasets in nnUNetv2 structure into `data/nnUnet`:
    ```
-   bash totalsegmentator-mri/scripts/prepare_nnunet_datasets.sh
+   bash totalspineseg/scripts/prepare_nnunet_datasets.sh
    ```
 
 1. Train the model. By default, this will train all datasets using fold 0. You can specify DATASET_ID (101, 102, or 103) and optionally a fold (only if DATASET_ID is specified, can be one of: 0, 1, 2, 3, 4, 5 or all):
    ```
-   bash totalsegmentator-mri/scripts/train_nnunet.sh [DATASET_ID [FOLD]]
+   bash totalspineseg/scripts/train_nnunet.sh [DATASET_ID [FOLD]]
    ```
 
 ## Inference
@@ -79,7 +74,7 @@ For comparison, we also trained a single model (`Dataset103`) that outputs indiv
 Run the model on a folder containing the images in .nii.gz format. If you didn't train the model yourself, you should download the model zip file from the release into `data/nnUNet/exports` (without extracting, you can run `mkdir -p data/nnUNet/exports` before):
 
 ```
-bash totalsegmentator-mri/scripts/inference_nnunet.sh INPUT_FOLDER OUTPUT_FOLDER
+bash totalspineseg/scripts/inference_nnunet.sh INPUT_FOLDER OUTPUT_FOLDER
 ```
 
 This will process all .nii.gz files in the INPUT_FOLDER and save the results in the OUTPUT_FOLDER.

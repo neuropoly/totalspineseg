@@ -17,16 +17,16 @@ trap "echo Caught Keyboard Interrupt within script. Exiting now.; exit" INT
 # SCRIPT STARTS HERE
 # ======================================================================================================================
 
-# Set the path to the utils folder
-utils=totalsegmentator-mri/src/totalsegmri/utils
+# Set the path to the resources folder
+resources=totalspineseg/totalspineseg/resources
 
 # Set the paths to the BIDS and raw data folders
 bids=data/bids
 raw=data/raw
 
-# Check if the TotalSegmentator MRI folder exists
-if [ ! -d totalsegmentator-mri ]; then
-    echo "totalsegmentator-mri folder not found in current working directory. Exiting."
+# Check if the TotalSpineSeg folder exists
+if [ ! -d totalspineseg ]; then
+    echo "totalspineseg folder not found in current working directory. Exiting."
     echo "Please make sure you clone the repository into the current working directory."
     exit 0
 fi
@@ -38,11 +38,11 @@ else
     echo "Preparing SPIDER dataset"
 
     echo "Convert images and masks from .mha to .nii.gz format"
-    python $utils/mha2nii.py -i $raw/spider/images -o $bids/spider
-    python $utils/mha2nii.py -i $raw/spider/masks -o $bids/spider/derivatives/labels
+    totalspineseg_mha2nii -i $raw/spider/images -o $bids/spider
+    totalspineseg_mha2nii -i $raw/spider/masks -o $bids/spider/derivatives/labels
 
     echo "Map SPIDER labels to the labels used in this project"
-    python $utils/map_labels.py -m totalsegmentator-mri/src/totalsegmri/resources/labels_maps/spider.json -s $bids/spider/derivatives/labels -o $bids/spider/derivatives/labels
+    totalspineseg_map_labels -m $resources/labels_maps/spider.json -s $bids/spider/derivatives/labels -o $bids/spider/derivatives/labels
 
     echo "Rename files to follow BIDS naming conventions"
     # Add 'sub-' prefix to filenames
@@ -69,12 +69,12 @@ else
     for f in $bids/spider/*_*.nii.gz; do mv $f ${f/_*.nii.gz/}/anat; done
     for f in $bids/spider/derivatives/labels/*_*.nii.gz; do mv $f ${f/_*.nii.gz/}/anat; done
 
-    # Rename segmentation files with '_totalsegmri' suffix
-    for f in $bids/spider/derivatives/labels/sub-*/anat/sub-*_*.nii.gz; do mv $f ${f/.nii.gz/_totalsegmri.nii.gz}; done
+    # Rename segmentation files with '_totalspineseg' suffix
+    for f in $bids/spider/derivatives/labels/sub-*/anat/sub-*_*.nii.gz; do mv $f ${f/.nii.gz/_totalspineseg.nii.gz}; done
 
-    # Add the spinal cord from _seg to _totalsegmri
-    python $utils/map_labels.py -m 1:200 --add-input --seg-suffix "_seg" --output-seg-suffix "_totalsegmri" -d "sub-" -u "anat" -s $bids/spider/derivatives/labels -o $bids/spider/derivatives/labels
+    # Add the spinal cord from _seg to _totalspineseg
+    totalspineseg_map_labels -m 1:200 --add-input --seg-suffix "_seg" --output-seg-suffix "_totalspineseg" -d "sub-" -u "anat" -s $bids/spider/derivatives/labels -o $bids/spider/derivatives/labels
 
-    # Add the sacrum from _sacrum to _totalsegmri
-    python $utils/map_labels.py -m 1:92 --add-input --seg-suffix "_sacrum" --output-seg-suffix "_totalsegmri" -d "sub-" -u "anat" -s $bids/spider/derivatives/labels -o $bids/spider/derivatives/labels
+    # Add the sacrum from _sacrum to _totalspineseg
+    totalspineseg_map_labels -m 1:92 --add-input --seg-suffix "_sacrum" --output-seg-suffix "_totalspineseg" -d "sub-" -u "anat" -s $bids/spider/derivatives/labels -o $bids/spider/derivatives/labels
 fi
