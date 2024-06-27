@@ -19,6 +19,10 @@ trap "echo Caught Keyboard Interrupt within script. Exiting now.; exit" INT
 # SCRIPT STARTS HERE
 # ======================================================================================================================
 
+# set TOTALSPINESEG and TOTALSPINESEG_DATA to data if not set
+TOTALSPINESEG=${TOTALSPINESEG:-totalspineseg}
+TOTALSPINESEG_DATA=${TOTALSPINESEG_DATA:-data}
+
 # RAM requirement in GB
 RAM_REQUIREMENT=8
 # Get the number of CPUs, subtract some for system processes
