@@ -50,12 +50,12 @@ for dsp in "$bids"/*; do
     echo "Working on $dsn"
 
     echo "Adding label-canal_seg and label-SC_seg to label-spine_dseg"
-    totalspineseg_map_labels -m 1:201 --add-input -s "$bids"/$dsn/derivatives/labels -o "$bids"/$dsn/derivatives/labels --seg-suffix "_label-canal_seg" --output-seg-suffix "_label-spine_dseg" -d "sub-" -u "anat"
-    totalspineseg_map_labels -m 1:200 --add-input -s "$bids"/$dsn/derivatives/labels -o "$bids"/$dsn/derivatives/labels --seg-suffix "_label-SC_seg" --output-seg-suffix "_label-spine_dseg" -d "sub-" -u "anat"
+    totalspineseg_map_labels -m 1:201 --add-input -s "$bids"/$dsn/derivatives/labels_iso -o "$bids"/$dsn/derivatives/labels_iso --seg-suffix "_label-canal_seg" --output-seg-suffix "_label-spine_dseg" -d "sub-" -u "anat"
+    totalspineseg_map_labels -m 1:200 --add-input -s "$bids"/$dsn/derivatives/labels_iso -o "$bids"/$dsn/derivatives/labels_iso --seg-suffix "_label-SC_seg" --output-seg-suffix "_label-spine_dseg" -d "sub-" -u "anat"
 
     echo "Copy images and labels into the nnUNet dataset folder"
     totalspineseg_cpdir "$bids"/$dsn "$nnUNet_raw"/Dataset99_TotalSpineSeg/imagesTr -p "sub-*/anat/sub-*.nii.gz" -f -r sub-:sub-${dsw} .nii.gz:_0000.nii.gz
-    totalspineseg_cpdir "$bids"/$dsn/derivatives/labels "$nnUNet_raw"/Dataset99_TotalSpineSeg/labelsTr -p "sub-*/anat/sub-*_label-spine_dseg.nii.gz" -f -r sub-:sub-${dsw} _label-spine_dseg.nii.gz:.nii.gz
+    totalspineseg_cpdir "$bids"/$dsn/derivatives/labels_iso "$nnUNet_raw"/Dataset99_TotalSpineSeg/labelsTr -p "sub-*/anat/sub-*_label-spine_dseg.nii.gz" -f -r sub-:sub-${dsw} _space-resampled_label-spine_dseg.nii.gz:.nii.gz
 done
 
 echo "Remove images withot segmentation and segmentation without images"
