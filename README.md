@@ -47,8 +47,8 @@ For comparison, we also trained a single model (`Dataset103`) that outputs indiv
 
 1. Set the path to TotalSpineSeg and data folders in the virtual environment:
    ```
-   echo 'export TOTALSPINESEG="$(realpath totalspineseg)"' >> venv/bin/activate
-   echo 'export TOTALSPINESEG_DATA="$(realpath data)"' >> venv/bin/activate
+   export TOTALSPINESEG="$(realpath totalspineseg)" && echo "export TOTALSPINESEG=\"$TOTALSPINESEG\"" >> venv/bin/activate
+   export TOTALSPINESEG_DATA="$(realpath data)" && echo "export TOTALSPINESEG_DATA=\"$TOTALSPINESEG_DATA\"" >> venv/bin/activate
    ```
 
 ## Training
