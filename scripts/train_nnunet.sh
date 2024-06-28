@@ -98,16 +98,16 @@ for d in ${DATASETS[@]}; do
     nnUNetv2_predict -d $d -i "$nnUNet_raw"/$d_name/imagesTs -o "$nnUNet_results"/$d_name/${nnUNetTrainer}__${nnUNetPlans}__${configuration}/fold_${FOLD}/test -f $FOLD -c $configuration -tr $nnUNetTrainer -p $nnUNetPlans -npp $JOBS -nps $JOBS
     nnUNetv2_evaluate_folder "$nnUNet_raw"/$d_name/labelsTs "$nnUNet_results"/$d_name/${nnUNetTrainer}__${nnUNetPlans}__${configuration}/fold_${FOLD}/test -djfile "$nnUNet_results"/$d_name/${nnUNetTrainer}__${nnUNetPlans}__${configuration}/dataset.json -pfile "$nnUNet_results"/$d_name/${nnUNetTrainer}__${nnUNetPlans}__${configuration}/plans.json -np $JOBS
 
-    p=$(realpath .)
+    p="$(realpath .)"
     cd "$nnUNet_results"
-    zip $p/"$nnUNet_exports"/${d_name}_fold_$FOLD.zip $d_name/${nnUNetTrainer}__${nnUNetPlans}__${configuration}/fold_${FOLD}/test/summary.json
-    cd $p
+    zip "$p"/"$nnUNet_exports"/${d_name}_fold_$FOLD.zip $d_name/${nnUNetTrainer}__${nnUNetPlans}__${configuration}/fold_${FOLD}/test/summary.json
+    cd "$p"
 
     echo "Export nnUNet dataset list for dataset $d_name"
     cd "$nnUNet_raw"/$d_name
-    ls */ > $p/"$nnUNet_results"/$d_name/${nnUNetTrainer}__${nnUNetPlans}__${configuration}/fold_${FOLD}/dataset.txt
-    cd $p/"$nnUNet_results"
-    zip $p/"$nnUNet_exports"/${d_name}_fold_$FOLD.zip $d_name/${nnUNetTrainer}__${nnUNetPlans}__${configuration}/fold_${FOLD}/dataset.txt
-    cd $p
+    ls */ > "$p"/"$nnUNet_results"/$d_name/${nnUNetTrainer}__${nnUNetPlans}__${configuration}/fold_${FOLD}/dataset.txt
+    cd "$p"/"$nnUNet_results"
+    zip "$p"/"$nnUNet_exports"/${d_name}_fold_$FOLD.zip $d_name/${nnUNetTrainer}__${nnUNetPlans}__${configuration}/fold_${FOLD}/dataset.txt
+    cd "$p"
 
 done
