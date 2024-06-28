@@ -45,10 +45,10 @@ For comparison, we also trained a single model (`Dataset103`) that outputs indiv
    python -m pip install -e totalspineseg
    ```
 
-1. Set the path to TotalSpineSeg and data folders:
+1. Set the path to TotalSpineSeg and data folders in the virtual environment:
    ```
-   export TOTALSPINESEG="$(realpath totalspineseg)"
-   export TOTALSPINESEG_DATA="$(realpath data)"
+   echo 'export TOTALSPINESEG="$(realpath totalspineseg)"' >> venv/bin/activate
+   echo 'export TOTALSPINESEG_DATA="$(realpath data)"' >> venv/bin/activate
    ```
 
 ## Training
