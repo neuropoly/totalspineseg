@@ -74,3 +74,6 @@ totalspineseg_transform_norm = "totalspineseg.utils.transform_norm:main"
 [build-system]
 requires = ["setuptools>=67.8.0"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["totalspineseg"]
