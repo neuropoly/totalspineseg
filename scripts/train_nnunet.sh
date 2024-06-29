@@ -34,6 +34,8 @@ JOBS_FOR_CPUS=$(($CPU_COUNT - $LEAVE_CPUS < 1 ? 1 : $CPU_COUNT - $LEAVE_CPUS ))
 JOBS_FOR_RAMGB=$(( $(awk -v ram_req="$RAM_REQUIREMENT" '/MemTotal/ {print int($2/1024/1024/ram_req < 1 ? 1 : $2/1024/1024/ram_req)}' /proc/meminfo) ))
 # Get the minimum of JOBS_FOR_CPUS and JOBS_FOR_RAMGB
 JOBS=$(( JOBS_FOR_CPUS < JOBS_FOR_RAMGB ? JOBS_FOR_CPUS : JOBS_FOR_RAMGB ))
+# Set the device to cpu if CUDA_VISIBLE_DEVICES is not set
+if [ -z "$CUDA_VISIBLE_DEVICES" ]; then DEVICE="cpu"; else DEVICE="cuda"; fi
 
 export nnUNet_def_n_proc=$JOBS
 export nnUNet_n_proc_DA=$JOBS
@@ -60,6 +62,7 @@ echo "nnUNetPlanner=${nnUNetPlanner}"
 echo "nnUNetPlans=${nnUNetPlans}"
 echo "configuration=${configuration}"
 echo "JOBS=${JOBS}"
+echo "DEVICE=${DEVICE}"
 echo ""
 
 # ensure the custom nnUNetTrainer is defined in the nnUNet library and add it if it is not
@@ -86,7 +89,7 @@ for d in ${DATASETS[@]}; do
     fi
 
     echo "Training nnUNet model for dataset $d_name"
-    nnUNetv2_train $d $configuration $FOLD -tr $nnUNetTrainer -p $nnUNetPlans --c
+    nnUNetv2_train $d $configuration $FOLD -tr $nnUNetTrainer -p $nnUNetPlans --c -device $DEVICE
 
     echo "Export the model for dataset $d_name in "$nnUNet_exports""
     mkdir -p "$nnUNet_exports"
@@ -108,6 +111,8 @@ for d in ${DATASETS[@]}; do
     ls */ > "$nnUNet_results"/$d_name/dataset.txt
     cd "$nnUNet_results"
     zip "$nnUNet_exports"/${d_name}_fold_$FOLD.zip $d_name/dataset.txt
+    cd "$nnUNet_preprocessed"
+    zip "$nnUNet_exports"/${d_name}_fold_$FOLD.zip $d_name/splits_final.json
     cd "$p"
 
 done
