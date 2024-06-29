@@ -91,7 +91,7 @@ fi
 totalspineseg_generate_resampled_images -i "${INPUT_FOLDER}" -o "${OUTPUT_FOLDER}"/input --image-suffix "" --output-image-suffix ""
 
 # Add _0000 to inputs if not exists to run nnunet
-for f in "${OUTPUT_FOLDER}"/input/*.nii.gz; do if [[ $f != *_0000.nii.gz ]]; then mv $f ${f/.nii.gz/_0000.nii.gz}; fi; done
+for f in "${OUTPUT_FOLDER}"/input/*.nii.gz; do if [[ "$f" != *_0000.nii.gz ]]; then mv "$f" "${f/.nii.gz/_0000.nii.gz}"; fi; done
 
 # Run step 1 model
 # Check if the final checkpoint exists, if not use the latest checkpoint
@@ -109,7 +109,7 @@ totalspineseg_map_labels -s "${OUTPUT_FOLDER}"/step2_input -o "${OUTPUT_FOLDER}"
 
 # For each of the created odd and even IVDs segmentation, copy the original image to use as the 1'st channel in step 2 model input folder
 for i in "${OUTPUT_FOLDER}"/step2_input/*; do
-    cp "${OUTPUT_FOLDER}"/input/$(basename ${i//0001.nii.gz/0000.nii.gz}) ${i//0001.nii.gz/0000.nii.gz}
+    cp "${OUTPUT_FOLDER}"/input/"$(basename "${i/_0001.nii.gz/_0000.nii.gz}")" "${i/_0001.nii.gz/_0000.nii.gz}"
 done
 
 # Run step 2 model with postprocessing
