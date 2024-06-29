@@ -41,6 +41,8 @@ JOBS_FOR_CPUS=$(($CPU_COUNT - $LEAVE_CPUS < 1 ? 1 : $CPU_COUNT - $LEAVE_CPUS ))
 JOBS_FOR_RAMGB=$(( $(awk -v ram_req="$RAM_REQUIREMENT" '/MemTotal/ {print int($2/1024/1024/ram_req < 1 ? 1 : $2/1024/1024/ram_req)}' /proc/meminfo) ))
 # Get the minimum of JOBS_FOR_CPUS and JOBS_FOR_RAMGB
 JOBS=$(( JOBS_FOR_CPUS < JOBS_FOR_RAMGB ? JOBS_FOR_CPUS : JOBS_FOR_RAMGB ))
+# Set the device to cpu if CUDA_VISIBLE_DEVICES is not set
+if [ -z "$CUDA_VISIBLE_DEVICES" ]; then DEVICE="cpu"; else DEVICE="cuda"; fi
 
 export nnUNet_def_n_proc=$JOBS
 export nnUNet_n_proc_DA=$JOBS
@@ -67,6 +69,7 @@ echo "nnUNetTrainer=${nnUNetTrainer}"
 echo "nnUNetPlans=${nnUNetPlans}"
 echo "configuration=${configuration}"
 echo "JOBS=${JOBS}"
+echo "DEVICE=${DEVICE}"
 echo ""
 
 # ensure the custom nnUNetTrainer is defined in the nnUNet library and add it if it is not
@@ -91,7 +94,9 @@ totalspineseg_generate_resampled_images -i "${INPUT_FOLDER}" -o "${OUTPUT_FOLDER
 for f in "${OUTPUT_FOLDER}"/input/*.nii.gz; do if [[ $f != *_0000.nii.gz ]]; then mv $f ${f/.nii.gz/_0000.nii.gz}; fi; done
 
 # Run step 1 model
-nnUNetv2_predict -d $step1_dataset -i "${OUTPUT_FOLDER}"/input -o "${OUTPUT_FOLDER}"/step1 -f $FOLD -c $configuration -p $nnUNetPlans -tr $nnUNetTrainer -npp $JOBS -nps $JOBS
+# Check if the final checkpoint exists, if not use the latest checkpoint
+if [ -f "$nnUNet_results"/Dataset${step1_dataset}_*/${nnUNetTrainer}__${nnUNetPlans}__${configuration}/fold_${FOLD}/checkpoint_final.pth ]; then CHECKPOINT=checkpoint_final.pth; else CHECKPOINT=checkpoint_latest.pth; fi
+nnUNetv2_predict -d $step1_dataset -i "${OUTPUT_FOLDER}"/input -o "${OUTPUT_FOLDER}"/step1 -f $FOLD -c $configuration -p $nnUNetPlans -tr $nnUNetTrainer -npp $JOBS -nps $JOBS -chk $CHECKPOINT -device $DEVICE
 
 # Transform labels to images space
 totalspineseg_transform_labels2images -i "${OUTPUT_FOLDER}"/input -s "${OUTPUT_FOLDER}"/step1 -o "${OUTPUT_FOLDER}"/step1
@@ -108,7 +113,9 @@ for i in "${OUTPUT_FOLDER}"/step2_input/*; do
 done
 
 # Run step 2 model with postprocessing
-nnUNetv2_predict -d $step2_dataset -i "${OUTPUT_FOLDER}"/step2_input -o "${OUTPUT_FOLDER}"/step2 -f $FOLD -c $configuration -p $nnUNetPlans -tr $nnUNetTrainer -npp $JOBS -nps $JOBS
+# Check if the final checkpoint exists, if not use the latest checkpoint
+if [ -f "$nnUNet_results"/Dataset${step1_dataset}_*/${nnUNetTrainer}__${nnUNetPlans}__${configuration}/fold_${FOLD}/checkpoint_final.pth ]; then CHECKPOINT=checkpoint_final.pth; else CHECKPOINT=checkpoint_latest.pth; fi
+nnUNetv2_predict -d $step2_dataset -i "${OUTPUT_FOLDER}"/step2_input -o "${OUTPUT_FOLDER}"/step2 -f $FOLD -c $configuration -p $nnUNetPlans -tr $nnUNetTrainer -npp $JOBS -nps $JOBS -chk $CHECKPOINT -device $DEVICE
 
 # Use an iterative algorithm to to assign an individual label value to each vertebrae and IVD in the final segmentation mask.
 totalspineseg_generate_labels_sequential -s "${OUTPUT_FOLDER}"/step2 -o "${OUTPUT_FOLDER}"/output --sacrum-labels 14 --csf-labels 16 --sc-labels 17 --disc-labels 2 3 4 5 6 7 --vertebrea-labels 9 10 11 12 13 14 --init-disc 4:224 7:202 5:219 6:207 --init-vertebrae 11:40 14:17 12:34 13:23 --step-diff-label --step-diff-disc
