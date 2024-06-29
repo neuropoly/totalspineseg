@@ -20,8 +20,8 @@ trap "echo Caught Keyboard Interrupt within script. Exiting now.; exit" INT
 # ======================================================================================================================
 
 # set TOTALSPINESEG and TOTALSPINESEG_DATA if not set
-TOTALSPINESEG=${TOTALSPINESEG:-totalspineseg}
-TOTALSPINESEG_DATA=${TOTALSPINESEG_DATA:-data}
+TOTALSPINESEG="$(realpath ${TOTALSPINESEG:-totalspineseg})"
+TOTALSPINESEG_DATA="$(realpath ${TOTALSPINESEG_DATA:-data})"
 
 # RAM requirement in GB
 RAM_REQUIREMENT=8
@@ -100,14 +100,14 @@ for d in ${DATASETS[@]}; do
 
     p="$(realpath .)"
     cd "$nnUNet_results"
-    zip "$p"/"$nnUNet_exports"/${d_name}_fold_$FOLD.zip $d_name/${nnUNetTrainer}__${nnUNetPlans}__${configuration}/fold_${FOLD}/test/summary.json
+    zip "$nnUNet_exports"/${d_name}_fold_$FOLD.zip $d_name/${nnUNetTrainer}__${nnUNetPlans}__${configuration}/fold_${FOLD}/test/summary.json
     cd "$p"
 
     echo "Export nnUNet dataset list for dataset $d_name"
     cd "$nnUNet_raw"/$d_name
-    ls */ > "$p"/"$nnUNet_results"/$d_name/${nnUNetTrainer}__${nnUNetPlans}__${configuration}/fold_${FOLD}/dataset.txt
-    cd "$p"/"$nnUNet_results"
-    zip "$p"/"$nnUNet_exports"/${d_name}_fold_$FOLD.zip $d_name/${nnUNetTrainer}__${nnUNetPlans}__${configuration}/fold_${FOLD}/dataset.txt
+    ls */ > "$nnUNet_results"/$d_name/dataset.txt
+    cd "$nnUNet_results"
+    zip "$nnUNet_exports"/${d_name}_fold_$FOLD.zip $d_name/dataset.txt
     cd "$p"
 
 done

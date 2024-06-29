@@ -21,8 +21,8 @@ trap "echo Caught Keyboard Interrupt within script. Exiting now.; exit" INT
 # ======================================================================================================================
 
 # set TOTALSPINESEG and TOTALSPINESEG_DATA if not set
-TOTALSPINESEG=${TOTALSPINESEG:-totalspineseg}
-TOTALSPINESEG_DATA=${TOTALSPINESEG_DATA:-data}
+TOTALSPINESEG="$(realpath ${TOTALSPINESEG:-totalspineseg})"
+TOTALSPINESEG_DATA="$(realpath ${TOTALSPINESEG_DATA:-data})"
 
 # Set the path to the resources folder
 resources="$TOTALSPINESEG"/totalspineseg/resources
