@@ -6,6 +6,7 @@ If you use this model, please cite our work:
 > Warszawer Y, Molinier N, Valošek J, Shirbint E, Benveniste PL, Achiron A, Eshaghi A and Cohen-Adad J. _Fully Automatic Vertebrae and Spinal Cord Segmentation Using a Hybrid Approach Combining nnU-Net and Iterative Algorithm_.	Proceedings of the 32th Annual Meeting of ISMRM. 2024
 
 - [Model Description](#model-description)
+- [Dependencies](#dependencies)
 - [Installation](#installation)
 - [Training](#training)
 - [Inference](#inference)
@@ -26,6 +27,10 @@ For comparison, we also trained a single model (`Dataset103`) that outputs indiv
 ![Figure 1](https://github.com/neuropoly/totalspineseg/assets/36595323/84fae79f-442b-48c3-bcdb-ce4ea857ac59)
 
 **Figure 1**: Illustration of the hybrid method for automatic segmentation of the spine and spinal cord structures. T1w image (A) is used to train model 1, which outputs 8 classes (B). These output labels are processed to extract odd IVDs (C). The T1w and odd IVDs are used as two input channels to train model 2, which outputs 14 classes (D). These output labels are processed to extract individual IVDs and vertebrae (E).
+
+## Dependencies
+
+- [Python](https://www.python.org/)>=3.9
 
 ## Installation
 
