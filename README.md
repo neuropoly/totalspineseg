@@ -32,7 +32,7 @@ For comparison, we also trained a single model (`Dataset103`) that outputs indiv
 1. Open a terminal in the directory where you want to work.
 
 1. Create and activate a virtual environment (highly recommended):
-   ```
+   ```bash
    python -m venv venv
    source venv/bin/activate
    ```
@@ -40,46 +40,61 @@ For comparison, we also trained a single model (`Dataset103`) that outputs indiv
 1. Install [PyTorch](https://pytorch.org/) as described on their website.
 
 1. Clone and install this repository:
-   ```
+   ```bash
    git clone https://github.com/neuropoly/totalspineseg.git
    python -m pip install -e totalspineseg
    ```
 
 1. Set the path to TotalSpineSeg and data folders in the virtual environment:
-   ```
+   ```bash
    export TOTALSPINESEG="$(realpath totalspineseg)" && echo "export TOTALSPINESEG=\"$TOTALSPINESEG\"" >> venv/bin/activate
    export TOTALSPINESEG_DATA="$(realpath data)" && echo "export TOTALSPINESEG_DATA=\"$TOTALSPINESEG_DATA\"" >> venv/bin/activate
    ```
 
 ## Training
 
+To train the TotalSpineSeg model, you will need the following hardware specifications:
+- Approximately 3.5TB of available disk space (for training with data augmentation)
+- RAM capacity of at least 32GB
+- CUDA GPU with at least 8GB of VRAM
+
+Please ensure that your system meets these requirements before proceeding with the training process.
+
 1. Ensure training dependencies are installed:
-   ```
+   ```bash
    apt-get install git git-annex jq -y
    ```
 
 1. Get the required datasets into `$TOTALSPINESEG_DATA/bids` (make sure you have access to the specified repositories):
-   ```
+   ```bash
    bash "$TOTALSPINESEG"/scripts/get_datasets.sh
    ```
 
 1. Temporary step (until all labels are pushed into the repositories): Extract [labels_iso_bids_0524.zip](https://github.com/neuropoly/totalspineseg/releases/download/labels/labels_iso_bids_0524.zip) and merge the `bids` folder (containing the labels) into `$TOTALSPINESEG_DATA/bids`.
 
 1. Prepare datasets in nnUNetv2 structure into `$TOTALSPINESEG_DATA/nnUnet`:
-   ```
-   bash "$TOTALSPINESEG"/scripts/prepare_nnunet_datasets.sh
+   ```bash
+   bash "$TOTALSPINESEG"/scripts/prepare_nnunet_datasets.sh [DATASET_ID] [-noaug]
    ```
 
-1. Train the model. By default, this will train all datasets using fold 0. You can specify DATASET_ID (101, 102, or 103) and optionally a fold (only if DATASET_ID is specified, can be one of: 0, 1, 2, 3, 4, 5 or all):
-   ```
+   The script optionally expects `DATASET_ID` as the first positional argument to specify the dataset to prepare. It can be either 101, 102, 103, or all. If `all` is specified, it will prepare all datasets (101, 102, 103). By default, it will prepare datasets 101 and 102.
+
+   Additionally, you can use the `-noaug` parameter to prepare the datasets without data augmentations.
+
+1. Train the model:
+   ```bash
    bash "$TOTALSPINESEG"/scripts/train_nnunet.sh [DATASET_ID [FOLD]]
    ```
+
+   The script optionally expects `DATASET_ID` as the first positional argument to specify the dataset to train. It can be either 101, 102, 103, or all. If `all` is specified, it will train all datasets (101, 102, 103). By default, it will train datasets 101 and 102.
+
+   Additionally, you can specify `FOLD` as the secons positional argument to specify the fold. It can be either 0, 1, 2, 3, 4, 5 or all. By default, it will train with fold 0.
 
 ## Inference
 
 Run the model on a folder containing the images in .nii.gz format. If you didn't train the model yourself, you should download the model zip file from the release into `$TOTALSPINESEG_DATA/nnUNet/exports` (without extracting, you can run `mkdir -p "$TOTALSPINESEG_DATA"/nnUNet/exports` before):
 
-```
+```bash
 bash "$TOTALSPINESEG"/scripts/inference_nnunet.sh INPUT_FOLDER OUTPUT_FOLDER
 ```
 

@@ -2,7 +2,7 @@
 
 # This script train the TotalSpineSeg nnUNet models.
 # It get also optional parameters DATASET and FOLD.
-# By default, it trains the models for datasets 101, 102, and 103 with fold 0.
+# By default, it trains the models for datasets 101 and 102 with fold 0.
 
 # BASH SETTINGS
 # ======================================================================================================================
@@ -18,6 +18,13 @@ trap "echo Caught Keyboard Interrupt within script. Exiting now.; exit" INT
 
 # SCRIPT STARTS HERE
 # ======================================================================================================================
+
+# Set the datasets to work with - default is 101 102
+DATASETS=${1:-101 102}
+if [ $DATASETS == all ]; then DATASETS=(101 102 103); fi
+
+# Set the fold to work with - default is 0
+FOLD=${2:-0}
 
 # set TOTALSPINESEG and TOTALSPINESEG_DATA if not set
 TOTALSPINESEG="$(realpath ${TOTALSPINESEG:-totalspineseg})"
@@ -67,12 +74,6 @@ echo ""
 
 # ensure the custom nnUNetTrainer is defined in the nnUNet library and add it if it is not
 source "$TOTALSPINESEG"/scripts/add_nnunet_trainer.sh
-
-# Set the datasets to work with - default is 101 102 103
-DATASETS=${1:-101 102 103}
-
-# Set the fold to work with - default is 0
-FOLD=${2:-0}
 
 echo "Working with datasets: ${DATASETS[@]}, fold: $FOLD"
 
