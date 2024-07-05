@@ -85,7 +85,12 @@ for d in ${DATASETS[@]}; do
     if [ ! -f "$nnUNet_preprocessed"/$d_name/${nnUNetPlans}.json ]; then
         echo "Preprocess dataset $d_name"
         nnUNetv2_plan_and_preprocess -d $d -pl $nnUNetPlanner -c $configuration -npfp $JOBS -np $JOBS --verify_dataset_integrity
-        jq ".configurations[\"${configuration}\"].patch_size = [224, 160, 80]" "$nnUNet_preprocessed"/$d_name/${nnUNetPlans}.json > "$nnUNet_preprocessed"/$d_name/${nnUNetPlans}_new.json
+        # Change the patch size to [224, 160, 80] for dataset 103 and [128, 96, 96] for 101 and 102
+        if [ $d -eq 103 ]; then
+            jq ".configurations[\"${configuration}\"].patch_size = [224, 160, 80]" "$nnUNet_preprocessed"/$d_name/${nnUNetPlans}.json > "$nnUNet_preprocessed"/$d_name/${nnUNetPlans}_new.json
+        else
+            jq ".configurations[\"${configuration}\"].patch_size = [128, 96, 96]" "$nnUNet_preprocessed"/$d_name/${nnUNetPlans}.json > "$nnUNet_preprocessed"/$d_name/${nnUNetPlans}_new.json
+        fi
         mv "$nnUNet_preprocessed"/$d_name/${nnUNetPlans}_new.json "$nnUNet_preprocessed"/$d_name/${nnUNetPlans}.json
     fi
 
