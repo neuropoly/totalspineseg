@@ -93,7 +93,7 @@ Please ensure that your system meets these requirements before proceeding with t
 
    The script optionally expects `DATASET_ID` as the first positional argument to specify the dataset to train. It can be either 101, 102, 103, or all. If `all` is specified, it will train all datasets (101, 102, 103). By default, it will train datasets 101 and 102.
 
-   Additionally, you can specify `FOLD` as the secons positional argument to specify the fold. It can be either 0, 1, 2, 3, 4, 5 or all. By default, it will train with fold 0.
+   Additionally, you can specify `FOLD` as the second positional argument to specify the fold. It can be either 0, 1, 2, 3, 4, 5 or all. By default, it will train with fold 0.
 
 ## Inference
 
