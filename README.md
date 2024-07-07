@@ -86,7 +86,7 @@ Please ensure that your system meets these requirements before proceeding with t
    bash "$TOTALSPINESEG"/scripts/prepare_nnunet_datasets.sh [DATASET_ID] [-noaug]
    ```
 
-   The script optionally expects `DATASET_ID` as the first positional argument to specify the dataset to prepare. It can be either 101, 102, 103, or all. If `all` is specified, it will prepare all datasets (101, 102, 103). By default, it will prepare datasets 101 and 102.
+   The script optionally accepts `DATASET_ID` as the first positional argument to specify the dataset to prepare. It can be either 101, 102, 103, or all. If `all` is specified, it will prepare all datasets (101, 102, 103). By default, it will prepare datasets 101 and 102.
 
    Additionally, you can use the `-noaug` parameter to prepare the datasets without data augmentations.
 
@@ -95,7 +95,7 @@ Please ensure that your system meets these requirements before proceeding with t
    bash "$TOTALSPINESEG"/scripts/train_nnunet.sh [DATASET_ID [FOLD]]
    ```
 
-   The script optionally expects `DATASET_ID` as the first positional argument to specify the dataset to train. It can be either 101, 102, 103, or all. If `all` is specified, it will train all datasets (101, 102, 103). By default, it will train datasets 101 and 102.
+   The script optionally accepts `DATASET_ID` as the first positional argument to specify the dataset to train. It can be either 101, 102, 103, or all. If `all` is specified, it will train all datasets (101, 102, 103). By default, it will train datasets 101 and 102.
 
    Additionally, you can specify `FOLD` as the second positional argument to specify the fold. It can be either 0, 1, 2, 3, 4, 5 or all. By default, it will train with fold 0.
 
