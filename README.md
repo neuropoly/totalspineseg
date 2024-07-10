@@ -34,7 +34,7 @@ For comparison, we also trained a single model (`Dataset103`) that outputs indiv
 
 ## Dependencies
 
-- [Python](https://www.python.org/)>=3.9
+- [Python](https://www.python.org/)>=3.9 with pip>=23, setuptools>=67
 
 ## Installation
 

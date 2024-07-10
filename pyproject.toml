@@ -72,7 +72,7 @@ totalspineseg_transform_labels2images = "totalspineseg.utils.transform_labels2im
 totalspineseg_transform_norm = "totalspineseg.utils.transform_norm:main"
 
 [build-system]
-requires = ["setuptools>=67.8.0"]
+requires = ["pip>=23", "setuptools>=67"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
