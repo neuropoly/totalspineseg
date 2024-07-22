@@ -34,27 +34,34 @@ For comparison, we also trained a single model (`Dataset103`) that outputs indiv
 
 ## Dependencies
 
-- [Python](https://www.python.org/)>=3.9 with pip>=23, setuptools>=67
+- Bash terminal
+- [Python](https://www.python.org/) >= 3.9
+- pip >= 23
+- setuptools >= 67
 
 ## Installation
 
-1. Open a terminal in the directory where you want to work.
+1. Open a `bash` terminal in the directory where you want to work.
 
-1. Create and activate a virtual environment (highly recommended):
+2. Create and activate a virtual environment (highly recommended):
    ```bash
    python -m venv venv
    source venv/bin/activate
    ```
 
-1. Install [PyTorch](https://pytorch.org/) as described on their website.
-
-1. Clone and install this repository:
+3. Clone and install this repository:
    ```bash
    git clone https://github.com/neuropoly/totalspineseg.git
    python -m pip install -e totalspineseg
    ```
 
-1. Set the path to TotalSpineSeg and data folders in the virtual environment:
+4. For CUDA GPU support, install **PyTorch** following the instructions on their [website](https://pytorch.org/). Be sure to add the `--upgrade` flag to your installation command to replace any existing PyTorch installation.
+   Example:
+     ```bash
+     pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 --upgrade
+     ```
+
+5. Set the path to TotalSpineSeg and data folders in the virtual environment:
    ```bash
    export TOTALSPINESEG="$(realpath totalspineseg)" && echo "export TOTALSPINESEG=\"$TOTALSPINESEG\"" >> venv/bin/activate
    export TOTALSPINESEG_DATA="$(realpath data)" && echo "export TOTALSPINESEG_DATA=\"$TOTALSPINESEG_DATA\"" >> venv/bin/activate
