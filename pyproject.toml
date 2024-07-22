@@ -70,6 +70,7 @@ totalspineseg_map_labels = "totalspineseg.utils.map_labels:main"
 totalspineseg_mha2nii = "totalspineseg.utils.mha2nii:main"
 totalspineseg_transform_labels2images = "totalspineseg.utils.transform_labels2images:main"
 totalspineseg_transform_norm = "totalspineseg.utils.transform_norm:main"
+totalspineseg_generate_averaged4d = "totalspineseg.utils.generate_averaged4d:main"
 
 [build-system]
 requires = ["pip>=23", "setuptools>=67"]

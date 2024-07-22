@@ -76,7 +76,10 @@ echo "Remove images withot segmentation and segmentation without images"
 for f in "$nnUNet_raw"/$SRC_DATASET/imagesTr/*.nii.gz; do if [ ! -f "$nnUNet_raw"/$SRC_DATASET/labelsTr/$(basename ${f/_0000.nii.gz/.nii.gz}) ]; then rm $f; fi; done
 for f in "$nnUNet_raw"/$SRC_DATASET/labelsTr/*.nii.gz; do if [ ! -f "$nnUNet_raw"/$SRC_DATASET/imagesTr/$(basename ${f/.nii.gz/_0000.nii.gz}) ]; then rm $f; fi; done
 
-echo "Transform images to canonical space and fix data type mismatch and sform qform mismatch"
+echo "Convert 4D images to 3D"
+totalspineseg_generate_averaged4d -i "$nnUNet_raw"/$SRC_DATASET/imagesTr -o "$nnUNet_raw"/$SRC_DATASET/imagesTr
+
+echo "Transform images to canonical space"
 totalspineseg_transform_norm -i "$nnUNet_raw"/$SRC_DATASET/imagesTr -o "$nnUNet_raw"/$SRC_DATASET/imagesTr
 
 echo "Resample images to 1x1x1mm"
