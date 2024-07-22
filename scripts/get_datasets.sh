@@ -4,7 +4,7 @@
 #   git@data.neuro.polymtl.ca:datasets/whole-spine.git
 #   git@data.neuro.polymtl.ca:datasets/spider-challenge-2023.git
 #   git@github.com:spine-generic/data-multi-subject.git
-#   git@github.com:spine-generic/data-single-subject
+#   git@github.com:spine-generic/data-single-subject.git
 
 # BASH SETTINGS
 # ======================================================================================================================
@@ -37,7 +37,7 @@ datasets=(
     git@data.neuro.polymtl.ca:datasets/whole-spine.git
     git@data.neuro.polymtl.ca:datasets/spider-challenge-2023.git
     git@github.com:spine-generic/data-multi-subject.git
-    git@github.com:spine-generic/data-single-subject
+    git@github.com:spine-generic/data-single-subject.git
 )
 
 # Loop over datasets and download them
