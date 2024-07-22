@@ -9,7 +9,10 @@ Please also cite nnUNet since our work is heavily based on it:
 > Isensee, F., Jaeger, P. F., Kohl, S. A., Petersen, J., & Maier-Hein, K. H. (2021). nnU-Net: a self-configuring 
 method for deep learning-based biomedical image segmentation. Nature methods, 18(2), 203-211.
 
+## Table of Contents
+
 - [Model Description](#model-description)
+- [Datasets](#datasets)
 - [Dependencies](#dependencies)
 - [Installation](#installation)
 - [Training](#training)
@@ -31,6 +34,13 @@ For comparison, we also trained a single model (`Dataset103`) that outputs indiv
 ![Figure 1](https://github.com/neuropoly/totalspineseg/assets/36595323/84fae79f-442b-48c3-bcdb-ce4ea857ac59)
 
 **Figure 1**: Illustration of the hybrid method for automatic segmentation of the spine and spinal cord structures. T1w image (A) is used to train model 1, which outputs 8 classes (B). These output labels are processed to extract odd IVDs (C). The T1w and odd IVDs are used as two input channels to train model 2, which outputs 14 classes (D). These output labels are processed to extract individual IVDs and vertebrae (E).
+
+## Datasets
+
+Our model is trained on those datasets:
+- Private whole-spine dataset (Internal access: `git@data.neuro.polymtl.ca:datasets/whole-spine.git`).
+- [SPIDER](https://doi.org/10.5281/zenodo.10159290) project dataset (Internal access: `git@data.neuro.polymtl.ca:datasets/spider-challenge-2023.git`)
+- [Spine Generic Project](https://github.com/spine-generic), including single and multi subject datasets (Public access: `git@github.com:spine-generic/data-single-subject.git` and `git@github.com:spine-generic/data-multi-subject.git`).
 
 ## Dependencies
 
