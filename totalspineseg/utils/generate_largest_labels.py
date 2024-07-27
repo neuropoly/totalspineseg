@@ -1,5 +1,5 @@
 import sys, argparse, textwrap
-from scipy.ndimage import label
+from scipy.ndimage import label, binary_dilation, generate_binary_structure, iterate_structure
 from pathlib import Path
 import numpy as np
 import nibabel as nib
@@ -59,6 +59,14 @@ def main():
         help='Suffix for output segmentation, defaults to "".'
     )
     parser.add_argument(
+        '--binarize', action="store_true", default=False,
+        help='If provided, binarize the segmentation to non-zero values before taking the largest component.'
+    )
+    parser.add_argument(
+        '--dilate', type=int, default=0,
+        help='Number of voxels to dilate the segmentation before taking the largest component, defaults to 0 (no dilation).'
+    )
+    parser.add_argument(
         '--max-workers', '-w', type=int, default=mp.cpu_count(),
         help='Max worker to run in parallel proccess, defaults to multiprocessing.cpu_count().'
     )
@@ -80,6 +88,8 @@ def main():
     prefix = args.prefix
     seg_suffix = args.seg_suffix
     output_seg_suffix = args.output_seg_suffix
+    binarize = args.binarize
+    dilate = args.dilate
     max_workers = args.max_workers
     verbose = args.verbose
 
@@ -93,6 +103,8 @@ def main():
             prefix = "{prefix}"
             seg_suffix = "{seg_suffix}"
             output_seg_suffix = "{output_seg_suffix}"
+            binarize = {binarize}
+            dilate = {dilate}
             max_workers = {max_workers}
             verbose = {verbose}
         '''))
@@ -114,6 +126,8 @@ def main():
         output_path=output_path,
         seg_suffix=seg_suffix,
         output_seg_suffix=output_seg_suffix,
+        binarize=binarize,
+        dilate=dilate,
    )
 
     with mp.Pool() as pool:
@@ -126,26 +140,42 @@ def generate_largest_labels(
             output_path,
             seg_suffix,
             output_seg_suffix,
+            binarize,
+            dilate,
         ):
     
     output_seg_path = output_path / seg_path.relative_to(segs_path).parent / seg_path.name.replace(f'{seg_suffix}.nii.gz', f'{output_seg_suffix}.nii.gz')
 
     # Load segmentation
     seg = nib.load(seg_path)
-    seg_data_src = np.asanyarray(seg.dataobj).round().astype(np.uint8)
+    seg_data = np.asanyarray(seg.dataobj).round().astype(np.uint8)
 
-    seg_data = np.zeros_like(seg_data_src)
+    if binarize:
+        seg_data_src = seg_data.copy()
+        seg_data = (seg_data != 0).astype(np.uint8)
 
-    for l in [_ for _ in np.unique(seg_data_src) if _ != 0]:
-        mask = seg_data_src == l
-        mask_labeled, num_labels = label(mask, np.ones((3, 3, 3)))
+    binary_dilation_structure = iterate_structure(generate_binary_structure(3, 1), dilate)
+    output_seg_data = np.zeros_like(seg_data)
+
+    for l in [_ for _ in np.unique(seg_data) if _ != 0]:
+        mask = seg_data == l
+        if dilate > 0:
+            # Dilate
+            mask_labeled, num_labels = label(binary_dilation(mask, binary_dilation_structure), np.ones((3, 3, 3)))
+            # Undo dilate
+            mask_labeled *= mask
+        else:
+            mask_labeled, num_labels = label(mask, np.ones((3, 3, 3)))
         # Find the label of the largest component
         label_sizes = np.bincount(mask_labeled.ravel())[1:]  # Skip 0 label size
         largest_label = label_sizes.argmax() + 1  # +1 because bincount labels start at 0
-        seg_data[mask_labeled == largest_label] = l
+        output_seg_data[mask_labeled == largest_label] = l
+
+    if binarize:
+        output_seg_data = output_seg_data * seg_data_src
 
     # Create result segmentation
-    output_seg = nib.Nifti1Image(seg_data, seg.affine, seg.header)
+    output_seg = nib.Nifti1Image(output_seg_data, seg.affine, seg.header)
     output_seg.set_qform(seg.affine)
     output_seg.set_sform(seg.affine)
     output_seg.set_data_dtype(np.uint8)
