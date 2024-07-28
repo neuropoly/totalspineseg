@@ -1,11 +1,14 @@
-import sys, argparse, textwrap, tempfile, shutil, subprocess
-from pathlib import Path
+import sys, argparse, textwrap
 import multiprocessing as mp
 from functools import partial
-from pathlib import Path
 from tqdm.contrib.concurrent import process_map
+from pathlib import Path
 import nibabel as nib
 import numpy as np
+import torchio as tio
+import warnings
+
+warnings.filterwarnings("ignore")
 
 
 def main():
@@ -14,13 +17,14 @@ def main():
     parser = argparse.ArgumentParser(
         description=textwrap.dedent(f'''
         This script processes NIfTI (Neuroimaging Informatics Technology Initiative) image and segmentation files.
-        It crop images and segmentations in the most anteior voxel the lowest vertebrae in the image or at the lowest voxel of T12-L1 IVD.'''
+        It transform image and segmentations into mXmXm mm resolution.'''
         ),
         epilog=textwrap.dedent('''
             Examples:
-            generate_cropped_images -i images -s labels -o images_cropped -g labels_cropped
+            resample -i images -o images
+            resample -i images -s labels -o images -g labels -m 1
             For BIDS:
-            generate_cropped_images -i . -s derivatives/labels -o . -g derivatives/labels --image-suffix "" --output-image-suffix "" --seg-suffix "_seg" --output-seg-suffix "_seg_cropped" -d "sub-" -u "anat"
+            resample -i . -s derivatives/labels -o . -g derivatives/labels --image-suffix "" --output-image-suffix "" --seg-suffix "_seg" --output-seg-suffix "_seg" -d "sub-" -u "anat" -m 1
         '''),
         formatter_class=argparse.RawTextHelpFormatter
     )
@@ -29,16 +33,16 @@ def main():
         help='The folder where input NIfTI images files are located (required).'
     )
     parser.add_argument(
-        '--segs-dir', '-s', type=Path, required=True,
-        help='The folder where input NIfTI segmentation files are located (required).'
+        '--segs-dir', '-s', type=Path, default=None,
+        help='The folder where input NIfTI segmentation files are located.'
     )
     parser.add_argument(
         '--output-images-dir', '-o', type=Path, required=True,
-        help='The folder where output cropped images will be saved (required).'
+        help='The folder where output augmented images will be saved with _a1, _a2 etc. suffixes (required).'
     )
     parser.add_argument(
-        '--output-segs-dir', '-g', type=Path, required=True,
-        help='The folder where output cropped segmentations will be saved (required).'
+        '--output-segs-dir', '-g', type=Path, default=None,
+        help='The folder where output augmented segmentation will be saved with _a1, _a2 etc. suffixes.'
     )
     parser.add_argument(
         '--subject-dir', '-d', type=str, default=None, nargs='?', const='',
@@ -73,8 +77,8 @@ def main():
         help='Segmentation suffix for output, defaults to "".'
     )
     parser.add_argument(
-        '--from-bottom', action="store_true", default=False,
-        help='Crop at the lowest voxel of T12-L1 IVD. Default: Crop in the most anteior voxel the lowest vertebrae in the image'
+        '--mm', '-m', type=float, nargs='+', default=[1.0],
+        help='The target voxel size in mm. Can accept 1 or 3 parameters for x, y, z. Default is 1mm.'
     )
     parser.add_argument(
         '--max-workers', '-w', type=int, default=mp.cpu_count(),
@@ -103,7 +107,7 @@ def main():
     seg_suffix = args.seg_suffix
     output_image_suffix = args.output_image_suffix
     output_seg_suffix = args.output_seg_suffix
-    from_bottom = args.from_bottom
+    mm = tuple(args.mm if len (args.mm) == 3 else [args.mm[0]] * 3)
     max_workers = args.max_workers
     verbose = args.verbose
     
@@ -122,7 +126,7 @@ def main():
             seg_suffix = "{seg_suffix}"
             output_image_suffix = "{output_image_suffix}"
             output_seg_suffix = "{output_seg_suffix}"
-            from_bottom = {from_bottom}
+            mm = {mm}
             max_workers = {max_workers}
             verbose = {verbose}
         '''))
@@ -138,8 +142,8 @@ def main():
     images_path_list = list(images_path.glob(glob_pattern))
 
     # Create a partially-applied function with the extra arguments
-    partial_generate_croped_images = partial(
-        generate_croped_images,
+    partial_resample = partial(
+        resample,
         images_path=images_path,
         segs_path=segs_path,
         output_images_path=output_images_path,
@@ -148,14 +152,14 @@ def main():
         seg_suffix=seg_suffix,
         output_image_suffix=output_image_suffix,
         output_seg_suffix=output_seg_suffix,
-        from_bottom=from_bottom,
+        mm=mm,
     )
 
     with mp.Pool() as pool:
-        process_map(partial_generate_croped_images, images_path_list, max_workers=max_workers)
+        process_map(partial_resample, images_path_list, max_workers=max_workers)
 
 
-def generate_croped_images(
+def resample(
         image_path,
         images_path,
         segs_path,
@@ -165,65 +169,64 @@ def generate_croped_images(
         seg_suffix,
         output_image_suffix,
         output_seg_suffix,
-        from_bottom,
+        mm,
     ):
     
-    seg_path = segs_path / image_path.relative_to(images_path).parent /  image_path.name.replace(f'{image_suffix}.nii.gz', f'{seg_suffix}.nii.gz')
+    image = nib.load(image_path)
+    image_data = np.asanyarray(image.dataobj)
+    image_data_dtype = getattr(np, image_data.dtype.name)
+    image_data = image_data.astype(np.float64)
     
-    if not seg_path.is_file():
-        print(f'Segmentation file not found: {seg_path}')
-        return
+    if segs_path:
+        seg_path = segs_path / image_path.relative_to(images_path).parent /  image_path.name.replace(f'{image_suffix}.nii.gz', f'{seg_suffix}.nii.gz')
+        seg = nib.load(seg_path)
+        seg_data = np.asanyarray(seg.dataobj).round().astype(np.uint8)
+
+        # Create result
+        subject = tio.Resample(mm)(tio.Subject(
+            image=tio.ScalarImage(tensor=image_data[None, ...], affine=image.affine),
+            seg=tio.LabelMap(tensor=seg_data[None, ...], affine=seg.affine),
+        ))
+        output_image_data, output_seg_data = subject.image.data.numpy()[0, ...].astype(np.float64), subject.seg.data.numpy()[0, ...].astype(np.uint8)
+        
+        output_seg_path = output_segs_path / image_path.relative_to(images_path).parent / seg_path.name.replace(f'{seg_suffix}.nii.gz', f'{output_seg_suffix}.nii.gz')
+
+        # Make sure output directory exists and save
+        output_seg_path.parent.mkdir(parents=True, exist_ok=True)
+        output_seg = nib.Nifti1Image(output_seg_data, subject.seg.affine, seg.header)
+        output_seg.set_qform(subject.seg.affine)
+        output_seg.set_sform(subject.seg.affine)
+        output_seg.set_data_dtype(np.uint8)
+        nib.save(output_seg, output_seg_path)
+
+    else:
+        # Create result
+        subject = tio.Resample(mm)(tio.Subject(
+            image=tio.ScalarImage(tensor=image_data[None, ...], affine=image.affine),
+        ))
+        output_image_data = subject.image.data.numpy()[0, ...].astype(np.float64)
+
+    # Rescale the image to the output data type if necessary
+    # code from https://github.com/spinalcordtoolbox/spinalcordtoolbox/blob/6.3/spinalcordtoolbox/image.py#L1217
+    if "int" in np.dtype(image_data_dtype).name:
+        # get min/max from output type
+        min_out = np.iinfo(image_data_dtype).min
+        max_out = np.iinfo(image_data_dtype).max
+        min_in = output_image_data.min()
+        max_in = output_image_data.max()
+        if (min_in < min_out) or (max_in > max_out):
+            data_rescaled = output_image_data * (max_out - min_out) / (max_in - min_in)
+            output_image_data = data_rescaled - (data_rescaled.min() - min_out)
 
     output_image_path = output_images_path / image_path.relative_to(images_path).parent / image_path.name.replace(f'{image_suffix}.nii.gz', f'{output_image_suffix}.nii.gz')
-    output_seg_path = output_segs_path / image_path.relative_to(images_path).parent / seg_path.name.replace(f'{seg_suffix}.nii.gz', f'{output_seg_suffix}.nii.gz')
 
-    temp_path = Path(tempfile.mkdtemp())
+    # Make sure output directory exists and save with original header image dtype
     output_image_path.parent.mkdir(parents=True, exist_ok=True)
-    output_seg_path.parent.mkdir(parents=True, exist_ok=True)
-
-    try:
-
-        # Copy files to tmp in canonial orientation
-        run_command(f'sct_image -i {image_path} -setorient LPI -o {temp_path}/img.nii.gz')
-        run_command(f'sct_image -i {seg_path} -setorient LPI -o {temp_path}/seg.nii.gz')
-
-        # Ensure img and seg in the same space
-        run_command(f'sct_register_multimodal -i {temp_path}/seg.nii.gz -d {temp_path}/img.nii.gz -identity 1 -x nn -o {temp_path}/seg.nii.gz')
-        
-        seg = nib.load(f'{temp_path}/seg.nii.gz')
-        seg_data = np.asanyarray(seg.dataobj).round().astype(np.uint8)
-        
-        # Create an array of z indices
-        z_indices = np.tile(np.arange(seg_data.shape[2]), (seg_data.shape[0], seg_data.shape[1], 1))
-        # Create an array of y indices
-        y_indices = np.broadcast_to(np.arange(seg_data.shape[1])[..., np.newaxis], seg_data.shape)
-
-        if not from_bottom:
-            # Cut at the z of the most anteior voxel the lowest vertebrae in the image
-            last_vert = seg_data[(18 <= seg_data) & (seg_data <= 41)].min()
-            zmin = -1
-            # Get the z - loop to fine the most inferior possible z with spinal canal (label 201). 
-            while zmin == -1 or 201 not in seg_data[..., zmin]:
-                zmin = z_indices[(seg_data == last_vert) & (y_indices == y_indices[seg_data == last_vert].max())].min()
-                last_vert += 1
-            run_command(f'sct_crop_image -i {temp_path}/img.nii.gz -zmin {zmin} -o {temp_path}/img.nii.gz')
-            run_command(f'sct_crop_image -i {temp_path}/seg.nii.gz -zmin {zmin} -o {temp_path}/seg.nii.gz')
-        elif 207 in seg_data:
-            # Cut at the lowest voxel of T12-L1 IVD
-            zmax = z_indices[seg_data == 207].min()
-            run_command(f'sct_crop_image -i {temp_path}/img.nii.gz -zmax {zmax} -o {temp_path}/img.nii.gz')
-            run_command(f'sct_crop_image -i {temp_path}/seg.nii.gz -zmax {zmax} -o {temp_path}/seg.nii.gz')
-
-        # Copy files from tmp to output destination
-        shutil.copy(str(temp_path / 'img.nii.gz'), str(output_image_path))
-        shutil.copy(str(temp_path / 'seg.nii.gz'), str(output_seg_path))
-    finally:
-        shutil.rmtree(temp_path)
-
-def run_command(command):
-    result = subprocess.run(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    # print(result.stdout)
-    # print(result.stderr)
+    output_image = nib.Nifti1Image(output_image_data.astype(image_data_dtype), subject.image.affine, image.header)
+    output_image.set_qform(subject.image.affine)
+    output_image.set_sform(subject.image.affine)
+    output_image.set_data_dtype(image_data_dtype)
+    nib.save(output_image, output_image_path)
 
 if __name__ == '__main__':
     main()

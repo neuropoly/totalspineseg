@@ -19,9 +19,9 @@ def main():
         '''),
         epilog=textwrap.dedent('''
             Examples:
-            generate_labels_sequential -s labels_init -o labels --sacrum-labels 14 --csf-labels 16 --sc-labels 17 --disc-labels 2 3 4 5 6 7 --vertebrea-labels 9 10 11 12 13 14 --init-disc 4:224 7:202 5:219 6:207 --init-vertebrae 11:40 14:17 12:34 13:23 --step-diff-label --step-diff-disc
+            iterative_label -s labels_init -o labels --sacrum-labels 14 --csf-labels 16 --sc-labels 17 --disc-labels 2 3 4 5 6 7 --vertebrea-labels 9 10 11 12 13 14 --init-disc 4:224 7:202 5:219 6:207 --init-vertebrae 11:40 14:17 12:34 13:23 --step-diff-label --step-diff-disc
             For BIDS:
-            generate_labels_sequential -s derivatives/labels -o derivatives/labels --sacrum-labels 14 --csf-labels 16 --sc-labels 17 --disc-labels 2 3 4 5 6 7 --vertebrea-labels 9 10 11 12 13 14 --init-disc 4:224 7:202 5:219 6:207 --init-vertebrae 11:40 14:17 12:34 13:23 --step-diff-label --step-diff-disc --seg-suffix "_seg" --output-seg-suffix "_seg_seq" -d "sub-" -u "anat"
+            iterative_label -s derivatives/labels -o derivatives/labels --sacrum-labels 14 --csf-labels 16 --sc-labels 17 --disc-labels 2 3 4 5 6 7 --vertebrea-labels 9 10 11 12 13 14 --init-disc 4:224 7:202 5:219 6:207 --init-vertebrae 11:40 14:17 12:34 13:23 --step-diff-label --step-diff-disc --seg-suffix "_seg" --output-seg-suffix "_seg_seq" -d "sub-" -u "anat"
         '''),
         formatter_class=argparse.RawTextHelpFormatter
     )
@@ -211,8 +211,8 @@ def main():
     segs_path_list = list(segs_path.glob(glob_pattern))
 
     # Create a partially-applied function with the extra arguments
-    partial_generate_labels_sequential = partial(
-        generate_labels_sequential,
+    partial_iterative_label = partial(
+        iterative_label,
         segs_path=segs_path,
         output_path=output_path,
         seg_suffix=seg_suffix,
@@ -236,10 +236,10 @@ def main():
    )
 
     with mp.Pool() as pool:
-        process_map(partial_generate_labels_sequential, segs_path_list, max_workers=max_workers)
+        process_map(partial_iterative_label, segs_path_list, max_workers=max_workers)
     
 
-def generate_labels_sequential(
+def iterative_label(
             seg_path,
             segs_path,
             output_path,

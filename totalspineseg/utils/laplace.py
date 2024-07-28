@@ -20,9 +20,9 @@ def main():
         ),
         epilog=textwrap.dedent('''
             Examples:
-            generate_laplace_images -i images -o images
+            laplace -i images -o images
             For BIDS:
-            generate_laplace_images -i . -o . --image-suffix "" --output-image-suffix "_laplace" -d "sub-" -u "anat"
+            laplace -i . -o . --image-suffix "" --output-image-suffix "_laplace" -d "sub-" -u "anat"
         '''),
         formatter_class=argparse.RawTextHelpFormatter
     )
@@ -110,8 +110,8 @@ def main():
     images_path_list = list(images_path.glob(glob_pattern))
 
     # Create a partially-applied function with the extra arguments
-    partial_generate_laplace_images = partial(
-        generate_laplace_images,
+    partial_laplace = partial(
+        laplace,
         images_path=images_path,
         output_images_path=output_images_path,
         image_suffix=image_suffix,
@@ -119,10 +119,10 @@ def main():
     )
 
     with mp.Pool() as pool:
-        process_map(partial_generate_laplace_images, images_path_list, max_workers=max_workers)
+        process_map(partial_laplace, images_path_list, max_workers=max_workers)
 
 
-def generate_laplace_images(
+def laplace(
         image_path,
         images_path,
         output_images_path,

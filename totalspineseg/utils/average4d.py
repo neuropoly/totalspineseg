@@ -15,13 +15,13 @@ def main():
     # Description and arguments
     parser = argparse.ArgumentParser(
         description=textwrap.dedent(f'''
-        This script processes NIfTI (Neuroimaging Informatics Technology Initiative) images and make sure affine is in sform and qform.'''
+        This script processes NIfTI (Neuroimaging Informatics Technology Initiative) images and average 4D images last dimension to 3D image.'''
         ),
         epilog=textwrap.dedent('''
             Examples:
-            transform_norm -i images -o images
+            average4d -i images -o images
             For BIDS:
-            transform_norm -i . -o . --image-suffix "" --output-image-suffix "" -d "sub-" -u "anat"
+            average4d -i . -o . --image-suffix "" --output-image-suffix "" -d "sub-" -u "anat"
         '''),
         formatter_class=argparse.RawTextHelpFormatter
     )
@@ -109,8 +109,8 @@ def main():
     images_path_list = list(images_path.glob(glob_pattern))
 
     # Create a partially-applied function with the extra arguments
-    partial_transform_norm = partial(
-        transform_norm,
+    partial_average4d = partial(
+        average4d,
         images_path=images_path,
         output_path=output_path,
         image_suffix=image_suffix,
@@ -118,10 +118,10 @@ def main():
     )
 
     with mp.Pool() as pool:
-        process_map(partial_transform_norm, images_path_list, max_workers=max_workers)
+        process_map(partial_average4d, images_path_list, max_workers=max_workers)
 
 
-def transform_norm(
+def average4d(
         image_path,
         images_path,
         output_path,
@@ -132,14 +132,13 @@ def transform_norm(
     output_image_path = output_path / image_path.relative_to(images_path).parent / image_path.name.replace(f'{image_suffix}.nii.gz', f'{output_suffix}.nii.gz')
     
     image = nib.load(image_path)
-    
-    # Get the data type of the image
-    image_data_dtype = getattr(np, np.asanyarray(image.dataobj).dtype.name)
+    image_data = np.asanyarray(image.dataobj)
+    image_data_dtype = getattr(np, image_data.dtype.name)
+    image_data = image_data.astype(np.float64)
 
-    # Transform the image to the closest canonical orientation
-    image = nib.as_closest_canonical(image)
-
-    image_data = np.asanyarray(image.dataobj).astype(np.float64)
+    # Average the last dimension
+    if len(image_data.shape) == 4:
+        image_data = np.mean(image_data, axis=-1)
 
     # Rescale the image to the output data type if necessary
     # code from https://github.com/spinalcordtoolbox/spinalcordtoolbox/blob/6.3/spinalcordtoolbox/image.py#L1217

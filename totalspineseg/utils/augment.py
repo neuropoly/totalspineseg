@@ -25,9 +25,9 @@ def main():
         ),
         epilog=textwrap.dedent('''
             Examples:
-            generate_augmentations -i images -s labels -o images -g labels --labels2image --seg-classes 202-224 18-41,92 200 201
+            augment -i images -s labels -o images -g labels --labels2image --seg-classes 202-224 18-41,92 200 201
             For BIDS:
-            generate_augmentations -i . -s derivatives/labels -o . -g derivatives/labels --image-suffix "" --output-image-suffix "" --seg-suffix "_seg" --output-seg-suffix "_seg" -d "sub-" -u "anat" --labels2image --seg-classes 202-224 18-41,92 200 201
+            augment -i . -s derivatives/labels -o . -g derivatives/labels --image-suffix "" --output-image-suffix "" --seg-suffix "_seg" --output-seg-suffix "_seg" -d "sub-" -u "anat" --labels2image --seg-classes 202-224 18-41,92 200 201
         '''),
         formatter_class=argparse.RawTextHelpFormatter
     )
@@ -157,8 +157,8 @@ def main():
     images_path_list = list(images_path.glob(glob_pattern))
 
     # Create a partially-applied function with the extra arguments
-    partial_generate_augmentations = partial(
-        generate_augmentations,
+    partial_augment = partial(
+        augment,
         images_path=images_path,
         segs_path=segs_path,
         output_images_path=output_images_path,
@@ -173,10 +173,10 @@ def main():
     )
 
     with mp.Pool() as pool:
-        process_map(partial_generate_augmentations, images_path_list, max_workers=max_workers)
+        process_map(partial_augment, images_path_list, max_workers=max_workers)
 
 
-def generate_augmentations(
+def augment(
         image_path,
         images_path,
         segs_path,

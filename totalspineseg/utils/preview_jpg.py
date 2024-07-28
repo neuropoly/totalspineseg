@@ -24,9 +24,9 @@ def main():
         ),
         epilog=textwrap.dedent('''
             Examples:
-            generate_seg_jpg -i images -s labels -o preview
+            preview_jpg -i images -s labels -o preview
             For BIDS:
-            generate_seg_jpg -i . -s derivatives/labels -o derivatives/preview --seg-suffix "_seg" -d "sub-" -u "anat"
+            preview_jpg -i . -s derivatives/labels -o derivatives/preview --seg-suffix "_seg" -d "sub-" -u "anat"
         '''),
         formatter_class=argparse.RawTextHelpFormatter
     )
@@ -144,8 +144,8 @@ def main():
     images_path_list = [_ for __ in [list(images_path.glob(f'{glob_pattern}.{e}')) for e in EXT] for _ in __]
 
     # Create a partially-applied function with the extra arguments
-    partial_generate_seg_jpg = partial(
-        generate_seg_jpg,
+    partial_preview_jpg = partial(
+        preview_jpg,
         segs_path=segs_path,
         images_path=images_path,
         output_path=output_path,
@@ -158,10 +158,10 @@ def main():
     )
 
     with mp.Pool() as pool:
-        process_map(partial_generate_seg_jpg, images_path_list, max_workers=max_workers)
+        process_map(partial_preview_jpg, images_path_list, max_workers=max_workers)
     
 
-def generate_seg_jpg(image_path, segs_path, images_path, output_path, seg_suffix, image_suffix, output_suffix, orient, sliceloc, override):
+def preview_jpg(image_path, segs_path, images_path, output_path, seg_suffix, image_suffix, output_suffix, orient, sliceloc, override):
 
     image_ext = [e for e in EXT if image_path.name.endswith(e)][0]
     output_image_path = output_path / image_path.relative_to(images_path).parent / image_path.name.replace(f'{image_suffix}.{image_ext}', f'_{orient}_{sliceloc}{output_suffix}.jpg')

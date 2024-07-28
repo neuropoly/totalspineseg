@@ -77,13 +77,13 @@ for f in "$nnUNet_raw"/$SRC_DATASET/imagesTr/*.nii.gz; do if [ ! -f "$nnUNet_raw
 for f in "$nnUNet_raw"/$SRC_DATASET/labelsTr/*.nii.gz; do if [ ! -f "$nnUNet_raw"/$SRC_DATASET/imagesTr/$(basename ${f/.nii.gz/_0000.nii.gz}) ]; then rm $f; fi; done
 
 echo "Convert 4D images to 3D"
-totalspineseg_generate_averaged4d -i "$nnUNet_raw"/$SRC_DATASET/imagesTr -o "$nnUNet_raw"/$SRC_DATASET/imagesTr
+totalspineseg_average4d -i "$nnUNet_raw"/$SRC_DATASET/imagesTr -o "$nnUNet_raw"/$SRC_DATASET/imagesTr
 
 echo "Transform images to canonical space"
-totalspineseg_transform_norm -i "$nnUNet_raw"/$SRC_DATASET/imagesTr -o "$nnUNet_raw"/$SRC_DATASET/imagesTr
+totalspineseg_transform_canonical -i "$nnUNet_raw"/$SRC_DATASET/imagesTr -o "$nnUNet_raw"/$SRC_DATASET/imagesTr
 
 echo "Resample images to 1x1x1mm"
-totalspineseg_generate_resampled_images -i "$nnUNet_raw"/$SRC_DATASET/imagesTr -o "$nnUNet_raw"/$SRC_DATASET/imagesTr
+totalspineseg_resample -i "$nnUNet_raw"/$SRC_DATASET/imagesTr -o "$nnUNet_raw"/$SRC_DATASET/imagesTr
 
 echo "Transform labels to images space"
 totalspineseg_transform_labels2images -i "$nnUNet_raw"/$SRC_DATASET/imagesTr -s "$nnUNet_raw"/$SRC_DATASET/labelsTr -o "$nnUNet_raw"/$SRC_DATASET/labelsTr
@@ -113,7 +113,7 @@ done
 
 if [ $NOAUG -eq 0 ]; then
     echo "Generate augmentations"
-    totalspineseg_generate_augmentations -i "$nnUNet_raw"/$SRC_DATASET/imagesTr -s "$nnUNet_raw"/$SRC_DATASET/labelsTr -o "$nnUNet_raw"/Dataset100_TotalSpineSeg_Aug/imagesTr -g "$nnUNet_raw"/Dataset100_TotalSpineSeg_Aug/labelsTr --labels2image --seg-classes 202-224 18-41,92 200 201
+    totalspineseg_augment -i "$nnUNet_raw"/$SRC_DATASET/imagesTr -s "$nnUNet_raw"/$SRC_DATASET/labelsTr -o "$nnUNet_raw"/Dataset100_TotalSpineSeg_Aug/imagesTr -g "$nnUNet_raw"/Dataset100_TotalSpineSeg_Aug/labelsTr --labels2image --seg-classes 202-224 18-41,92 200 201
     totalspineseg_cpdir "$nnUNet_raw"/$SRC_DATASET "$nnUNet_raw"/Dataset100_TotalSpineSeg_Aug -p "*Ts/*.nii.gz"
     totalspineseg_transform_labels2images -i "$nnUNet_raw"/Dataset100_TotalSpineSeg_Aug/imagesTr -s "$nnUNet_raw"/Dataset100_TotalSpineSeg_Aug/labelsTr -o "$nnUNet_raw"/Dataset100_TotalSpineSeg_Aug/labelsTr
     SRC_DATASET=Dataset100_TotalSpineSeg_Aug
