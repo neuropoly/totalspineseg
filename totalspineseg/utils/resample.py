@@ -81,6 +81,10 @@ def main():
         help='The target voxel size in mm. Can accept 1 or 3 parameters for x, y, z. Default is 1mm.'
     )
     parser.add_argument(
+        '--override', '-r', action="store_true", default=False,
+        help='Override existing output files, defaults to false (Do not override).'
+    )
+    parser.add_argument(
         '--max-workers', '-w', type=int, default=mp.cpu_count(),
         help='Max worker to run in parallel proccess, defaults to multiprocessing.cpu_count().'
     )
@@ -108,6 +112,7 @@ def main():
     output_image_suffix = args.output_image_suffix
     output_seg_suffix = args.output_seg_suffix
     mm = tuple(args.mm if len (args.mm) == 3 else [args.mm[0]] * 3)
+    override = args.override
     max_workers = args.max_workers
     verbose = args.verbose
     
@@ -127,9 +132,14 @@ def main():
             output_image_suffix = "{output_image_suffix}"
             output_seg_suffix = "{output_seg_suffix}"
             mm = {mm}
+            override = {override}
             max_workers = {max_workers}
             verbose = {verbose}
         '''))
+
+    if segs_path and not output_segs_path:
+        print('--output-segs-dir is required when --segs-dir is provided.')
+        return
 
     glob_pattern = ""
     if subject_dir is not None:
@@ -153,6 +163,7 @@ def main():
         output_image_suffix=output_image_suffix,
         output_seg_suffix=output_seg_suffix,
         mm=mm,
+        override=override,
     )
 
     with mp.Pool() as pool:
@@ -170,15 +181,23 @@ def resample(
         output_image_suffix,
         output_seg_suffix,
         mm,
+        override,
     ):
-    
+
+    output_image_path = output_images_path / image_path.relative_to(images_path).parent / image_path.name.replace(f'{image_suffix}.nii.gz', f'{output_image_suffix}.nii.gz')
+    seg_path = segs_path and segs_path / image_path.relative_to(images_path).parent /  image_path.name.replace(f'{image_suffix}.nii.gz', f'{seg_suffix}.nii.gz')
+    output_seg_path = segs_path and output_segs_path / image_path.relative_to(images_path).parent / seg_path.name.replace(f'{seg_suffix}.nii.gz', f'{output_seg_suffix}.nii.gz')
+
+    # If the output image already exists and we are not overriding it, return
+    if not override and output_image_path.exists() and (not output_seg_path or output_image_path.exists()):
+        return
+
     image = nib.load(image_path)
     image_data = np.asanyarray(image.dataobj)
     image_data_dtype = getattr(np, image_data.dtype.name)
     image_data = image_data.astype(np.float64)
-    
-    if segs_path:
-        seg_path = segs_path / image_path.relative_to(images_path).parent /  image_path.name.replace(f'{image_suffix}.nii.gz', f'{seg_suffix}.nii.gz')
+
+    if segs_path and (override or not output_seg_path.exists()):
         seg = nib.load(seg_path)
         seg_data = np.asanyarray(seg.dataobj).round().astype(np.uint8)
 
@@ -189,8 +208,6 @@ def resample(
         ))
         output_image_data, output_seg_data = subject.image.data.numpy()[0, ...].astype(np.float64), subject.seg.data.numpy()[0, ...].astype(np.uint8)
         
-        output_seg_path = output_segs_path / image_path.relative_to(images_path).parent / seg_path.name.replace(f'{seg_suffix}.nii.gz', f'{output_seg_suffix}.nii.gz')
-
         # Make sure output directory exists and save
         output_seg_path.parent.mkdir(parents=True, exist_ok=True)
         output_seg = nib.Nifti1Image(output_seg_data, subject.seg.affine, seg.header)
@@ -206,6 +223,10 @@ def resample(
         ))
         output_image_data = subject.image.data.numpy()[0, ...].astype(np.float64)
 
+    # If the output image already exists and we are not overriding it, return
+    if not override and output_image_path.exists():
+        return
+
     # Rescale the image to the output data type if necessary
     # code from https://github.com/spinalcordtoolbox/spinalcordtoolbox/blob/6.3/spinalcordtoolbox/image.py#L1217
     if "int" in np.dtype(image_data_dtype).name:
@@ -217,8 +238,6 @@ def resample(
         if (min_in < min_out) or (max_in > max_out):
             data_rescaled = output_image_data * (max_out - min_out) / (max_in - min_in)
             output_image_data = data_rescaled - (data_rescaled.min() - min_out)
-
-    output_image_path = output_images_path / image_path.relative_to(images_path).parent / image_path.name.replace(f'{image_suffix}.nii.gz', f'{output_image_suffix}.nii.gz')
 
     # Make sure output directory exists and save with original header image dtype
     output_image_path.parent.mkdir(parents=True, exist_ok=True)

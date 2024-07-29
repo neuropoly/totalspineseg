@@ -82,6 +82,10 @@ def main():
         help='If the output file already exists, add the mapped input labels to the existing output labels before saving (the labels from the input are prioritized). Defaults to false (overwrite the output file).'
     )
     parser.add_argument(
+        '--override', '-r', action="store_true", default=False,
+        help='Override existing output files, defaults to false (Do not override).'
+    )
+    parser.add_argument(
         '--max-workers', '-w', type=int, default=mp.cpu_count(),
         help='Max worker to run in parallel proccess, defaults to multiprocessing.cpu_count().'
     )
@@ -107,6 +111,7 @@ def main():
     default_input = args.default_input
     add_output = args.add_output
     add_input = args.add_input
+    override = args.override
     max_workers = args.max_workers
     verbose = args.verbose
 
@@ -124,6 +129,7 @@ def main():
             default_input = {default_input}
             add_output = {add_output}
             add_input = {add_input}
+            override = {override}
             max_workers = {max_workers}
             verbose = {verbose}
         '''))
@@ -150,15 +156,41 @@ def main():
     segs_path_list = list(segs_path.glob(glob_pattern))
 
     # Create a partially-applied function with the extra arguments
-    partial_map_seg = partial(map_seg, segs_path=segs_path, map_dict=map_dict, output_path=output_path, seg_suffix=seg_suffix, output_seg_suffix=output_seg_suffix, add_output=add_output, add_input=add_input, default_input=default_input)
+    partial_map_labels = partial(
+        map_labels,
+        segs_path=segs_path,
+        map_dict=map_dict,
+        output_path=output_path,
+        seg_suffix=seg_suffix,
+        output_seg_suffix=output_seg_suffix,
+        add_output=add_output,
+        add_input=add_input,
+        default_input=default_input,
+        override=override,
+    )
 
     with mp.Pool() as pool:
-        process_map(partial_map_seg, segs_path_list, max_workers=max_workers)
+        process_map(partial_map_labels, segs_path_list, max_workers=max_workers)
     
 
-def map_seg(seg_path, segs_path, map_dict, output_path, seg_suffix, output_seg_suffix, add_output, add_input, default_input):
+def map_labels(
+        seg_path,
+        segs_path,
+        map_dict,
+        output_path,
+        seg_suffix,
+        output_seg_suffix,
+        add_output,
+        add_input,
+        default_input,
+        override,
+    ):
     
     output_seg_path = output_path / seg_path.relative_to(segs_path).parent / seg_path.name.replace(f'{seg_suffix}.nii.gz', f'{output_seg_suffix}.nii.gz')
+
+    # If the output image already exists and we are not overriding it, return
+    if not override and output_seg_path.exists():
+        return
 
     # Load segmentation
     seg = nib.load(seg_path)

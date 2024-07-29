@@ -130,6 +130,10 @@ def main():
         '''),
     )
     parser.add_argument(
+        '--override', '-r', action="store_true", default=False,
+        help='Override existing output files, defaults to false (Do not override).'
+    )
+    parser.add_argument(
         '--max-workers', '-w', type=int, default=mp.cpu_count(),
         help='Max worker to run in parallel proccess, defaults to multiprocessing.cpu_count().'
     )
@@ -167,6 +171,7 @@ def main():
     combine_before_label = args.combine_before_label
     step_diff_label = args.step_diff_label
     step_diff_disc = args.step_diff_disc
+    override = args.override
     max_workers = args.max_workers
     verbose = args.verbose
 
@@ -196,6 +201,7 @@ def main():
             combine_before_label = {combine_before_label}
             step_diff_label = {step_diff_label}
             step_diff_disc = {step_diff_disc}
+            override = {override}
             max_workers = {max_workers}
             verbose = {verbose}
         '''))
@@ -233,6 +239,7 @@ def main():
         combine_before_label=combine_before_label,
         step_diff_label=step_diff_label,
         step_diff_disc=step_diff_disc,
+        override=override,
    )
 
     with mp.Pool() as pool:
@@ -240,30 +247,35 @@ def main():
     
 
 def iterative_label(
-            seg_path,
-            segs_path,
-            output_path,
-            seg_suffix,
-            output_seg_suffix,
-            disc_labels,
-            init_disc,
-            output_disc_step,
-            vertebrea_labels,
-            init_vertebrae,
-            output_vertebrea_step,
-            sacrum_labels,
-            output_sacrum_label,
-            csf_labels,
-            output_csf_label,
-            sc_labels,
-            output_sc_label,
-            dilation_size,
-            combine_before_label,
-            step_diff_label,
-            step_diff_disc,
-        ):
+        seg_path,
+        segs_path,
+        output_path,
+        seg_suffix,
+        output_seg_suffix,
+        disc_labels,
+        init_disc,
+        output_disc_step,
+        vertebrea_labels,
+        init_vertebrae,
+        output_vertebrea_step,
+        sacrum_labels,
+        output_sacrum_label,
+        csf_labels,
+        output_csf_label,
+        sc_labels,
+        output_sc_label,
+        dilation_size,
+        combine_before_label,
+        step_diff_label,
+        step_diff_disc,
+        override,
+    ):
     
     output_seg_path = output_path / seg_path.relative_to(segs_path).parent / seg_path.name.replace(f'{seg_suffix}.nii.gz', f'{output_seg_suffix}.nii.gz')
+
+    # If the output image already exists and we are not overriding it, return
+    if not override and output_seg_path.exists():
+        return
 
     # Load segmentation
     seg = nib.load(seg_path)
@@ -300,6 +312,7 @@ def iterative_label(
 
         # If no label found, print error
         if num_labels == 0:
+            output_seg_path.is_file() and output_seg_path.unlink()
             print(f"Error: {seg_path}, some label must be in the segmentation (labels: {labels})")
             return
 
@@ -360,6 +373,7 @@ def iterative_label(
 
         # If no init label found, print error
         if first_label == 0:
+            output_seg_path.is_file() and output_seg_path.unlink()
             print(f"Error: {seg_path}, some initiation label must be in the segmentation (init: {list(init.keys())})")
             return
 

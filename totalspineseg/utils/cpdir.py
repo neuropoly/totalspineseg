@@ -19,8 +19,8 @@ def main():
         epilog=textwrap.dedent('''
             Examples:
             cpdir src dst
-            cpdir src dst -p "*w_0000.nii.gz" "*w.nii.gz" -f
-            cpdir src dst -p "*"
+            cpdir src dst -p "*w_0000.nii.gz" "*w.nii.gz" -f -t sub-:sub-SINGLE .nii.gz:_0000.nii.gz
+            cpdir src dst -p "*" -r
         '''),
         formatter_class=argparse.RawTextHelpFormatter
     )
@@ -41,11 +41,15 @@ def main():
         help='Put files in destination folder directly without keeping the source subfolders, defaults to false (keep source subfolders).'
     )
     parser.add_argument(
-        '--replace', '-r', type=lambda x:x.split(':'), nargs='+', default=[],
+        '--replace', '-t', type=lambda x:x.split(':'), nargs='+', default=[],
         help=textwrap.dedent('''
             Replace string in the destination path befor copying using regex. (e.g. -r "_w.nii.gz:_w_0001.nii.gz").
             Notice that the replacment is done on the full path.
         ''')
+    )
+    parser.add_argument(
+        '--override', '-r', action="store_true", default=False,
+        help='Override existing output files, defaults to false (Do not override).'
     )
     parser.add_argument(
         '--max-workers', '-w', type=int, default=mp.cpu_count(),
@@ -68,6 +72,7 @@ def main():
     pattern = args.pattern
     flat = args.flat
     replace = dict(args.replace)
+    override = args.override
     max_workers = args.max_workers
     verbose = args.verbose
 
@@ -80,6 +85,7 @@ def main():
             pattern = {pattern}
             flat = {flat}
             replace = {replace}
+            override = {override}
             max_workers = {max_workers}
             verbose = {verbose}
         '''))
@@ -94,21 +100,35 @@ def main():
         dst=dst,
         flat=flat,
         replace=replace,
+        override=override,
     )
 
     with mp.Pool() as pool:
         process_map(partial_cpdir, files_path_list, max_workers=max_workers)
 
 
-def cpdir(file_path, src, dst, flat, replace):
+def cpdir(
+        file_path,
+        src,
+        dst,
+        flat,
+        replace,
+        override,
+    ):
 
     if flat:
         dst_file_path = dst / file_path.name
     else:
         dst_file_path = dst / file_path.relative_to(src)
+
     # Replace all regex patterns in replace list
     for k, v in replace.items():
         dst_file_path = Path(re.sub(k, v, str(dst_file_path)))
+
+    # If the output already exists and we are not overriding it, return
+    if not override and dst_file_path.exists():
+        return
+
     # Make sure dst directory exists and copy
     dst_file_path.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(file_path, dst_file_path)

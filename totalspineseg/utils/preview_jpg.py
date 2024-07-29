@@ -161,13 +161,24 @@ def main():
         process_map(partial_preview_jpg, images_path_list, max_workers=max_workers)
     
 
-def preview_jpg(image_path, segs_path, images_path, output_path, seg_suffix, image_suffix, output_suffix, orient, sliceloc, override):
+def preview_jpg(
+        image_path,
+        segs_path,
+        images_path,
+        output_path,
+        seg_suffix,
+        image_suffix,
+        output_suffix,
+        orient,
+        sliceloc,
+        override,
+    ):
 
     image_ext = [e for e in EXT if image_path.name.endswith(e)][0]
     output_image_path = output_path / image_path.relative_to(images_path).parent / image_path.name.replace(f'{image_suffix}.{image_ext}', f'_{orient}_{sliceloc}{output_suffix}.jpg')
 
     # Check if the output file exists and if the override flag is set to 0
-    if output_image_path.exists() and not override:
+    if not override and output_image_path.exists():
         return
 
     try:

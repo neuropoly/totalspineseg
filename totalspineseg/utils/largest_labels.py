@@ -67,6 +67,10 @@ def main():
         help='Number of voxels to dilate the segmentation before taking the largest component, defaults to 0 (no dilation).'
     )
     parser.add_argument(
+        '--override', '-r', action="store_true", default=False,
+        help='Override existing output files, defaults to false (Do not override).'
+    )
+    parser.add_argument(
         '--max-workers', '-w', type=int, default=mp.cpu_count(),
         help='Max worker to run in parallel proccess, defaults to multiprocessing.cpu_count().'
     )
@@ -90,6 +94,7 @@ def main():
     output_seg_suffix = args.output_seg_suffix
     binarize = args.binarize
     dilate = args.dilate
+    override = args.override
     max_workers = args.max_workers
     verbose = args.verbose
 
@@ -105,6 +110,7 @@ def main():
             output_seg_suffix = "{output_seg_suffix}"
             binarize = {binarize}
             dilate = {dilate}
+            override = {override}
             max_workers = {max_workers}
             verbose = {verbose}
         '''))
@@ -128,6 +134,7 @@ def main():
         output_seg_suffix=output_seg_suffix,
         binarize=binarize,
         dilate=dilate,
+        override=override,
    )
 
     with mp.Pool() as pool:
@@ -135,16 +142,21 @@ def main():
     
 
 def largest_labels(
-            seg_path,
-            segs_path,
-            output_path,
-            seg_suffix,
-            output_seg_suffix,
-            binarize,
-            dilate,
-        ):
+        seg_path,
+        segs_path,
+        output_path,
+        seg_suffix,
+        output_seg_suffix,
+        binarize,
+        dilate,
+        override,
+    ):
     
     output_seg_path = output_path / seg_path.relative_to(segs_path).parent / seg_path.name.replace(f'{seg_suffix}.nii.gz', f'{output_seg_suffix}.nii.gz')
+
+    # If the output image already exists and we are not overriding it, return
+    if not override and output_seg_path.exists():
+        return
 
     # Load segmentation
     seg = nib.load(seg_path)

@@ -58,6 +58,10 @@ def main():
         help='Image suffix for output, defaults to "_0000".'
     )
     parser.add_argument(
+        '--override', '-r', action="store_true", default=False,
+        help='Override existing output files, defaults to false (Do not override).'
+    )
+    parser.add_argument(
         '--max-workers', '-w', type=int, default=mp.cpu_count(),
         help='Max worker to run in parallel proccess, defaults to multiprocessing.cpu_count().'
     )
@@ -80,6 +84,7 @@ def main():
     prefix = args.prefix
     image_suffix = args.image_suffix
     output_suffix = args.output_suffix
+    override = args.override
     max_workers = args.max_workers
     verbose = args.verbose
     
@@ -94,6 +99,7 @@ def main():
             prefix = "{prefix}"
             image_suffix = "{image_suffix}"
             output_suffix = "{output_suffix}"
+            override = {override}
             max_workers = {max_workers}
             verbose = {verbose}
         '''))
@@ -115,6 +121,7 @@ def main():
         output_path=output_path,
         image_suffix=image_suffix,
         output_suffix=output_suffix,
+        override=override,
     )
 
     with mp.Pool() as pool:
@@ -127,10 +134,15 @@ def average4d(
         output_path,
         image_suffix,
         output_suffix,
+        override,
     ):
 
     output_image_path = output_path / image_path.relative_to(images_path).parent / image_path.name.replace(f'{image_suffix}.nii.gz', f'{output_suffix}.nii.gz')
-    
+
+    # If the output image already exists and we are not overriding it, return
+    if not override and output_image_path.exists():
+        return
+
     image = nib.load(image_path)
     image_data = np.asanyarray(image.dataobj)
     image_data_dtype = getattr(np, image_data.dtype.name)

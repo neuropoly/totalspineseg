@@ -92,6 +92,10 @@ def main():
         help='Define classes of labels for per class augmentation. Example: 202-224 18-41,92 200 201 for IVDs, vertebrae, disc, csf (Default to use each label as a separate class ).'
     )
     parser.add_argument(
+        '--override', '-r', action="store_true", default=False,
+        help='If provided, override existing output files, defaults to false (Do not override).'
+    )
+    parser.add_argument(
         '--max-workers', '-w', type=int, default=mp.cpu_count(),
         help='Max worker to run in parallel proccess, defaults to multiprocessing.cpu_count().'
     )
@@ -121,6 +125,7 @@ def main():
     augmentations_per_image = args.augmentations_per_image
     labels2image = args.labels2image
     seg_classes = args.seg_classes
+    override = args.override
     max_workers = args.max_workers
     verbose = args.verbose
     
@@ -142,6 +147,7 @@ def main():
             augmentations_per_image = {augmentations_per_image}
             labels2image = {labels2image}
             seg_classes = {seg_classes}
+            override = {override}
             max_workers = {max_workers}
             verbose = {verbose}
         '''))
@@ -170,6 +176,7 @@ def main():
         augmentations_per_image=augmentations_per_image,
         labels2image=labels2image,
         seg_classes=seg_classes,
+        override=override,
     )
 
     with mp.Pool() as pool:
@@ -189,11 +196,19 @@ def augment(
         augmentations_per_image,
         labels2image,
         seg_classes,
+        override,
     ):
     
     seg_path = segs_path / image_path.relative_to(images_path).parent /  image_path.name.replace(f'{image_suffix}.nii.gz', f'{seg_suffix}.nii.gz')
+    output_image_path_pattern = output_images_path / image_path.relative_to(images_path).parent / image_path.name.replace(f'{image_suffix}.nii.gz', f'_a*{output_image_suffix}.nii.gz')
+    output_seg_path_pattern = output_segs_path / image_path.relative_to(images_path).parent / seg_path.name.replace(f'{seg_suffix}.nii.gz', f'_a*{output_seg_suffix}.nii.gz')
     
     if not seg_path.is_file():
+        if override:
+            for f in output_image_path_pattern.parent.glob(output_image_path_pattern.name):
+                f.unlink()
+            for f in output_seg_path_pattern.parent.glob(output_seg_path_pattern.name):
+                f.unlink()
         print(f'Segmentation file not found: {seg_path}')
         return
     
@@ -205,8 +220,12 @@ def augment(
     seg_data = np.asanyarray(seg.dataobj).round().astype(np.uint8)
 
     for i in range(augmentations_per_image):
-        output_image_path = output_images_path / image_path.relative_to(images_path).parent / image_path.name.replace(f'{image_suffix}.nii.gz', f'_a{i}{output_image_suffix}.nii.gz')
-        output_seg_path = output_segs_path / image_path.relative_to(images_path).parent / seg_path.name.replace(f'{seg_suffix}.nii.gz', f'_a{i}{output_seg_suffix}.nii.gz')
+        output_image_path = output_image_path_pattern.with_name(output_image_path_pattern.name.replace('*', f'{i}'))
+        output_seg_path = output_seg_path_pattern.with_name(output_seg_path_pattern.name.replace('*', f'{i}'))
+
+        # If the output image already exists and we are not overriding it, continue
+        if not override and (output_image_path.exists() or output_seg_path.exists()):
+            continue
 
         _aug_redistribute_seg = partial(aug_redistribute_seg, classes=seg_classes)
         _aug_labels2image = partial(aug_labels2image, classes=seg_classes)

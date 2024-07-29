@@ -72,12 +72,12 @@ def main():
         help='Image suffix for output, defaults to "_0000".'
     )
     parser.add_argument(
-        '--margin', '-m', type=int, default=10,
-        help='Margin to add to the cropped region, defaults to 10.'
+        '--margin', '-m', type=int, default=0,
+        help='Margin to add to the cropped region, defaults to 0.'
     )
     parser.add_argument(
         '--override', '-r', action="store_true", default=False,
-        help='Override existing output files, defaults to false (Do not override).'
+        help='If provided, override existing output files, defaults to false (Do not override).'
     )
     parser.add_argument(
         '--max-workers', '-w', type=int, default=mp.cpu_count(),
@@ -197,15 +197,16 @@ def single(
     ):
     
     output_image_path = output_images_path / image_path.relative_to(images_path).parent / image_path.name.replace(f'{image_suffix}.nii.gz', f'{output_image_suffix}.nii.gz')
-    
+
     # If the output image already exists and we are not overriding it, return
-    if output_image_path.exists() and not override:
+    if not override and output_image_path.exists():
         return
     
     seg_path = segs_path / image_path.relative_to(images_path).parent /  image_path.name.replace(f'{image_suffix}.nii.gz', f'{seg_suffix}.nii.gz')
 
     # Check if the segmentation file exists
     if not seg_path.is_file():
+        output_image_path.is_file() and output_image_path.unlink()
         print(f'Segmentation file not found: {seg_path}')
         return
     

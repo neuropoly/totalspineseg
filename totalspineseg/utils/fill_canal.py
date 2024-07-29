@@ -75,6 +75,10 @@ def main():
         help='Take the largest spinal canal component.'
     )
     parser.add_argument(
+        '--override', '-r', action="store_true", default=False,
+        help='Override existing output files, defaults to false (Do not override).'
+    )
+    parser.add_argument(
         '--max-workers', '-w', type=int, default=mp.cpu_count(),
         help='Max worker to run in parallel proccess, defaults to multiprocessing.cpu_count().'
     )
@@ -100,6 +104,7 @@ def main():
     csf_label = args.csf_label
     largest_cord = args.largest_cord
     largest_canal = args.largest_canal
+    override = args.override
     max_workers = args.max_workers
     verbose = args.verbose
 
@@ -117,6 +122,7 @@ def main():
             csf_label = {csf_label}
             largest_cord = {largest_cord}
             largest_canal = {largest_canal}
+            override = {override}
             max_workers = {max_workers}
             verbose = {verbose}
         '''))
@@ -142,6 +148,7 @@ def main():
         csf_label=csf_label,
         largest_cord=largest_cord,
         largest_canal=largest_canal,
+        override=override,
     )
 
     with mp.Pool() as pool:
@@ -149,18 +156,23 @@ def main():
     
 
 def fill_canal(
-            seg_path,
-            segs_path,
-            output_path,
-            seg_suffix,
-            output_seg_suffix,
-            cord_label,
-            csf_label,
-            largest_cord,
-            largest_canal
-        ):
+        seg_path,
+        segs_path,
+        output_path,
+        seg_suffix,
+        output_seg_suffix,
+        cord_label,
+        csf_label,
+        largest_cord,
+        largest_canal,
+        override,
+    ):
     
     output_seg_path = output_path / seg_path.relative_to(segs_path).parent / seg_path.name.replace(f'{seg_suffix}.nii.gz', f'{output_seg_suffix}.nii.gz')
+
+    # If the output image already exists and we are not overriding it, return
+    if not override and output_seg_path.exists():
+        return
 
     # Load segmentation
     seg = nib.load(seg_path)

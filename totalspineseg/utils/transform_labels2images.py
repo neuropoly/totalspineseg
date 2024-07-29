@@ -68,6 +68,10 @@ def main():
         help='Image suffix for output, defaults to "".'
     )
     parser.add_argument(
+        '--override', '-r', action="store_true", default=False,
+        help='Override existing output files, defaults to false (Do not override).'
+    )
+    parser.add_argument(
         '--max-workers', '-w', type=int, default=mp.cpu_count(),
         help='Max worker to run in parallel proccess, defaults to multiprocessing.cpu_count().'
     )
@@ -92,6 +96,7 @@ def main():
     image_suffix = args.image_suffix
     seg_suffix = args.seg_suffix
     output_suffix = args.output_suffix
+    override = args.override
     max_workers = args.max_workers
     verbose = args.verbose
     
@@ -108,6 +113,7 @@ def main():
             image_suffix = "{image_suffix}"
             seg_suffix = "{seg_suffix}"
             output_suffix = "{output_suffix}"
+            override = {override}
             max_workers = {max_workers}
             verbose = {verbose}
         '''))
@@ -131,6 +137,7 @@ def main():
         image_suffix=image_suffix,
         seg_suffix=seg_suffix,
         output_suffix=output_suffix,
+        override=override,
     )
 
     with mp.Pool() as pool:
@@ -145,15 +152,20 @@ def transform_labels2images(
         image_suffix,
         seg_suffix,
         output_suffix,
+        override,
     ):
     
     seg_path = segs_path / image_path.relative_to(images_path).parent /  image_path.name.replace(f'{image_suffix}.nii.gz', f'{seg_suffix}.nii.gz')
-    
+    output_seg_path = output_path / image_path.relative_to(images_path).parent / seg_path.name.replace(f'{seg_suffix}.nii.gz', f'{output_suffix}.nii.gz')
+
+    # If the output image already exists and we are not overriding it, return
+    if not override and output_seg_path.exists():
+        return
+
     if not seg_path.is_file():
+        output_seg_path.is_file() and output_seg_path.unlink()
         print(f'Segmentation file not found: {seg_path}')
         return
-    
-    output_seg_path = output_path / image_path.relative_to(images_path).parent / seg_path.name.replace(f'{seg_suffix}.nii.gz', f'{output_suffix}.nii.gz')
 
     image = nib.load(image_path)
     seg = nib.load(seg_path)
