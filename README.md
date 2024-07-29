@@ -86,6 +86,8 @@ To train the TotalSpineSeg model, you will need the following hardware specifica
 
 Please ensure that your system meets these requirements before proceeding with the training process.
 
+1. Make sure that the `bash` terminal is opened with the virtual environment (if used) activated (using `source venv/bin/activate` in the installation directory).
+
 1. Ensure training dependencies are installed:
    ```bash
    apt-get install git git-annex jq -y
@@ -117,6 +119,8 @@ Please ensure that your system meets these requirements before proceeding with t
    Additionally, you can specify `FOLD` as the second positional argument to specify the fold. It can be either 0, 1, 2, 3, 4, 5 or all. By default, it will train with fold 0.
 
 ## Inference
+
+1. Make sure that the `bash` terminal is opened with the virtual environment (if used) activated (using `source venv/bin/activate` in the installation directory).
 
 1. If you didn't train the model yourself, you should download the model zip file from the release into `$TOTALSPINESEG_DATA/nnUNet/exports` (do not extract the zip files). You can run `mkdir -p "$TOTALSPINESEG_DATA"/nnUNet/exports` to create the folder.
 2. Run the model on a folder containing the images in .nii.gz format:
