@@ -87,8 +87,14 @@ if [ ! -d "$nnUNet_results"/Dataset${step2_dataset}_* ]; then
     nnUNetv2_install_pretrained_model_from_zip "$nnUNet_exports"/Dataset${step2_dataset}_*_fold_$FOLD.zip
 fi
 
+#Convert 4D images to 3D
+totalspineseg_average4d -i "${INPUT_FOLDER}" -o "${OUTPUT_FOLDER}"/input -r
+
+#Transform images to canonical space
+totalspineseg_reorient_canonical -i "${OUTPUT_FOLDER}"/input -o "${OUTPUT_FOLDER}"/input -r
+
 # Make output dir with copy of the input images resampled to 1x1x1mm
-totalspineseg_resample -i "${INPUT_FOLDER}" -o "${OUTPUT_FOLDER}"/input --image-suffix "" --output-image-suffix "" -r
+totalspineseg_resample -i "${OUTPUT_FOLDER}"/input -o "${OUTPUT_FOLDER}"/input --image-suffix "" --output-image-suffix "" -r
 
 # Add _0000 to inputs if not exists to run nnunet
 for f in "${OUTPUT_FOLDER}"/input/*.nii.gz; do if [[ "$f" != *_0000.nii.gz ]]; then mv "$f" "${f/.nii.gz/_0000.nii.gz}"; fi; done
