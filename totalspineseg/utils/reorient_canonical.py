@@ -19,9 +19,9 @@ def main():
         ),
         epilog=textwrap.dedent('''
             Examples:
-            transform_canonical -i images -o images
+            reorient_canonical -i images -o images
             For BIDS:
-            transform_canonical -i . -o . --image-suffix "" --output-image-suffix "" -d "sub-" -u "anat"
+            reorient_canonical -i . -o . --image-suffix "" --output-image-suffix "" -d "sub-" -u "anat"
         '''),
         formatter_class=argparse.RawTextHelpFormatter
     )
@@ -115,8 +115,8 @@ def main():
     images_path_list = list(images_path.glob(glob_pattern))
 
     # Create a partially-applied function with the extra arguments
-    partial_transform_canonical = partial(
-        transform_canonical,
+    partial_reorient_canonical = partial(
+        reorient_canonical,
         images_path=images_path,
         output_path=output_path,
         image_suffix=image_suffix,
@@ -125,10 +125,10 @@ def main():
     )
 
     with mp.Pool() as pool:
-        process_map(partial_transform_canonical, images_path_list, max_workers=max_workers)
+        process_map(partial_reorient_canonical, images_path_list, max_workers=max_workers)
 
 
-def transform_canonical(
+def reorient_canonical(
         image_path,
         images_path,
         output_path,
