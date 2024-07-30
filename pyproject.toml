@@ -66,6 +66,7 @@ totalspineseg_generate_laplace_images = "totalspineseg.utils.generate_laplace_im
 totalspineseg_generate_largest_labels = "totalspineseg.utils.generate_largest_labels:main"
 totalspineseg_generate_resampled_images = "totalspineseg.utils.generate_resampled_images:main"
 totalspineseg_generate_seg_jpg = "totalspineseg.utils.generate_seg_jpg:main"
+totalspineseg_reorient_images = "totalspineseg.utils.reorient_images:main"
 totalspineseg_map_labels = "totalspineseg.utils.map_labels:main"
 totalspineseg_mha2nii = "totalspineseg.utils.mha2nii:main"
 totalspineseg_transform_labels2images = "totalspineseg.utils.transform_labels2images:main"

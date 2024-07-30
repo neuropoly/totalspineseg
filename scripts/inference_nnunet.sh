@@ -90,6 +90,9 @@ fi
 # Make output dir with copy of the input images resampled to 1x1x1mm
 totalspineseg_generate_resampled_images -i "${INPUT_FOLDER}" -o "${OUTPUT_FOLDER}"/input --image-suffix "" --output-image-suffix ""
 
+# Reorient images to LPI
+totalspineseg_reorient_images -i "${OUTPUT_FOLDER}"/input -o "${OUTPUT_FOLDER}"/input --orientation LPI
+
 # Add _0000 to inputs if not exists to run nnunet
 for f in "${OUTPUT_FOLDER}"/input/*.nii.gz; do if [[ "$f" != *_0000.nii.gz ]]; then mv "$f" "${f/.nii.gz/_0000.nii.gz}"; fi; done
 
