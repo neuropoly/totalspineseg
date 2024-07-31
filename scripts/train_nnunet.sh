@@ -57,6 +57,7 @@ nnUNetTrainer=nnUNetTrainer_16000epochs
 nnUNetPlanner=ExperimentPlanner
 nnUNetPlans=nnUNetPlans
 configuration=3d_fullres
+data_identifier=3d_fullres
 
 echo ""
 echo "Running with the following parameters:"
@@ -68,6 +69,7 @@ echo "nnUNetTrainer=${nnUNetTrainer}"
 echo "nnUNetPlanner=${nnUNetPlanner}"
 echo "nnUNetPlans=${nnUNetPlans}"
 echo "configuration=${configuration}"
+echo "data_identifier=${data_identifier}"
 echo "JOBS=${JOBS}"
 echo "DEVICE=${DEVICE}"
 echo ""
@@ -96,7 +98,6 @@ for d in ${DATASETS[@]}; do
 
     echo "Training nnUNet model for dataset $d_name"
     # if already decompressed do not decompress again
-    data_identifier=$(jq -r ".configurations[\"${configuration}\"].data_identifier" "$nnUNet_preprocessed"/$d_name/${nnUNetPlans}.json)
     if [ $(find "$nnUNet_preprocessed"/$d_name/$data_identifier -name "*.npy" | wc -l) -eq $(( 2 * $(find "$nnUNet_preprocessed"/$d_name/$data_identifier -name "*.npz" | wc -l))) ]; then DECOMPRESSED="--use_compressed"; else DECOMPRESSED=""; fi
     nnUNetv2_train $d $configuration $FOLD -tr $nnUNetTrainer -p $nnUNetPlans --c -device $DEVICE $DECOMPRESSED
 
