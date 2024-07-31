@@ -80,11 +80,11 @@ step1_dataset=101
 step2_dataset=102
 
 if [ ! -d "$nnUNet_results"/Dataset${step1_dataset}_* ]; then
-    nnUNetv2_install_pretrained_model_from_zip "$nnUNet_exports"/Dataset${step1_dataset}_*_fold_$FOLD.zip
+    nnUNetv2_install_pretrained_model_from_zip "$nnUNet_exports"/Dataset${step1_dataset}_*.zip
 fi
 
 if [ ! -d "$nnUNet_results"/Dataset${step2_dataset}_* ]; then
-    nnUNetv2_install_pretrained_model_from_zip "$nnUNet_exports"/Dataset${step2_dataset}_*_fold_$FOLD.zip
+    nnUNetv2_install_pretrained_model_from_zip "$nnUNet_exports"/Dataset${step2_dataset}_*.zip
 fi
 
 #Convert 4D images to 3D

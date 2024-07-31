@@ -104,7 +104,7 @@ for d in ${DATASETS[@]}; do
     echo "Export the model for dataset $d_name in "$nnUNet_exports""
     mkdir -p "$nnUNet_exports"
     mkdir -p "$nnUNet_results"/$d_name/ensembles
-    nnUNetv2_export_model_to_zip -d $d -o "$nnUNet_exports"/${d_name}_fold_$FOLD.zip -c $configuration -f $FOLD -tr $nnUNetTrainer -p $nnUNetPlans
+    nnUNetv2_export_model_to_zip -d $d -o "$nnUNet_exports"/${d_name}__${nnUNetTrainer}__${nnUNetPlans}__${configuration}__fold_$FOLD.zip -c $configuration -f $FOLD -tr $nnUNetTrainer -p $nnUNetPlans
 
     echo "Testing nnUNet model for dataset $d_name"
     mkdir -p "$nnUNet_results"/$d_name/${nnUNetTrainer}__${nnUNetPlans}__${configuration}/fold_${FOLD}/test
@@ -113,16 +113,16 @@ for d in ${DATASETS[@]}; do
 
     p="$(realpath .)"
     cd "$nnUNet_results"
-    zip "$nnUNet_exports"/${d_name}_fold_$FOLD.zip $d_name/${nnUNetTrainer}__${nnUNetPlans}__${configuration}/fold_${FOLD}/test/summary.json
+    zip "$nnUNet_exports"/${d_name}__${nnUNetTrainer}__${nnUNetPlans}__${configuration}__fold_$FOLD.zip $d_name/${nnUNetTrainer}__${nnUNetPlans}__${configuration}/fold_${FOLD}/test/summary.json
     cd "$p"
 
     echo "Export nnUNet dataset list for dataset $d_name"
     cd "$nnUNet_raw"/$d_name
     ls */ > "$nnUNet_results"/$d_name/dataset.txt
     cd "$nnUNet_results"
-    zip "$nnUNet_exports"/${d_name}_fold_$FOLD.zip $d_name/dataset.txt
+    zip "$nnUNet_exports"/${d_name}__${nnUNetTrainer}__${nnUNetPlans}__${configuration}__fold_$FOLD.zip $d_name/dataset.txt
     cd "$nnUNet_preprocessed"
-    zip "$nnUNet_exports"/${d_name}_fold_$FOLD.zip $d_name/splits_final.json
+    zip "$nnUNet_exports"/${d_name}__${nnUNetTrainer}__${nnUNetPlans}__${configuration}__fold_$FOLD.zip $d_name/splits_final.json
     cd "$p"
 
 done
