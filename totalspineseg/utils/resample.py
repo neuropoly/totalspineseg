@@ -17,14 +17,13 @@ def main():
     parser = argparse.ArgumentParser(
         description=textwrap.dedent(f'''
         This script processes NIfTI (Neuroimaging Informatics Technology Initiative) image and segmentation files.
-        It transform image and segmentations into mXmXm mm resolution.'''
+        It transform image into mXmXm mm resolution.'''
         ),
         epilog=textwrap.dedent('''
             Examples:
             resample -i images -o images
-            resample -i images -s labels -o images -g labels -m 1
             For BIDS:
-            resample -i . -s derivatives/labels -o . -g derivatives/labels --image-suffix "" --output-image-suffix "" --seg-suffix "_seg" --output-seg-suffix "_seg" -d "sub-" -u "anat" -m 1
+            resample -i . -o . --image-suffix "" --output-image-suffix "" -d "sub-" -u "anat" -m 1
         '''),
         formatter_class=argparse.RawTextHelpFormatter
     )
@@ -33,16 +32,8 @@ def main():
         help='The folder where input NIfTI images files are located (required).'
     )
     parser.add_argument(
-        '--segs-dir', '-s', type=Path, default=None,
-        help='The folder where input NIfTI segmentation files are located.'
-    )
-    parser.add_argument(
         '--output-images-dir', '-o', type=Path, required=True,
         help='The folder where output augmented images will be saved with _a1, _a2 etc. suffixes (required).'
-    )
-    parser.add_argument(
-        '--output-segs-dir', '-g', type=Path, default=None,
-        help='The folder where output augmented segmentation will be saved with _a1, _a2 etc. suffixes.'
     )
     parser.add_argument(
         '--subject-dir', '-d', type=str, default=None, nargs='?', const='',
@@ -65,16 +56,8 @@ def main():
         help='Image suffix, defaults to "_0000".'
     )
     parser.add_argument(
-        '--seg-suffix', type=str, default='',
-        help='Segmentation suffix, defaults to "".'
-    )
-    parser.add_argument(
         '--output-image-suffix', type=str, default='_0000',
         help='Image suffix for output, defaults to "_0000".'
-    )
-    parser.add_argument(
-        '--output-seg-suffix', type=str, default='',
-        help='Segmentation suffix for output, defaults to "".'
     )
     parser.add_argument(
         '--mm', '-m', type=float, nargs='+', default=[1.0],
@@ -101,16 +84,12 @@ def main():
 
     # Get the command-line argument values
     images_path = args.images_dir
-    segs_path = args.segs_dir
     output_images_path = args.output_images_dir
-    output_segs_path = args.output_segs_dir
     subject_dir = args.subject_dir
     subject_subdir = args.subject_subdir
     prefix = args.prefix
     image_suffix = args.image_suffix
-    seg_suffix = args.seg_suffix
     output_image_suffix = args.output_image_suffix
-    output_seg_suffix = args.output_seg_suffix
     mm = tuple(args.mm if len (args.mm) == 3 else [args.mm[0]] * 3)
     override = args.override
     max_workers = args.max_workers
@@ -121,25 +100,17 @@ def main():
         print(textwrap.dedent(f''' 
             Running {Path(__file__).stem} with the following params:
             images_path = "{images_path}"
-            segs_path = "{segs_path}"
             output_images_path = "{output_images_path}"
-            output_segs_path = "{output_segs_path}"
             subject_dir = "{subject_dir}"
             subject_subdir = "{subject_subdir}"
             prefix = "{prefix}"
             image_suffix = "{image_suffix}"
-            seg_suffix = "{seg_suffix}"
             output_image_suffix = "{output_image_suffix}"
-            output_seg_suffix = "{output_seg_suffix}"
             mm = {mm}
             override = {override}
             max_workers = {max_workers}
             verbose = {verbose}
         '''))
-
-    if segs_path and not output_segs_path:
-        print('--output-segs-dir is required when --segs-dir is provided.')
-        return
 
     glob_pattern = ""
     if subject_dir is not None:
@@ -148,20 +119,16 @@ def main():
         glob_pattern += f"{subject_subdir}/"
     glob_pattern += f'{prefix}*{image_suffix}.nii.gz'
 
-    # Process the NIfTI image and segmentation files
+    # Process the NIfTI image files
     images_path_list = list(images_path.glob(glob_pattern))
 
     # Create a partially-applied function with the extra arguments
     partial_resample = partial(
         resample,
         images_path=images_path,
-        segs_path=segs_path,
         output_images_path=output_images_path,
-        output_segs_path=output_segs_path,
         image_suffix=image_suffix,
-        seg_suffix=seg_suffix,
         output_image_suffix=output_image_suffix,
-        output_seg_suffix=output_seg_suffix,
         mm=mm,
         override=override,
     )
@@ -173,23 +140,17 @@ def main():
 def resample(
         image_path,
         images_path,
-        segs_path,
         output_images_path,
-        output_segs_path,
         image_suffix,
-        seg_suffix,
         output_image_suffix,
-        output_seg_suffix,
         mm,
         override,
     ):
 
     output_image_path = output_images_path / image_path.relative_to(images_path).parent / image_path.name.replace(f'{image_suffix}.nii.gz', f'{output_image_suffix}.nii.gz')
-    seg_path = segs_path and segs_path / image_path.relative_to(images_path).parent /  image_path.name.replace(f'{image_suffix}.nii.gz', f'{seg_suffix}.nii.gz')
-    output_seg_path = segs_path and output_segs_path / image_path.relative_to(images_path).parent / seg_path.name.replace(f'{seg_suffix}.nii.gz', f'{output_seg_suffix}.nii.gz')
 
     # If the output image already exists and we are not overriding it, return
-    if not override and output_image_path.exists() and (not output_seg_path or output_image_path.exists()):
+    if not override and output_image_path.exists():
         return
 
     image = nib.load(image_path)
@@ -197,35 +158,11 @@ def resample(
     image_data_dtype = getattr(np, image_data.dtype.name)
     image_data = image_data.astype(np.float64)
 
-    if segs_path and (override or not output_seg_path.exists()):
-        seg = nib.load(seg_path)
-        seg_data = np.asanyarray(seg.dataobj).round().astype(np.uint8)
-
-        # Create result
-        subject = tio.Resample(mm)(tio.Subject(
-            image=tio.ScalarImage(tensor=image_data[None, ...], affine=image.affine),
-            seg=tio.LabelMap(tensor=seg_data[None, ...], affine=seg.affine),
-        ))
-        output_image_data, output_seg_data = subject.image.data.numpy()[0, ...].astype(np.float64), subject.seg.data.numpy()[0, ...].astype(np.uint8)
-        
-        # Make sure output directory exists and save
-        output_seg_path.parent.mkdir(parents=True, exist_ok=True)
-        output_seg = nib.Nifti1Image(output_seg_data, subject.seg.affine, seg.header)
-        output_seg.set_qform(subject.seg.affine)
-        output_seg.set_sform(subject.seg.affine)
-        output_seg.set_data_dtype(np.uint8)
-        nib.save(output_seg, output_seg_path)
-
-    else:
-        # Create result
-        subject = tio.Resample(mm)(tio.Subject(
-            image=tio.ScalarImage(tensor=image_data[None, ...], affine=image.affine),
-        ))
-        output_image_data = subject.image.data.numpy()[0, ...].astype(np.float64)
-
-    # If the output image already exists and we are not overriding it, return
-    if not override and output_image_path.exists():
-        return
+    # Create result
+    subject = tio.Resample(mm)(tio.Subject(
+        image=tio.ScalarImage(tensor=image_data[None, ...], affine=image.affine),
+    ))
+    output_image_data = subject.image.data.numpy()[0, ...].astype(np.float64)
 
     # Rescale the image to the output data type if necessary
     # code from https://github.com/spinalcordtoolbox/spinalcordtoolbox/blob/6.3/spinalcordtoolbox/image.py#L1217
