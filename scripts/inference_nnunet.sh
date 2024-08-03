@@ -44,8 +44,8 @@ JOBS_FOR_CPUS=$(($CPU_COUNT - $LEAVE_CPUS < 1 ? 1 : $CPU_COUNT - $LEAVE_CPUS ))
 JOBS_FOR_RAMGB=$(( $(awk -v ram_req="$RAM_REQUIREMENT" '/MemTotal/ {print int($2/1024/1024/ram_req < 1 ? 1 : $2/1024/1024/ram_req)}' /proc/meminfo) ))
 # Get the minimum of JOBS_FOR_CPUS and JOBS_FOR_RAMGB
 JOBS=$(( JOBS_FOR_CPUS < JOBS_FOR_RAMGB ? JOBS_FOR_CPUS : JOBS_FOR_RAMGB ))
-# Set the device to cpu if CUDA_VISIBLE_DEVICES is not set
-if [ -z "$CUDA_VISIBLE_DEVICES" ]; then DEVICE="cpu"; else DEVICE="cuda"; fi
+# Set the device to cpu if cuda is not available
+DEVICE=$(python3 -c "import torch; print('cuda' if torch.cuda.is_available() else 'cpu')")
 
 export nnUNet_def_n_proc=$JOBS
 export nnUNet_n_proc_DA=$JOBS
