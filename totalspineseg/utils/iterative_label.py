@@ -351,7 +351,6 @@ def _iterative_label(
             combine_before_label=combine_before_label,
             step_diff_label=step_diff_label,
             step_diff_disc=step_diff_disc,
-            override=override,
         )
     except ValueError as e:
         output_seg_path.is_file() and output_seg_path.unlink()
