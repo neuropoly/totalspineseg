@@ -35,12 +35,12 @@ def main():
         help='The folder where input NIfTI images files are located (required).'
     )
     parser.add_argument(
-        '--segs-dir', '-s', type=Path, default=None,
-        help='The folder where input NIfTI segmentation files are located.'
-    )
-    parser.add_argument(
         '--output-dir', '-o', type=Path, required=True,
         help='The folder where output combined JPG images will be saved (required).'
+    )
+    parser.add_argument(
+        '--segs-dir', '-s', type=Path, default=None,
+        help='The folder where input NIfTI segmentation files are located.'
     )
     parser.add_argument(
         '--subject-dir', '-d', type=str, default=None, nargs='?', const='',
@@ -63,12 +63,12 @@ def main():
         help='Image suffix, defaults to "_0000".'
     )
     parser.add_argument(
-        '--seg-suffix', type=str, default='',
-        help='Segmentation suffix, defaults to "".'
-    )
-    parser.add_argument(
         '--output-suffix', type=str, default='',
         help='Suffix to add to the output jpg, defaults to "".'
+    )
+    parser.add_argument(
+        '--seg-suffix', type=str, default='',
+        help='Segmentation suffix, defaults to "".'
     )
     parser.add_argument(
         '--orient', '-t', type=str, choices=['sag', 'ax', 'cor'], default='sag',
@@ -99,14 +99,14 @@ def main():
 
     # Get the command-line argument values
     images_path = args.images_dir
-    segs_path = args.segs_dir
     output_path = args.output_dir
+    segs_path = args.segs_dir
     subject_dir = args.subject_dir
     subject_subdir = args.subject_subdir
     prefix = args.prefix
     image_suffix = args.image_suffix
-    seg_suffix = args.seg_suffix
     output_suffix = args.output_suffix
+    seg_suffix = args.seg_suffix
     orient = args.orient
     sliceloc = args.sliceloc
     override = args.override
@@ -118,14 +118,14 @@ def main():
         print(textwrap.dedent(f'''
             Running {Path(__file__).stem} with the following params:
             images_path = "{images_path}"
-            segs_path = "{segs_path}"
             output_dir = "{output_path}"
+            segs_path = "{segs_path}"
             subject_dir = "{subject_dir}"
             subject_subdir = "{subject_subdir}"
             prefix = "{prefix}"
             image_suffix = "{image_suffix}"
-            seg_suffix = "{seg_suffix}"
             output_suffix = "{output_suffix}"
+            seg_suffix = "{seg_suffix}"
             orient = "{orient}"
             sliceloc = {sliceloc}
             override = {override}
@@ -135,14 +135,14 @@ def main():
 
     preview_jpg_mp(
         images_path=images_path,
-        segs_path=segs_path,
         output_path=output_path,
+        segs_path=segs_path,
         subject_dir=subject_dir,
         subject_subdir=subject_subdir,
         prefix=prefix,
         image_suffix=image_suffix,
-        seg_suffix=seg_suffix,
         output_suffix=output_suffix,
+        seg_suffix=seg_suffix,
         orient=orient,
         sliceloc=sliceloc,
         override=override,
@@ -151,22 +151,22 @@ def main():
 
 def preview_jpg_mp(
         images_path,
-        segs_path,
         output_path,
+        segs_path=None,
         subject_dir=None,
         subject_subdir='',
         prefix='',
         image_suffix='_0000',
-        seg_suffix='',
         output_suffix='',
+        seg_suffix='',
         orient='sag',
         sliceloc=0.5,
         override=False,
         max_workers=mp.cpu_count(),
     ):
     images_path = Path(images_path)
-    segs_path = Path(segs_path)
     output_path = Path(output_path)
+    segs_path = segs_path and Path(segs_path)
 
     glob_pattern = ""
     if subject_dir is not None:
@@ -178,9 +178,9 @@ def preview_jpg_mp(
     # Process the NIfTI image and segmentation files
     image_path_list = [_ for __ in [list(images_path.glob(f'{glob_pattern}.{e}')) for e in EXT] for _ in __]
     image_ext_list = [[e for e in EXT if _.name.endswith(e)][0] for _ in image_path_list]
-    seg_path_list = [segs_path / i.relative_to(images_path).parent / i.name.replace(f'{image_suffix}.{e}', f'{seg_suffix}') for i, e in zip(image_path_list, image_ext_list)]
-    seg_path_list = [([_.parent / f'{_.name}.{e}' for e in EXT if (_.parent / f'{_.name}.{e}').is_file()] + [None])[0] for _ in seg_path_list]
     output_path_list = [output_path / i.relative_to(images_path).parent / i.name.replace(f'{image_suffix}.{e}', f'_{orient}_{sliceloc}{output_suffix}.jpg') for i, e in zip(image_path_list, image_ext_list)]
+    seg_path_list = [segs_path and segs_path / i.relative_to(images_path).parent / i.name.replace(f'{image_suffix}.{e}', f'{seg_suffix}') for i, e in zip(image_path_list, image_ext_list)]
+    seg_path_list = [segs_path and ([_.parent / f'{_.name}.{e}' for e in EXT if (_.parent / f'{_.name}.{e}').is_file()] + [None])[0] for _ in seg_path_list]
 
     process_map(
         partial(
@@ -190,22 +190,22 @@ def preview_jpg_mp(
             override=override,
         ),
         image_path_list,
-        seg_path_list,
         output_path_list,
+        seg_path_list,
         max_workers=max_workers
     )
 
 def _preview_jpg(
         image_path,
-        seg_path,
         output_path,
+        seg_path=None,
         orient='sag',
         sliceloc=0.5,
         override=False,
     ):
     image_path = Path(image_path)
-    seg_path = Path(seg_path)
     output_path = Path(output_path)
+    seg_path = seg_path and Path(seg_path)
 
     # If the output image already exists and we are not overriding it, return
     if not override and output_path.exists():
