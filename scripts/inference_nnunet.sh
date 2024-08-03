@@ -114,7 +114,7 @@ totalspineseg_cpdir "${OUTPUT_FOLDER}"/input "${OUTPUT_FOLDER}"/step2_input -p "
 totalspineseg_crop_image2seg -i "${OUTPUT_FOLDER}"/step2_input -s "${OUTPUT_FOLDER}"/step2_input -o "${OUTPUT_FOLDER}"/step2_input --seg-suffix _0001 -m 10 -r
 
 # Transform step 1 segmentation to the cropped images space
-totalspineseg_transform_seg2image -i "${OUTPUT_FOLDER}"/step2_input -s "${OUTPUT_FOLDER}"/step2_input -o "${OUTPUT_FOLDER}"/step2_input --seg-suffix _0001 -r
+totalspineseg_transform_seg2image -i "${OUTPUT_FOLDER}"/step2_input -s "${OUTPUT_FOLDER}"/step2_input -o "${OUTPUT_FOLDER}"/step2_input --seg-suffix _0001 --output-seg-suffix _0001 -r
 
 # Distinguished odd IVDs based on the C2-C3, C7-T1 and L5-S1 IVD labels output by step 1 model:
 # First we will use an iterative algorithm to label IVDs with the definite labels
