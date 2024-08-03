@@ -10,7 +10,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 def main():
-    
+
     # Parse command line arguments
     parser = argparse.ArgumentParser(
         description=textwrap.dedent(f'''
@@ -32,8 +32,16 @@ def main():
         help='Folder containing input segmentations for each subject.'
     )
     parser.add_argument(
-        '--output-dir', '-o', type=Path, required=True, 
+        '--output-segs-dir', '-o', type=Path, required=True,
         help='Folder to save output segmentations for each subject.'
+    )
+    parser.add_argument(
+        '--update-segs-dir', type=Path, default=None,
+        help='Folder containing segmentations to be update. We update this segmentations with all non-zero values of the mapped input labels.'
+    )
+    parser.add_argument(
+        '--update-from-segs-dir', type=Path, default=None,
+        help='Folder containing segmentations to be update from. We update the mapped input labels with all non-zero values of this segmentations.'
     )
     parser.add_argument(
         '--map', '-m', type=str, nargs='+', default=[],
@@ -53,33 +61,32 @@ def main():
         '''),
     )
     parser.add_argument(
-        '--subject-subdir', '-u', type=str, default='', 
+        '--subject-subdir', '-u', type=str, default='',
         help='Subfolder inside subject folder containing masks, defaults to no subfolder.'
     )
     parser.add_argument(
-        '--prefix', '-p', type=str, default='', 
+        '--prefix', '-p', type=str, default='',
         help='File prefix to work on.'
     )
     parser.add_argument(
         '--seg-suffix', type=str, default='',
-        help='Suffix for output segmentation, defaults to "".'
+        help='Suffix for input segmentation, defaults to "".'
     )
     parser.add_argument(
         '--output-seg-suffix', type=str, default='',
         help='Suffix for output segmentation, defaults to "".'
     )
     parser.add_argument(
-        '--default-input', action="store_true", default=False,
-        help='Init output from input, defaults to false (init all to 0).'
+        '--update-seg-suffix', type=str, default='',
+        help='Suffix for --update-segs-dir segmentation, defaults to "".'
     )
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument(
-        '--add-output', action="store_true", default=False,
-        help='If the output file already exists, add all the labels from the existing output to the mapped input before saving (the labels from the output are prioritized), defaults to false (Overwrite the output file).'
+    parser.add_argument(
+        '--update-from-seg-suffix', type=str, default='',
+        help='Suffix for --update-from-segs-dir segmentation, defaults to "".'
     )
-    group.add_argument(
-        '--add-input', action="store_true", default=False,
-        help='If the output file already exists, add the mapped input labels to the existing output labels before saving (the labels from the input are prioritized). Defaults to false (overwrite the output file).'
+    parser.add_argument(
+        '--keep-unmapped', action="store_true", default=False,
+        help='Keep unmapped labels as they are in the output segmentation, defaults to false (discard unmapped labels).'
     )
     parser.add_argument(
         '--override', '-r', action="store_true", default=False,
@@ -101,16 +108,18 @@ def main():
 
     # Get arguments
     segs_path = args.segs_dir
-    output_path = args.output_dir
+    output_segs_path = args.output_segs_dir
+    update_segs_path = args.update_segs_dir
+    update_from_segs_path = args.update_from_segs_dir
     map_list = args.map
     subject_dir = args.subject_dir
     subject_subdir = args.subject_subdir
     prefix = args.prefix
     seg_suffix = args.seg_suffix
     output_seg_suffix = args.output_seg_suffix
-    default_input = args.default_input
-    add_output = args.add_output
-    add_input = args.add_input
+    update_seg_suffix = args.update_seg_suffix
+    update_from_seg_suffix = args.update_from_seg_suffix
+    keep_unmapped = args.keep_unmapped
     override = args.override
     max_workers = args.max_workers
     verbose = args.verbose
@@ -119,16 +128,18 @@ def main():
         print(textwrap.dedent(f'''
             Running {Path(__file__).stem} with the following params:
             segs_dir = "{segs_path}"
-            output_dir = "{output_path}"
+            output_segs_dir = "{output_segs_path}"
+            update_segs_dir = "{update_segs_path}"
+            update_from_segs_dir = "{update_from_segs_path}"
             map = {map_list}
             subject_dir = "{subject_dir}"
             subject_subdir = "{subject_subdir}"
             prefix = "{prefix}"
             seg_suffix = "{seg_suffix}"
             output_seg_suffix = "{output_seg_suffix}"
-            default_input = {default_input}
-            add_output = {add_output}
-            add_input = {add_input}
+            update_seg_suffix = "{update_seg_suffix}"
+            update_from_seg_suffix = "{update_from_seg_suffix}"
+            keep_unmapped = {keep_unmapped}
             override = {override}
             max_workers = {max_workers}
             verbose = {verbose}
@@ -145,6 +156,46 @@ def main():
         except:
             raise ValueError("Input param map is not in the right structure. Make sure it is in the right format, e.g., 1:2 3:5")
 
+    map_labels_mp(
+        segs_path=segs_path,
+        output_segs_path=output_segs_path,
+        update_segs_path=update_segs_path,
+        update_from_segs_path=update_from_segs_path,
+        map_dict=map_dict,
+        subject_dir=subject_dir,
+        subject_subdir=subject_subdir,
+        prefix=prefix,
+        seg_suffix=seg_suffix,
+        output_seg_suffix=output_seg_suffix,
+        update_seg_suffix=update_seg_suffix,
+        update_from_seg_suffix=update_from_seg_suffix,
+        keep_unmapped=keep_unmapped,
+        override=override,
+        max_workers=max_workers,
+    )
+
+def map_labels_mp(
+        segs_path,
+        output_segs_path,
+        update_segs_path=None,
+        update_from_segs_path=None,
+        map_dict={},
+        subject_dir=None,
+        subject_subdir='',
+        prefix='',
+        seg_suffix='',
+        output_seg_suffix='',
+        update_seg_suffix='',
+        update_from_seg_suffix='',
+        keep_unmapped=False,
+        override=False,
+        max_workers=mp.cpu_count()
+    ):
+    segs_path = Path(segs_path)
+    output_segs_path = Path(output_segs_path)
+    update_segs_path = update_segs_path and Path(update_segs_path)
+    update_from_segs_path = update_from_segs_path and Path(update_from_segs_path)
+
     glob_pattern = ""
     if subject_dir is not None:
         glob_pattern += f"{subject_dir}*/"
@@ -153,40 +204,38 @@ def main():
     glob_pattern += f'{prefix}*{seg_suffix}.nii.gz'
 
     # Process the NIfTI image and segmentation files
-    segs_path_list = list(segs_path.glob(glob_pattern))
+    seg_path_list = list(segs_path.glob(glob_pattern))
+    output_seg_path_list = [output_segs_path / _.relative_to(segs_path).parent / _.name.replace(f'{seg_suffix}.nii.gz', f'{output_seg_suffix}.nii.gz') for _ in seg_path_list]
+    update_seg_path_list = [update_segs_path and update_segs_path / _.relative_to(segs_path).parent / _.name.replace(f'{seg_suffix}.nii.gz', f'{update_seg_suffix}.nii.gz') for _ in seg_path_list]
+    update_from_seg_path_list = [update_from_segs_path and update_from_segs_path / _.relative_to(segs_path).parent / _.name.replace(f'{seg_suffix}.nii.gz', f'{update_from_seg_suffix}.nii.gz') for _ in seg_path_list]
 
-    # Create a partially-applied function with the extra arguments
-    partial_map_labels = partial(
-        map_labels,
-        segs_path=segs_path,
-        map_dict=map_dict,
-        output_path=output_path,
-        seg_suffix=seg_suffix,
-        output_seg_suffix=output_seg_suffix,
-        add_output=add_output,
-        add_input=add_input,
-        default_input=default_input,
-        override=override,
+    process_map(
+        partial(
+            _map_labels,
+            map_dict=map_dict,
+            keep_unmapped=keep_unmapped,
+            override=override,
+        ),
+        seg_path_list,
+        output_seg_path_list,
+        update_seg_path_list,
+        update_from_seg_path_list,
+        max_workers=max_workers,
     )
 
-    with mp.Pool() as pool:
-        process_map(partial_map_labels, segs_path_list, max_workers=max_workers)
-    
-
-def map_labels(
+def _map_labels(
         seg_path,
-        segs_path,
-        map_dict,
-        output_path,
-        seg_suffix,
-        output_seg_suffix,
-        add_output,
-        add_input,
-        default_input,
-        override,
+        output_seg_path,
+        update_seg_path=None,
+        update_from_seg_path=None,
+        map_dict={},
+        keep_unmapped=False,
+        override=False,
     ):
-    
-    output_seg_path = output_path / seg_path.relative_to(segs_path).parent / seg_path.name.replace(f'{seg_suffix}.nii.gz', f'{output_seg_suffix}.nii.gz')
+    seg_path = Path(seg_path)
+    output_seg_path = Path(output_seg_path)
+    update_seg_path = update_seg_path and Path(update_seg_path)
+    update_from_seg_path = update_from_seg_path and Path(update_from_seg_path)
 
     # If the output image already exists and we are not overriding it, return
     if not override and output_seg_path.exists():
@@ -194,40 +243,59 @@ def map_labels(
 
     # Load segmentation
     seg = nib.load(seg_path)
+    update_seg = update_seg_path and nib.load(update_seg_path)
+    update_from_seg = update_from_seg_path and nib.load(update_from_seg_path)
+
+    output_seg = map_labels(
+        seg=seg,
+        update_seg=update_seg,
+        update_from_seg=update_from_seg,
+        map_dict=map_dict,
+        keep_unmapped=keep_unmapped,
+    )
+
+    # Ensure correct segmentation dtype, affine and header
+    output_seg = nib.Nifti1Image(
+        np.asanyarray(output_seg.dataobj).round().astype(np.uint8),
+        output_seg.affine, output_seg.header
+    )
+    output_seg.set_data_dtype(np.uint8)
+    output_seg.set_qform(output_seg.affine)
+    output_seg.set_sform(output_seg.affine)
+
+    # Make sure output directory exists and save the segmentation
+    output_seg_path.parent.mkdir(parents=True, exist_ok=True)
+    nib.save(output_seg, output_seg_path)
+
+def map_labels(
+        seg,
+        update_seg=None,
+        update_from_seg=None,
+        map_dict={},
+        keep_unmapped=False,
+    ):
     seg_data = np.asanyarray(seg.dataobj).round().astype(np.uint8)
+    update_seg_data = update_seg and np.asanyarray(update_seg.dataobj).round().astype(np.uint8)
+    update_from_seg_data = update_from_seg and np.asanyarray(update_from_seg.dataobj).round().astype(np.uint8)
 
     # Apply label mapping
-    mapped_seg_data = np.copy(seg_data) if default_input else np.zeros_like(seg_data)
-    
+    output_seg_data = np.copy(seg_data) if keep_unmapped else np.zeros_like(seg_data)
+
     # Apply label mapping for all labels that are not mapped to 0
     for orig, new in map_dict.items():
-        mapped_seg_data[seg_data==int(orig)] = int(new)
+        output_seg_data[seg_data==int(orig)] = int(new)
 
-    # Add new mapped labels to output
-    if (add_output or add_input) and output_seg_path.is_file():
-        # Load segmentation
-        output_seg = nib.load(output_seg_path)
-        output_seg_data = np.asanyarray(output_seg.dataobj).round().astype(np.uint8)
+    # Update the output segmentation with the update_seg_data where the output_seg_data is 0
+    if update_seg_data:
+        output_seg_data[output_seg_data == 0] = update_seg_data[output_seg_data == 0]
 
-        if add_output:
-            # Update output from existing output file
-            mapped_seg_data[output_seg_data != 0] = output_seg_data[output_seg_data != 0]
-        elif add_input:
-            # Update output from existing output file
-            output_seg_data[mapped_seg_data != 0] = mapped_seg_data[mapped_seg_data != 0]
-            mapped_seg_data = output_seg_data
+    # Update the output segmentation with the update_from_seg_data where it is not 0
+    if update_from_seg_data:
+        output_seg_data[update_from_seg_data != 0] = update_from_seg_data[update_from_seg_data != 0]
 
-    # Create result segmentation 
-    mapped_seg = nib.Nifti1Image(mapped_seg_data, seg.affine, seg.header)
-    mapped_seg.set_qform(seg.affine)
-    mapped_seg.set_sform(seg.affine)
-    mapped_seg.set_data_dtype(np.uint8)
+    output_seg = nib.Nifti1Image(output_seg_data, seg.affine, seg.header)
 
-    # Make sure output directory exists
-    output_seg_path.parent.mkdir(parents=True, exist_ok=True)
-    
-    # Save mapped segmentation
-    nib.save(mapped_seg, output_seg_path)
+    return output_seg
 
 if __name__ == '__main__':
     main()

@@ -11,11 +11,11 @@ import warnings
 warnings.filterwarnings("ignore")
 
 def main():
-    
+
     # Parse command line arguments
     parser = argparse.ArgumentParser(
         description=textwrap.dedent(f'''
-            Fix csf label to include all non cord spinal canal, this will put the spinal canal label in all the voxels (labeled as a backgroupn) between the spinal canal and the spinal cord.
+            Fix Spinal Canal label to include all non cord spinal canal, this will put the spinal canal label in all the voxels (labeled as a backgroupn) between the spinal canal and the spinal cord.
         '''),
         epilog=textwrap.dedent('''
             Examples:
@@ -31,7 +31,7 @@ def main():
         help='Folder containing input segmentations.'
     )
     parser.add_argument(
-        '--output-dir', '-o', type=Path, required=True, 
+        '--output-segs-dir', '-o', type=Path, required=True,
         help='Folder to save output segmentations.'
     )
     parser.add_argument(
@@ -43,11 +43,11 @@ def main():
         '''),
     )
     parser.add_argument(
-        '--subject-subdir', '-u', type=str, default='', 
+        '--subject-subdir', '-u', type=str, default='',
         help='Subfolder inside subject folder containing masks (for example "anat"), defaults to no subfolder.'
     )
     parser.add_argument(
-        '--prefix', '-p', type=str, default='', 
+        '--prefix', '-p', type=str, default='',
         help='File prefix to work on.'
     )
     parser.add_argument(
@@ -63,8 +63,8 @@ def main():
         help='Label used for spinal cord, defaults to 200.'
     )
     parser.add_argument(
-        '--csf-label', type=int, default=201,
-        help='Label used for csf, defaults to 201.'
+        '--canal-label', type=int, default=201,
+        help='Label used for Spinal Canal, defaults to 201.'
     )
     parser.add_argument(
         '--largest-cord', action="store_true", default=False,
@@ -94,14 +94,14 @@ def main():
 
     # Get arguments
     segs_path = args.segs_dir
-    output_path = args.output_dir
+    output_segs_path = args.output_segs_dir
     subject_dir = args.subject_dir
     subject_subdir = args.subject_subdir
     prefix = args.prefix
     seg_suffix = args.seg_suffix
     output_seg_suffix = args.output_seg_suffix
     cord_label = args.cord_label
-    csf_label = args.csf_label
+    canal_label = args.canal_label
     largest_cord = args.largest_cord
     largest_canal = args.largest_canal
     override = args.override
@@ -112,21 +112,55 @@ def main():
         print(textwrap.dedent(f'''
             Running {Path(__file__).stem} with the following params:
             segs_dir = "{segs_path}"
-            output_dir = "{output_path}"
+            output_segs_dir = "{output_segs_path}"
             subject_dir = "{subject_dir}"
             subject_subdir = "{subject_subdir}"
             prefix = "{prefix}"
             seg_suffix = "{seg_suffix}"
             output_seg_suffix = "{output_seg_suffix}"
             cord_label = {cord_label}
-            csf_label = {csf_label}
+            canal_label = {canal_label}
             largest_cord = {largest_cord}
             largest_canal = {largest_canal}
             override = {override}
             max_workers = {max_workers}
             verbose = {verbose}
         '''))
-    
+
+    fill_canal_mp(
+        segs_path=segs_path,
+        output_segs_path=output_segs_path,
+        subject_dir=subject_dir,
+        subject_subdir=subject_subdir,
+        prefix=prefix,
+        seg_suffix=seg_suffix,
+        output_seg_suffix=output_seg_suffix,
+        cord_label=cord_label,
+        canal_label=canal_label,
+        largest_cord=largest_cord,
+        largest_canal=largest_canal,
+        override=override,
+        max_workers=max_workers,
+    )
+
+def fill_canal_mp(
+        segs_path,
+        output_segs_path,
+        subject_dir=None,
+        subject_subdir='',
+        prefix='',
+        seg_suffix='',
+        output_seg_suffix='',
+        cord_label=200,
+        canal_label=201,
+        largest_cord=False,
+        largest_canal=False,
+        override=False,
+        max_workers=mp.cpu_count(),
+    ):
+    segs_path = Path(segs_path)
+    output_segs_path = Path(output_segs_path)
+
     glob_pattern = ""
     if subject_dir is not None:
         glob_pattern += f"{subject_dir}*/"
@@ -135,40 +169,34 @@ def main():
     glob_pattern += f'{prefix}*{seg_suffix}.nii.gz'
 
     # Process the NIfTI image and segmentation files
-    segs_path_list = list(segs_path.glob(glob_pattern))
+    seg_path_list = list(segs_path.glob(glob_pattern))
+    output_seg_path_list = [output_segs_path / _.relative_to(segs_path).parent / _.name.replace(f'{seg_suffix}.nii.gz', f'{output_seg_suffix}.nii.gz') for _ in seg_path_list]
 
-    # Create a partially-applied function with the extra arguments
-    partial_fill_canal = partial(
-        fill_canal,
-        segs_path=segs_path,
-        output_path=output_path,
-        seg_suffix=seg_suffix,
-        output_seg_suffix=output_seg_suffix,
-        cord_label=cord_label,
-        csf_label=csf_label,
-        largest_cord=largest_cord,
-        largest_canal=largest_canal,
-        override=override,
+    process_map(
+        partial(
+            _fill_canal,
+            cord_label=cord_label,
+            canal_label=canal_label,
+            largest_cord=largest_cord,
+            largest_canal=largest_canal,
+            override=override,
+        ),
+        seg_path_list,
+        output_seg_path_list,
+        max_workers=max_workers,
     )
 
-    with mp.Pool() as pool:
-        process_map(partial_fill_canal, segs_path_list, max_workers=max_workers)
-    
-
-def fill_canal(
+def _fill_canal(
         seg_path,
-        segs_path,
-        output_path,
-        seg_suffix,
-        output_seg_suffix,
-        cord_label,
-        csf_label,
-        largest_cord,
-        largest_canal,
-        override,
+        output_seg_path,
+        cord_label=200,
+        canal_label=201,
+        largest_cord=False,
+        largest_canal=False,
+        override=False,
     ):
-    
-    output_seg_path = output_path / seg_path.relative_to(segs_path).parent / seg_path.name.replace(f'{seg_suffix}.nii.gz', f'{output_seg_suffix}.nii.gz')
+    seg_path = Path(seg_path)
+    output_seg_path = Path(output_seg_path)
 
     # If the output image already exists and we are not overriding it, return
     if not override and output_seg_path.exists():
@@ -176,28 +204,57 @@ def fill_canal(
 
     # Load segmentation
     seg = nib.load(seg_path)
-    seg_data = np.asanyarray(seg.dataobj).round().astype(np.uint8)
+
+    output_seg = fill_canal(
+        seg,
+        cord_label=cord_label,
+        canal_label=canal_label,
+        largest_cord=largest_cord,
+        largest_canal=largest_canal,
+    )
+
+    # Ensure correct segmentation dtype, affine and header
+    output_seg = nib.Nifti1Image(
+        np.asanyarray(output_seg.dataobj).round().astype(np.uint8),
+        output_seg.affine, output_seg.header
+    )
+    output_seg.set_data_dtype(np.uint8)
+    output_seg.set_qform(output_seg.affine)
+    output_seg.set_sform(output_seg.affine)
+
+    # Make sure output directory exists and save the segmentation
+    output_seg_path.parent.mkdir(parents=True, exist_ok=True)
+    nib.save(output_seg, output_seg_path)
+
+def fill_canal(
+        seg,
+        cord_label=200,
+        canal_label=201,
+        largest_cord=False,
+        largest_canal=False,
+    ):
+    output_seg_data = np.asanyarray(seg.dataobj).round().astype(np.uint8)
 
     # Take the largest spinal cord component
-    if largest_cord and cord_label in seg_data:
-        cord_mask = seg_data == cord_label
+    if largest_cord and cord_label in output_seg_data:
+        cord_mask = output_seg_data == cord_label
         cord_mask_largest = largest(cord_mask)
-        seg_data[cord_mask & ~cord_mask_largest] = csf_label
+        output_seg_data[cord_mask & ~cord_mask_largest] = canal_label
 
-    if csf_label in seg_data:
-        
+    if canal_label in output_seg_data:
+
         # Take the largest spinal canal component
         if largest_canal:
-            canal_mask = np.isin(seg_data, [cord_label, csf_label])
+            canal_mask = np.isin(output_seg_data, [cord_label, canal_label])
             canal_mask_largest = largest(canal_mask)
-            seg_data[canal_mask & ~canal_mask_largest] = 0
+            output_seg_data[canal_mask & ~canal_mask_largest] = 0
 
         # Create an array of x indices
-        x_indices = np.broadcast_to(np.arange(seg_data.shape[0])[..., np.newaxis, np.newaxis], seg_data.shape)
+        x_indices = np.broadcast_to(np.arange(output_seg_data.shape[0])[..., np.newaxis, np.newaxis], output_seg_data.shape)
         # Create an array of y indices
-        y_indices = np.broadcast_to(np.arange(seg_data.shape[1])[..., np.newaxis], seg_data.shape)
+        y_indices = np.broadcast_to(np.arange(output_seg_data.shape[1])[..., np.newaxis], output_seg_data.shape)
 
-        canal_mask = np.isin(seg_data, [cord_label, csf_label])
+        canal_mask = np.isin(output_seg_data, [cord_label, canal_label])
         canal_mask_min_x = np.min(np.where(canal_mask, x_indices, np.inf), axis=0)[np.newaxis, ...]
         canal_mask_max_x = np.max(np.where(canal_mask, x_indices, -np.inf), axis=0)[np.newaxis, ...]
         canal_mask_min_y = np.min(np.where(canal_mask, y_indices, np.inf), axis=1)[:, np.newaxis, :]
@@ -207,19 +264,11 @@ def fill_canal(
                 (x_indices <= canal_mask_max_x) & \
                 (canal_mask_min_y <= y_indices) & \
                 (y_indices <= canal_mask_max_y)
-        seg_data[canal_mask & (seg_data != cord_label)] = csf_label
+        output_seg_data[canal_mask & (output_seg_data != cord_label)] = canal_label
 
-    # Create result segmentation 
-    mapped_seg = nib.Nifti1Image(seg_data, seg.affine, seg.header)
-    mapped_seg.set_qform(seg.affine)
-    mapped_seg.set_sform(seg.affine)
-    mapped_seg.set_data_dtype(np.uint8)
+    output_seg = nib.Nifti1Image(output_seg_data, seg.affine, seg.header)
 
-    # Make sure output directory exists
-    output_seg_path.parent.mkdir(parents=True, exist_ok=True)
-    
-    # Save mapped segmentation
-    nib.save(mapped_seg, output_seg_path)
+    return output_seg
 
 def largest(mask):
     mask_labeled, num_labels = label(mask, np.ones((3, 3, 3)))

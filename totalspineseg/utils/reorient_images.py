@@ -56,10 +56,10 @@ def main():
     orientation = args.orientation
     max_workers = args.max_workers
     verbose = args.verbose
-    
+
     # Print the argument values if verbose is enabled
     if verbose:
-        print(textwrap.dedent(f''' 
+        print(textwrap.dedent(f'''
             Running {Path(__file__).stem} with the following params:
             images_path = "{images_path}"
             output_images_path = "{output_images_path}"
@@ -93,7 +93,7 @@ def reorient_images(
         orientation,
         verbose
     ):
-    
+
     # Load image
     image = Image(str(image_path)).change_orientation(orientation)
 

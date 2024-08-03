@@ -11,17 +11,17 @@ import warnings
 warnings.filterwarnings("ignore")
 
 def main():
-    
+
     # Parse command line arguments
     parser = argparse.ArgumentParser(
         description=textwrap.dedent(f'''
-            Label Vertebrae IVD CSF and Spinal Cord from init segmentation.
+            Label Vertebrae, IVDs, Spinal Cord and canal from init segmentation.
         '''),
         epilog=textwrap.dedent('''
             Examples:
-            iterative_label -s labels_init -o labels --sacrum-labels 14 --csf-labels 16 --sc-labels 17 --disc-labels 2 3 4 5 6 7 --vertebrea-labels 9 10 11 12 13 14 --init-disc 4:224 7:202 5:219 6:207 --init-vertebrae 11:40 14:17 12:34 13:23 --step-diff-label --step-diff-disc
+            iterative_label -s labels_init -o labels --sacrum-labels 14 --canal-labels 16 --sc-labels 17 --disc-labels 2 3 4 5 6 7 --vertebrea-labels 9 10 11 12 13 14 --init-disc 4:224 7:202 5:219 6:207 --init-vertebrae 11:40 14:17 12:34 13:23 --step-diff-label --step-diff-disc
             For BIDS:
-            iterative_label -s derivatives/labels -o derivatives/labels --sacrum-labels 14 --csf-labels 16 --sc-labels 17 --disc-labels 2 3 4 5 6 7 --vertebrea-labels 9 10 11 12 13 14 --init-disc 4:224 7:202 5:219 6:207 --init-vertebrae 11:40 14:17 12:34 13:23 --step-diff-label --step-diff-disc --seg-suffix "_seg" --output-seg-suffix "_seg_seq" -d "sub-" -u "anat"
+            iterative_label -s derivatives/labels -o derivatives/labels --sacrum-labels 14 --canal-labels 16 --sc-labels 17 --disc-labels 2 3 4 5 6 7 --vertebrea-labels 9 10 11 12 13 14 --init-disc 4:224 7:202 5:219 6:207 --init-vertebrae 11:40 14:17 12:34 13:23 --step-diff-label --step-diff-disc --seg-suffix "_seg" --output-seg-suffix "_seg_seq" -d "sub-" -u "anat"
         '''),
         formatter_class=argparse.RawTextHelpFormatter
     )
@@ -31,7 +31,7 @@ def main():
         help='Folder containing input segmentations.'
     )
     parser.add_argument(
-        '--output-dir', '-o', type=Path, required=True, 
+        '--output-segs-dir', '-o', type=Path, required=True,
         help='Folder to save output segmentations.'
     )
     parser.add_argument(
@@ -43,11 +43,11 @@ def main():
         '''),
     )
     parser.add_argument(
-        '--subject-subdir', '-u', type=str, default='', 
+        '--subject-subdir', '-u', type=str, default='',
         help='Subfolder inside subject folder containing masks (for example "anat"), defaults to no subfolder.'
     )
     parser.add_argument(
-        '--prefix', '-p', type=str, default='', 
+        '--prefix', '-p', type=str, default='',
         help='File prefix to work on.'
     )
     parser.add_argument(
@@ -91,20 +91,20 @@ def main():
         help='The sacrum label in the output, defaults to 92.'
     )
     parser.add_argument(
-        '--csf-labels', type=int, nargs='+', default=[],
-        help='The CSF label.'
+        '--canal-labels', type=int, nargs='+', default=[],
+        help='The Spinal Canal label.'
     )
     parser.add_argument(
-        '--output-csf-label', type=int, default=201,
-        help='The CSF label in the output, defaults to 201.'
+        '--output-canal-label', type=int, default=201,
+        help='The Spinal Canal label in the output, defaults to 201.'
     )
     parser.add_argument(
         '--sc-labels', type=int, nargs='+', default=[],
-        help='The spinal cord label.'
+        help='The Spinal Cord label.'
     )
     parser.add_argument(
         '--output-sc-label', type=int, default=200,
-        help='The spinal cord label in the output, defaults to 200.'
+        help='The Spinal Cord label in the output, defaults to 200.'
     )
     parser.add_argument(
         '--dilation-size', type=int, default=1,
@@ -149,7 +149,7 @@ def main():
 
     # Get arguments
     segs_path = args.segs_dir
-    output_path = args.output_dir
+    output_segs_path = args.output_segs_dir
     subject_dir = args.subject_dir
     subject_subdir = args.subject_subdir
     prefix = args.prefix
@@ -163,8 +163,8 @@ def main():
     output_vertebrea_step = args.output_vertebrea_step
     sacrum_labels = args.sacrum_labels
     output_sacrum_label = args.output_sacrum_label
-    csf_labels = args.csf_labels
-    output_csf_label = args.output_csf_label
+    canal_labels = args.canal_labels
+    output_canal_label = args.output_canal_label
     sc_labels = args.sc_labels
     output_sc_label = args.output_sc_label
     dilation_size = args.dilation_size
@@ -179,7 +179,7 @@ def main():
         print(textwrap.dedent(f'''
             Running {Path(__file__).stem} with the following params:
             segs_dir = "{segs_path}"
-            output_dir = "{output_path}"
+            output_segs_dir = "{output_segs_path}"
             subject_dir = "{subject_dir}"
             subject_subdir = "{subject_subdir}"
             prefix = "{prefix}"
@@ -193,8 +193,8 @@ def main():
             output_vertebrea_step = {output_vertebrea_step}
             sacrum_labels = {sacrum_labels}
             output_sacrum_label = {output_sacrum_label}
-            csf_labels = {csf_labels}
-            output_csf_label = {output_csf_label}
+            canal_labels = {canal_labels}
+            output_canal_label = {output_canal_label}
             sc_labels = {sc_labels}
             output_sc_label = {output_sc_label}
             dilation_size = {dilation_size}
@@ -205,7 +205,65 @@ def main():
             max_workers = {max_workers}
             verbose = {verbose}
         '''))
-    
+
+    iterative_label_mp(
+        segs_path=segs_path,
+        output_segs_path=output_segs_path,
+        subject_dir=subject_dir,
+        subject_subdir=subject_subdir,
+        prefix=prefix,
+        seg_suffix=seg_suffix,
+        output_seg_suffix=output_seg_suffix,
+        disc_labels=disc_labels,
+        init_disc=init_disc,
+        output_disc_step=output_disc_step,
+        vertebrea_labels=vertebrea_labels,
+        init_vertebrae=init_vertebrae,
+        output_vertebrea_step=output_vertebrea_step,
+        sacrum_labels=sacrum_labels,
+        output_sacrum_label=output_sacrum_label,
+        canal_labels=canal_labels,
+        output_canal_label=output_canal_label,
+        sc_labels=sc_labels,
+        output_sc_label=output_sc_label,
+        dilation_size=dilation_size,
+        combine_before_label=combine_before_label,
+        step_diff_label=step_diff_label,
+        step_diff_disc=step_diff_disc,
+        override=override,
+        max_workers=max_workers,
+    )
+
+def iterative_label_mp(
+        segs_path,
+        output_segs_path,
+        subject_dir=None,
+        subject_subdir='',
+        prefix='',
+        seg_suffix='',
+        output_seg_suffix='',
+        disc_labels=[],
+        init_disc={},
+        output_disc_step=-1,
+        vertebrea_labels=[],
+        init_vertebrae={},
+        output_vertebrea_step=-1,
+        sacrum_labels=[],
+        output_sacrum_label=92,
+        canal_labels=[],
+        output_canal_label=201,
+        sc_labels=[],
+        output_sc_label=200,
+        dilation_size=1,
+        combine_before_label=False,
+        step_diff_label=False,
+        step_diff_disc=False,
+        override=False,
+        max_workers=mp.cpu_count(),
+    ):
+    segs_path = Path(segs_path)
+    output_segs_path = Path(output_segs_path)
+
     glob_pattern = ""
     if subject_dir is not None:
         glob_pattern += f"{subject_dir}*/"
@@ -214,64 +272,58 @@ def main():
     glob_pattern += f'{prefix}*{seg_suffix}.nii.gz'
 
     # Process the NIfTI image and segmentation files
-    segs_path_list = list(segs_path.glob(glob_pattern))
+    seg_path_list = list(segs_path.glob(glob_pattern))
+    output_seg_path_list = [output_segs_path / _.relative_to(segs_path).parent / _.name.replace(f'{seg_suffix}.nii.gz', f'{output_seg_suffix}.nii.gz') for _ in seg_path_list]
 
-    # Create a partially-applied function with the extra arguments
-    partial_iterative_label = partial(
-        iterative_label,
-        segs_path=segs_path,
-        output_path=output_path,
-        seg_suffix=seg_suffix,
-        output_seg_suffix=output_seg_suffix,
-        disc_labels=disc_labels,
-        output_disc_step=output_disc_step,
-        init_disc=init_disc,
-        vertebrea_labels=vertebrea_labels,
-        init_vertebrae=init_vertebrae,
-        output_vertebrea_step=output_vertebrea_step,
-        sacrum_labels=sacrum_labels,
-        output_sacrum_label=output_sacrum_label,
-        csf_labels=csf_labels,
-        output_csf_label=output_csf_label,
-        sc_labels=sc_labels,
-        output_sc_label=output_sc_label,
-        dilation_size=dilation_size,
-        combine_before_label=combine_before_label,
-        step_diff_label=step_diff_label,
-        step_diff_disc=step_diff_disc,
-        override=override,
-   )
+    process_map(
+        partial(
+            _iterative_label,
+            disc_labels=disc_labels,
+            output_disc_step=output_disc_step,
+            init_disc=init_disc,
+            vertebrea_labels=vertebrea_labels,
+            init_vertebrae=init_vertebrae,
+            output_vertebrea_step=output_vertebrea_step,
+            sacrum_labels=sacrum_labels,
+            output_sacrum_label=output_sacrum_label,
+            canal_labels=canal_labels,
+            output_canal_label=output_canal_label,
+            sc_labels=sc_labels,
+            output_sc_label=output_sc_label,
+            dilation_size=dilation_size,
+            combine_before_label=combine_before_label,
+            step_diff_label=step_diff_label,
+            step_diff_disc=step_diff_disc,
+            override=override,
+        ),
+        seg_path_list,
+        output_seg_path_list,
+        max_workers=max_workers,
+    )
 
-    with mp.Pool() as pool:
-        process_map(partial_iterative_label, segs_path_list, max_workers=max_workers)
-    
-
-def iterative_label(
+def _iterative_label(
         seg_path,
-        segs_path,
-        output_path,
-        seg_suffix,
-        output_seg_suffix,
-        disc_labels,
-        init_disc,
-        output_disc_step,
-        vertebrea_labels,
-        init_vertebrae,
-        output_vertebrea_step,
-        sacrum_labels,
-        output_sacrum_label,
-        csf_labels,
-        output_csf_label,
-        sc_labels,
-        output_sc_label,
-        dilation_size,
-        combine_before_label,
-        step_diff_label,
-        step_diff_disc,
-        override,
+        output_seg_path,
+        disc_labels=[],
+        init_disc={},
+        output_disc_step=-1,
+        vertebrea_labels=[],
+        init_vertebrae={},
+        output_vertebrea_step=-1,
+        sacrum_labels=[],
+        output_sacrum_label=92,
+        canal_labels=[],
+        output_canal_label=201,
+        sc_labels=[],
+        output_sc_label=200,
+        dilation_size=1,
+        combine_before_label=False,
+        step_diff_label=False,
+        step_diff_disc=False,
+        override=False,
     ):
-    
-    output_seg_path = output_path / seg_path.relative_to(segs_path).parent / seg_path.name.replace(f'{seg_suffix}.nii.gz', f'{output_seg_suffix}.nii.gz')
+    seg_path = Path(seg_path)
+    output_seg_path = Path(output_seg_path)
 
     # If the output image already exists and we are not overriding it, return
     if not override and output_seg_path.exists():
@@ -279,9 +331,68 @@ def iterative_label(
 
     # Load segmentation
     seg = nib.load(seg_path)
-    seg_data_src = np.asanyarray(seg.dataobj).round().astype(np.uint8)
 
-    seg_data = np.zeros_like(seg_data_src)
+    try:
+        output_seg = iterative_label(
+            seg,
+            disc_labels=disc_labels,
+            init_disc=init_disc,
+            output_disc_step=output_disc_step,
+            vertebrea_labels=vertebrea_labels,
+            init_vertebrae=init_vertebrae,
+            output_vertebrea_step=output_vertebrea_step,
+            sacrum_labels=sacrum_labels,
+            output_sacrum_label=output_sacrum_label,
+            canal_labels=canal_labels,
+            output_canal_label=output_canal_label,
+            sc_labels=sc_labels,
+            output_sc_label=output_sc_label,
+            dilation_size=dilation_size,
+            combine_before_label=combine_before_label,
+            step_diff_label=step_diff_label,
+            step_diff_disc=step_diff_disc,
+            override=override,
+        )
+    except ValueError as e:
+        output_seg_path.is_file() and output_seg_path.unlink()
+        print(f'Error: {seg_path}, {e}')
+        return
+
+    # Ensure correct segmentation dtype, affine and header
+    output_seg = nib.Nifti1Image(
+        np.asanyarray(output_seg.dataobj).round().astype(np.uint8),
+        output_seg.affine, output_seg.header
+    )
+    output_seg.set_data_dtype(np.uint8)
+    output_seg.set_qform(output_seg.affine)
+    output_seg.set_sform(output_seg.affine)
+
+    # Make sure output directory exists and save the segmentation
+    output_seg_path.parent.mkdir(parents=True, exist_ok=True)
+    nib.save(output_seg, output_seg_path)
+
+def iterative_label(
+        seg,
+        disc_labels=[],
+        init_disc={},
+        output_disc_step=-1,
+        vertebrea_labels=[],
+        init_vertebrae={},
+        output_vertebrea_step=-1,
+        sacrum_labels=[],
+        output_sacrum_label=92,
+        canal_labels=[],
+        output_canal_label=201,
+        sc_labels=[],
+        output_sc_label=200,
+        dilation_size=1,
+        combine_before_label=False,
+        step_diff_label=False,
+        step_diff_disc=False,
+    ):
+    seg_data = np.asanyarray(seg.dataobj).round().astype(np.uint8)
+
+    output_seg_data = np.zeros_like(seg_data)
 
     binary_dilation_structure = iterate_structure(generate_binary_structure(3, 1), dilation_size)
 
@@ -297,11 +408,11 @@ def iterative_label(
         # Get labeled
         if combine_before_label or not is_vert: # Always for discs
             # Combine all labels before label continue voxels
-            mask_labeled, num_labels = label(binary_dilation(np.isin(seg_data_src, labels), binary_dilation_structure), np.ones((3, 3, 3)))
+            mask_labeled, num_labels = label(binary_dilation(np.isin(seg_data, labels), binary_dilation_structure), np.ones((3, 3, 3)))
         else:
-            mask_labeled, num_labels = np.zeros_like(seg_data_src), 0
+            mask_labeled, num_labels = np.zeros_like(seg_data), 0
             for l in labels:
-                mask = seg_data_src == l
+                mask = seg_data == l
                 # Dilate
                 tmp_mask_labeled, tmp_num_labels = label(binary_dilation(mask, binary_dilation_structure), np.ones((3, 3, 3)))
                 # Undo dilate
@@ -310,11 +421,9 @@ def iterative_label(
                     mask_labeled[tmp_mask_labeled != 0] = tmp_mask_labeled[tmp_mask_labeled != 0] + num_labels
                     num_labels += tmp_num_labels
 
-        # If no label found, print error
+        # If no label found, raise error
         if num_labels == 0:
-            output_seg_path.is_file() and output_seg_path.unlink()
-            print(f"Error: {seg_path}, some label must be in the segmentation (labels: {labels})")
-            return
+            raise ValueError(f"Some label must be in the segmentation (labels: {labels})")
 
         # Get the z index of the center of mass for each label
         canonical_mask_labeled = np.asanyarray(nib.as_closest_canonical(nib.Nifti1Image(mask_labeled, seg.affine, seg.header)).dataobj).round().astype(np.uint8)
@@ -322,14 +431,14 @@ def iterative_label(
 
         # Sort the labels by their z-index (reversed)
         sorted_z_indexes, sorted_labels = zip(*sorted(zip(mask_labeled_z_indexes,range(1,num_labels+1)))[::-1])
-        
+
         if is_vert:
             # Combine sequential vertebrae labels if they have the same value in the original segmentation
             if step_diff_label and len(labels) - len(init) > 1:
                 new_sorted_labels = []
                 prev_l, prev_orig_label = 0, 0
                 for l in sorted_labels:
-                    curr_orig_label = seg_data_src[mask_labeled == l].flat[0]
+                    curr_orig_label = seg_data[mask_labeled == l].flat[0]
                     if curr_orig_label == prev_orig_label:
                         mask_labeled[mask_labeled == l] = prev_l
                         num_labels -= 1
@@ -367,49 +476,41 @@ def iterative_label(
         # Set the first label
         first_label = 0
         for k, v in init.items():
-            if k in seg_data_src:
-                first_label = v - step * sorted_labels.index(mask_labeled[seg_data_src == k].flat[0])
+            if k in seg_data:
+                first_label = v - step * sorted_labels.index(mask_labeled[seg_data == k].flat[0])
                 break
 
         # If no init label found, print error
         if first_label == 0:
-            output_seg_path.is_file() and output_seg_path.unlink()
-            print(f"Error: {seg_path}, some initiation label must be in the segmentation (init: {list(init.keys())})")
-            return
+            raise ValueError(f"Some initiation label must be in the segmentation (init: {list(init.keys())})")
 
         # Set the output value for the current label
         for i in range(num_labels):
-            seg_data[mask_labeled == sorted_labels[i]] = first_label + step * i
+            output_seg_data[mask_labeled == sorted_labels[i]] = first_label + step * i
 
     # Set sacrum label
     if len(sacrum_labels) > 0:
-        seg_data[seg_data == output_sacrum_label] = 0
-        seg_data[np.isin(seg_data_src, sacrum_labels)] = output_sacrum_label
+        output_seg_data[output_seg_data == output_sacrum_label] = 0
+        output_seg_data[np.isin(seg_data, sacrum_labels)] = output_sacrum_label
 
         # If no sacrum_labels in input try to use the init_vertebrae map of the sacrum
         sacrum_output_labels = [init_vertebrae[_] for _ in sacrum_labels if _ in init_vertebrae]
-        if output_sacrum_label not in seg_data and len(sacrum_output_labels) > 0:
-            seg_data[np.isin(seg_data, sacrum_output_labels)] = output_sacrum_label
+        if output_sacrum_label not in output_seg_data and len(sacrum_output_labels) > 0:
+            output_seg_data[np.isin(output_seg_data, sacrum_output_labels)] = output_sacrum_label
 
-    # Set CSF label
-    if len(csf_labels) > 0:
-        seg_data[seg_data == output_csf_label] = 0
-        seg_data[np.isin(seg_data_src, csf_labels)] = output_csf_label
+    # Set Spinal Canal label
+    if len(canal_labels) > 0:
+        output_seg_data[output_seg_data == output_canal_label] = 0
+        output_seg_data[np.isin(seg_data, canal_labels)] = output_canal_label
 
     # Set cord label
     if len(sc_labels) > 0:
-        seg_data[seg_data == output_sc_label] = 0
-        seg_data[np.isin(seg_data_src, sc_labels)] = output_sc_label
+        output_seg_data[output_seg_data == output_sc_label] = 0
+        output_seg_data[np.isin(seg_data, sc_labels)] = output_sc_label
 
-    # Create result segmentation
-    output_seg = nib.Nifti1Image(seg_data, seg.affine, seg.header)
-    output_seg.set_qform(seg.affine)
-    output_seg.set_sform(seg.affine)
-    output_seg.set_data_dtype(np.uint8)
-    # Make sure output directory exists
-    output_seg_path.parent.mkdir(parents=True, exist_ok=True)
-    # Save mapped segmentation
-    nib.save(output_seg, output_seg_path)
+    output_seg = nib.Nifti1Image(output_seg_data, seg.affine, seg.header)
+
+    return output_seg
 
 if __name__ == '__main__':
     main()

@@ -25,7 +25,7 @@ class Image(object):
 
         if absolutepath is not None:
             self._path = os.path.abspath(absolutepath)
-        
+
         # Case 1: load an image from file
         if isinstance(param, str):
             self.loadFromPath(param)
@@ -44,18 +44,18 @@ class Image(object):
             self.hdr.set_data_shape(self.data.shape)
         else:
             raise TypeError('Image constructor takes at least one argument.')
-    
+
         # Fix any mismatch between the array's datatype and the header datatype
         self.fix_header_dtype()
 
     @property
     def dim(self):
         return get_dimension(self)
-    
+
     @property
     def orientation(self):
         return get_orientation(self)
-    
+
     @property
     def absolutepath(self):
         """
@@ -73,7 +73,7 @@ class Image(object):
         the best way to set it.
         """
         return self._path
-    
+
     @absolutepath.setter
     def absolutepath(self, value):
         if value is None:
@@ -84,7 +84,7 @@ class Image(object):
         elif not os.path.isabs(value):
             value = os.path.abspath(value)
         self._path = value
-    
+
     @property
     def header(self):
         return self.hdr
@@ -136,7 +136,7 @@ class Image(object):
         """
         change_orientation(self, orientation, self, inverse=inverse)
         return self
-    
+
     def getNonZeroCoordinates(self, sorting=None, reverse_coord=False):
         """
         This function return all the non-zero coordinates that the image contains.
@@ -180,7 +180,7 @@ class Image(object):
                 raise ValueError("sorting parameter must be either 'x', 'y', 'z' or 'value'")
 
         return list_coordinates
-    
+
     def change_type(self, dtype):
         """
         Change data type on image.
@@ -189,7 +189,7 @@ class Image(object):
         """
         change_type(self, dtype, self)
         return self
-    
+
     def fix_header_dtype(self):
         """
         Change the header dtype to the match the datatype of the array.
@@ -205,7 +205,7 @@ class Image(object):
             logger.warning(f"Image header specifies datatype '{dtype_header}', but array is of type "
                            f"'{dtype_data}'. Header metadata will be overwritten to use '{dtype_data}'.")
             self.hdr.set_data_dtype(dtype_data)
-    
+
     def save(self, path=None, dtype=None, verbose=1, mutable=False):
         """
         Write an image in a nifti file

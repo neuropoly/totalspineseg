@@ -20,9 +20,9 @@ def main():
         ),
         epilog=textwrap.dedent('''
             Examples:
-            laplace -i images -o images
+            abs_laplace -i images -o images
             For BIDS:
-            laplace -i . -o . --image-suffix "" --output-image-suffix "_laplace" -d "sub-" -u "anat"
+            abs_laplace -i . -o . --image-suffix "" --output-image-suffix "_laplace" -d "sub-" -u "anat"
         '''),
         formatter_class=argparse.RawTextHelpFormatter
     )
@@ -43,11 +43,11 @@ def main():
         '''),
     )
     parser.add_argument(
-        '--subject-subdir', '-u', type=str, default='', 
+        '--subject-subdir', '-u', type=str, default='',
         help='Subfolder inside subject folder containing masks, defaults to no subfolder.'
     )
     parser.add_argument(
-        '--prefix', '-p', type=str, default='', 
+        '--prefix', '-p', type=str, default='',
         help='File prefix to work on.'
     )
     parser.add_argument(
@@ -88,10 +88,10 @@ def main():
     override = args.override
     max_workers = args.max_workers
     verbose = args.verbose
-    
+
     # Print the argument values if verbose is enabled
     if verbose:
-        print(textwrap.dedent(f''' 
+        print(textwrap.dedent(f'''
             Running {Path(__file__).stem} with the following params:
             images_path = "{images_path}"
             output_images_path = "{output_images_path}"
@@ -105,6 +105,32 @@ def main():
             verbose = {verbose}
         '''))
 
+    abs_laplace_mp(
+        images_path=images_path,
+        output_images_path=output_images_path,
+        subject_dir=subject_dir,
+        subject_subdir=subject_subdir,
+        prefix=prefix,
+        image_suffix=image_suffix,
+        output_image_suffix=output_image_suffix,
+        override=override,
+        max_workers=max_workers,
+    )
+
+def abs_laplace_mp(
+        images_path,
+        output_images_path,
+        subject_dir=None,
+        subject_subdir='',
+        prefix='',
+        image_suffix='_0000',
+        output_image_suffix='_0000',
+        override=False,
+        max_workers=mp.cpu_count(),
+    ):
+    images_path = Path(images_path)
+    output_images_path = Path(output_images_path)
+
     glob_pattern = ""
     if subject_dir is not None:
         glob_pattern += f"{subject_dir}*/"
@@ -113,32 +139,26 @@ def main():
     glob_pattern += f'{prefix}*{image_suffix}.nii.gz'
 
     # Process the NIfTI image and segmentation files
-    images_path_list = list(images_path.glob(glob_pattern))
+    image_path_list = list(images_path.glob(glob_pattern))
+    output_image_path_list = [output_images_path / _.relative_to(images_path).parent / _.name.replace(f'{image_suffix}.nii.gz', f'{output_image_suffix}.nii.gz') for _ in image_path_list]
 
-    # Create a partially-applied function with the extra arguments
-    partial_laplace = partial(
-        laplace,
-        images_path=images_path,
-        output_images_path=output_images_path,
-        image_suffix=image_suffix,
-        output_image_suffix=output_image_suffix,
-        override=override,
+    process_map(
+        partial(
+            _abs_laplace,
+            override=override,
+        ),
+        image_path_list,
+        output_image_path_list,
+        max_workers=max_workers,
     )
 
-    with mp.Pool() as pool:
-        process_map(partial_laplace, images_path_list, max_workers=max_workers)
-
-
-def laplace(
+def _abs_laplace(
         image_path,
-        images_path,
-        output_images_path,
-        image_suffix,
-        output_image_suffix,
+        output_image_path,
         override,
     ):
-
-    output_image_path = output_images_path / image_path.relative_to(images_path).parent / image_path.name.replace(f'{image_suffix}.nii.gz', f'{output_image_suffix}.nii.gz')
+    image_path = Path(image_path)
+    output_image_path = Path(output_image_path)
 
     # If the output image already exists and we are not overriding it, return
     if not override and output_image_path.exists():
@@ -146,32 +166,48 @@ def laplace(
 
     image = nib.load(image_path)
 
-    # Get the data type of the image
-    image_data = np.asanyarray(image.dataobj)
-    image_data_dtype = getattr(np, image_data.dtype.name)
-    image_data = image_data.astype(np.float64)
+    # Get image dtype from the image data (preferred over header dtype to avoid data loss)
+    image_data_dtype = getattr(np, np.asanyarray(image.dataobj).dtype.name)
+
+    # Rescale the image to the output dtype range if necessary
+    # Modified from https://github.com/spinalcordtoolbox/spinalcordtoolbox/blob/6.3/spinalcordtoolbox/image.py#L1217
+    if "int" in np.dtype(image_data_dtype).name:
+        image_data = np.asanyarray(image.dataobj).astype(np.float64)
+        image_min, image_max = image_data.min(), image_data.max()
+        dtype_min, dtype_max = np.iinfo(image_data_dtype).min, np.iinfo(image_data_dtype).max
+        if (image_min < dtype_min) or (dtype_max < image_max):
+            data_rescaled = image_data * (dtype_max - dtype_min) / (image_max - image_min)
+            image_data = data_rescaled - (data_rescaled.min() - dtype_min)
+            image = nib.Nifti1Image(image_data.astype(image_data_dtype), image.affine, image.header)
+
+    output_image = abs_laplace(image)
+
+    # Ensure correct image dtype, affine and header
+    output_image = nib.Nifti1Image(
+        np.asanyarray(output_image.dataobj).astype(image_data_dtype),
+        output_image.affine, output_image.header
+    )
+    output_image.set_data_dtype(image_data_dtype)
+    output_image.set_qform(output_image.affine)
+    output_image.set_sform(output_image.affine)
+
+    # Make sure output directory exists and save the image
+    output_image_path.parent.mkdir(parents=True, exist_ok=True)
+    nib.save(output_image, output_image_path)
+
+def abs_laplace(
+        image,
+    ):
+    image_data = np.asanyarray(image.dataobj).astype(np.float64)
 
     output_image_data = np.abs(laplace(image_data))
 
-    # Rescale the image to the output data type if necessary
-    # code from https://github.com/spinalcordtoolbox/spinalcordtoolbox/blob/6.3/spinalcordtoolbox/image.py#L1217
-    if "int" in np.dtype(image_data_dtype).name:
-        # get min/max from output type
-        min_out = np.iinfo(image_data_dtype).min
-        max_out = np.iinfo(image_data_dtype).max
-        min_in = output_image_data.min()
-        max_in = output_image_data.max()
-        if (min_in < min_out) or (max_in > max_out):
-            data_rescaled = output_image_data * (max_out - min_out) / (max_in - min_in)
-            output_image_data = data_rescaled - (data_rescaled.min() - min_out)
+    # Return to original range
+    output_image_data = np.interp(output_image_data, (output_image_data.min(), output_image_data.max()), (image_data.min(), image_data.max()))
 
-    # Make sure output directory exists and save with original header image dtype
-    output_image_path.parent.mkdir(parents=True, exist_ok=True)
-    output_image = nib.Nifti1Image(output_image_data.astype(image_data_dtype), image.affine, image.header)
-    output_image.set_qform(image.affine)
-    output_image.set_sform(image.affine)
-    output_image.set_data_dtype(image_data_dtype)
-    nib.save(output_image, output_image_path)
+    output_image = nib.Nifti1Image(output_image_data, image.affine, image.header)
+
+    return output_image
 
 if __name__ == '__main__':
     main()

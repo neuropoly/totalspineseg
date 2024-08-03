@@ -26,6 +26,9 @@ if [ $DATASETS == all ]; then DATASETS=(101 102 103); fi
 # Set the fold to work with - default is 0
 FOLD=${2:-0}
 
+# ensure the custom nnUNetTrainer is defined in the nnUNet library and add it if it is not
+source "$TOTALSPINESEG"/scripts/add_nnunet_trainer.sh
+
 # set TOTALSPINESEG and TOTALSPINESEG_DATA if not set
 TOTALSPINESEG="$(realpath ${TOTALSPINESEG:-totalspineseg})"
 TOTALSPINESEG_DATA="$(realpath ${TOTALSPINESEG_DATA:-data})"
@@ -73,9 +76,6 @@ echo "data_identifier=${data_identifier}"
 echo "JOBS=${JOBS}"
 echo "DEVICE=${DEVICE}"
 echo ""
-
-# ensure the custom nnUNetTrainer is defined in the nnUNet library and add it if it is not
-source "$TOTALSPINESEG"/scripts/add_nnunet_trainer.sh
 
 echo "Working with datasets: ${DATASETS[@]}, fold: $FOLD"
 

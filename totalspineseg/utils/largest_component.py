@@ -11,7 +11,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 def main():
-    
+
     # Parse command line arguments
     parser = argparse.ArgumentParser(
         description=textwrap.dedent(f'''
@@ -19,9 +19,9 @@ def main():
         '''),
         epilog=textwrap.dedent('''
             Examples:
-            largest_labels -s labels -o labels_largest
+            largest_component -s labels -o labels_largest
             For BIDS:
-            largest_labels -s derivatives/labels -o derivatives/labels --seg-suffix "_seg" --output-seg-suffix "_seg_largest" -d "sub-" -u "anat"
+            largest_component -s derivatives/labels -o derivatives/labels --seg-suffix "_seg" --output-seg-suffix "_seg_largest" -d "sub-" -u "anat"
         '''),
         formatter_class=argparse.RawTextHelpFormatter
     )
@@ -31,7 +31,7 @@ def main():
         help='Folder containing input segmentations.'
     )
     parser.add_argument(
-        '--output-dir', '-o', type=Path, required=True, 
+        '--output-segs-dir', '-o', type=Path, required=True,
         help='Folder to save output segmentations.'
     )
     parser.add_argument(
@@ -43,11 +43,11 @@ def main():
         '''),
     )
     parser.add_argument(
-        '--subject-subdir', '-u', type=str, default='', 
+        '--subject-subdir', '-u', type=str, default='',
         help='Subfolder inside subject folder containing masks (for example "anat"), defaults to no subfolder.'
     )
     parser.add_argument(
-        '--prefix', '-p', type=str, default='', 
+        '--prefix', '-p', type=str, default='',
         help='File prefix to work on.'
     )
     parser.add_argument(
@@ -86,7 +86,7 @@ def main():
 
     # Get arguments
     segs_path = args.segs_dir
-    output_path = args.output_dir
+    output_segs_path = args.output_segs_dir
     subject_dir = args.subject_dir
     subject_subdir = args.subject_subdir
     prefix = args.prefix
@@ -102,7 +102,7 @@ def main():
         print(textwrap.dedent(f'''
             Running {Path(__file__).stem} with the following params:
             segs_dir = "{segs_path}"
-            output_dir = "{output_path}"
+            output_segs_dir = "{output_segs_path}"
             subject_dir = "{subject_dir}"
             subject_subdir = "{subject_subdir}"
             prefix = "{prefix}"
@@ -114,7 +114,37 @@ def main():
             max_workers = {max_workers}
             verbose = {verbose}
         '''))
-    
+
+    largest_component_mp(
+        segs_path=segs_path,
+        output_segs_path=output_segs_path,
+        subject_dir=subject_dir,
+        subject_subdir=subject_subdir,
+        prefix=prefix,
+        seg_suffix=seg_suffix,
+        output_seg_suffix=output_seg_suffix,
+        binarize=binarize,
+        dilate=dilate,
+        override=override,
+        max_workers=max_workers
+    )
+
+def largest_component_mp(
+        segs_path,
+        output_segs_path,
+        subject_dir=None,
+        subject_subdir='',
+        prefix='',
+        seg_suffix='',
+        output_seg_suffix='',
+        binarize=False,
+        dilate=0,
+        override=False,
+        max_workers=mp.cpu_count(),
+    ):
+    segs_path = Path(segs_path)
+    output_segs_path = Path(output_segs_path)
+
     glob_pattern = ""
     if subject_dir is not None:
         glob_pattern += f"{subject_dir}*/"
@@ -123,36 +153,30 @@ def main():
     glob_pattern += f'{prefix}*{seg_suffix}.nii.gz'
 
     # Process the NIfTI image and segmentation files
-    segs_path_list = list(segs_path.glob(glob_pattern))
+    seg_path_list = list(segs_path.glob(glob_pattern))
+    output_seg_path_list = [output_segs_path / _.relative_to(segs_path).parent / _.name.replace(f'{seg_suffix}.nii.gz', f'{output_seg_suffix}.nii.gz') for _ in seg_path_list]
 
-    # Create a partially-applied function with the extra arguments
-    partial_largest_labels = partial(
-        largest_labels,
-        segs_path=segs_path,
-        output_path=output_path,
-        seg_suffix=seg_suffix,
-        output_seg_suffix=output_seg_suffix,
-        binarize=binarize,
-        dilate=dilate,
-        override=override,
-   )
+    process_map(
+        partial(
+            _largest_component,
+            binarize=binarize,
+            dilate=dilate,
+            override=override,
+        ),
+        seg_path_list,
+        output_seg_path_list,
+        max_workers=max_workers
+    )
 
-    with mp.Pool() as pool:
-        process_map(partial_largest_labels, segs_path_list, max_workers=max_workers)
-    
-
-def largest_labels(
+def _largest_component(
         seg_path,
-        segs_path,
-        output_path,
-        seg_suffix,
-        output_seg_suffix,
-        binarize,
-        dilate,
-        override,
+        output_seg_path,
+        binarize=False,
+        dilate=0,
+        override=False,
     ):
-    
-    output_seg_path = output_path / seg_path.relative_to(segs_path).parent / seg_path.name.replace(f'{seg_suffix}.nii.gz', f'{output_seg_suffix}.nii.gz')
+    seg_path = Path(seg_path)
+    output_seg_path = Path(output_seg_path)
 
     # If the output image already exists and we are not overriding it, return
     if not override and output_seg_path.exists():
@@ -160,6 +184,31 @@ def largest_labels(
 
     # Load segmentation
     seg = nib.load(seg_path)
+
+    output_seg = largest_component(
+        seg,
+        binarize=binarize,
+        dilate=dilate,
+    )
+
+    # Ensure correct segmentation dtype, affine and header
+    output_seg = nib.Nifti1Image(
+        np.asanyarray(output_seg.dataobj).round().astype(np.uint8),
+        output_seg.affine, output_seg.header
+    )
+    output_seg.set_data_dtype(np.uint8)
+    output_seg.set_qform(output_seg.affine)
+    output_seg.set_sform(output_seg.affine)
+
+    # Make sure output directory exists and save the segmentation
+    output_seg_path.parent.mkdir(parents=True, exist_ok=True)
+    nib.save(output_seg, output_seg_path)
+
+def largest_component(
+        seg,
+        binarize=False,
+        dilate=0,
+    ):
     seg_data = np.asanyarray(seg.dataobj).round().astype(np.uint8)
 
     if binarize:
@@ -186,15 +235,9 @@ def largest_labels(
     if binarize:
         output_seg_data = output_seg_data * seg_data_src
 
-    # Create result segmentation
     output_seg = nib.Nifti1Image(output_seg_data, seg.affine, seg.header)
-    output_seg.set_qform(seg.affine)
-    output_seg.set_sform(seg.affine)
-    output_seg.set_data_dtype(np.uint8)
-    # Make sure output directory exists
-    output_seg_path.parent.mkdir(parents=True, exist_ok=True)
-    # Save mapped segmentation
-    nib.save(output_seg, output_seg_path)
+
+    return output_seg
 
 if __name__ == '__main__':
     main()

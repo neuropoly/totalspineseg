@@ -56,11 +56,11 @@ def main():
         '''),
     )
     parser.add_argument(
-        '--subject-subdir', '-u', type=str, default='', 
+        '--subject-subdir', '-u', type=str, default='',
         help='Subfolder inside subject folder containing masks, defaults to no subfolder.'
     )
     parser.add_argument(
-        '--prefix', '-p', type=str, default='', 
+        '--prefix', '-p', type=str, default='',
         help='File prefix to work on.'
     )
     parser.add_argument(
@@ -89,7 +89,7 @@ def main():
     )
     parser.add_argument(
         '--seg-classes', type=parse_class, nargs='+', default=None,
-        help='Define classes of labels for per class augmentation. Example: 202-224 18-41,92 200 201 for IVDs, vertebrae, disc, csf (Default to use each label as a separate class ).'
+        help='Define classes of labels for per class augmentation. Example: 202-224 18-41,92 200 201 for IVDs, vertebrae, Spinal Cord and Canal (Default to use each label as a separate class ).'
     )
     parser.add_argument(
         '--override', '-r', action="store_true", default=False,
@@ -128,10 +128,10 @@ def main():
     override = args.override
     max_workers = args.max_workers
     verbose = args.verbose
-    
+
     # Print the argument values if verbose is enabled
     if verbose:
-        print(textwrap.dedent(f''' 
+        print(textwrap.dedent(f'''
             Running {Path(__file__).stem} with the following params:
             images_path = "{images_path}"
             segs_path = "{segs_path}"
@@ -152,23 +152,14 @@ def main():
             verbose = {verbose}
         '''))
 
-    glob_pattern = ""
-    if subject_dir is not None:
-        glob_pattern += f"{subject_dir}*/"
-    if len(subject_subdir) > 0:
-        glob_pattern += f"{subject_subdir}/"
-    glob_pattern += f'{prefix}*{image_suffix}.nii.gz'
-
-    # Process the NIfTI image and segmentation files
-    images_path_list = list(images_path.glob(glob_pattern))
-
-    # Create a partially-applied function with the extra arguments
-    partial_augment = partial(
-        augment,
+    augment_mp(
         images_path=images_path,
         segs_path=segs_path,
         output_images_path=output_images_path,
         output_segs_path=output_segs_path,
+        subject_dir=subject_dir,
+        subject_subdir=subject_subdir,
+        prefix=prefix,
         image_suffix=image_suffix,
         seg_suffix=seg_suffix,
         output_image_suffix=output_image_suffix,
@@ -177,47 +168,101 @@ def main():
         labels2image=labels2image,
         seg_classes=seg_classes,
         override=override,
+        max_workers=max_workers,
     )
 
-    with mp.Pool() as pool:
-        process_map(partial_augment, images_path_list, max_workers=max_workers)
-
-
-def augment(
-        image_path,
+def augment_mp(
         images_path,
         segs_path,
         output_images_path,
         output_segs_path,
-        image_suffix,
-        seg_suffix,
-        output_image_suffix,
-        output_seg_suffix,
-        augmentations_per_image,
-        labels2image,
-        seg_classes,
-        override,
+        subject_dir=None,
+        subject_subdir='',
+        prefix='',
+        image_suffix='_0000',
+        seg_suffix='',
+        output_image_suffix='_0000',
+        output_seg_suffix='',
+        augmentations_per_image=7,
+        labels2image=False,
+        seg_classes=None,
+        override=False,
+        max_workers=mp.cpu_count(),
     ):
-    
-    seg_path = segs_path / image_path.relative_to(images_path).parent /  image_path.name.replace(f'{image_suffix}.nii.gz', f'{seg_suffix}.nii.gz')
-    output_image_path_pattern = output_images_path / image_path.relative_to(images_path).parent / image_path.name.replace(f'{image_suffix}.nii.gz', f'_a*{output_image_suffix}.nii.gz')
-    output_seg_path_pattern = output_segs_path / image_path.relative_to(images_path).parent / seg_path.name.replace(f'{seg_suffix}.nii.gz', f'_a*{output_seg_suffix}.nii.gz')
-    
+    images_path = Path(images_path)
+    segs_path = Path(segs_path)
+    output_images_path = Path(output_images_path)
+    output_segs_path = Path(output_segs_path)
+
+    glob_pattern = ""
+    if subject_dir is not None:
+        glob_pattern += f"{subject_dir}*/"
+    if len(subject_subdir) > 0:
+        glob_pattern += f"{subject_subdir}/"
+    glob_pattern += f'{prefix}*{image_suffix}.nii.gz'
+
+    # Process the NIfTI image and segmentation files
+    image_path_list = list(images_path.glob(glob_pattern))
+    seg_path_list = [segs_path / _.relative_to(images_path).parent / _.name.replace(f'{image_suffix}.nii.gz', f'{seg_suffix}.nii.gz') for _ in image_path_list]
+    output_image_path_pattern_list = [output_images_path / _.relative_to(images_path).parent / _.name.replace(f'{image_suffix}.nii.gz', f'_a*{output_image_suffix}.nii.gz') for _ in image_path_list]
+    output_seg_path_pattern_list = [output_segs_path / _.relative_to(segs_path).parent / _.name.replace(f'{seg_suffix}.nii.gz', f'_a*{output_seg_suffix}.nii.gz') for _ in seg_path_list]
+
+    process_map(
+        partial(
+            _augment,
+            augmentations_per_image=augmentations_per_image,
+            labels2image=labels2image,
+            seg_classes=seg_classes,
+            override=override,
+        ),
+        image_path_list,
+        seg_path_list,
+        output_image_path_pattern_list,
+        output_seg_path_pattern_list,
+        max_workers=max_workers,
+    )
+
+def _augment(
+        image_path,
+        seg_path,
+        output_image_path_pattern,
+        output_seg_path_pattern,
+        augmentations_per_image=7,
+        labels2image=False,
+        seg_classes=None,
+        override=False,
+    ):
+    image_path = Path(image_path)
+    seg_path = Path(seg_path)
+    output_image_path_pattern = Path(output_image_path_pattern)
+    output_seg_path_pattern = Path(output_seg_path_pattern)
+
+    if override:
+        for f in output_image_path_pattern.parent.glob(output_image_path_pattern.name):
+            f.unlink()
+        for f in output_seg_path_pattern.parent.glob(output_seg_path_pattern.name):
+            f.unlink()
+
     if not seg_path.is_file():
-        if override:
-            for f in output_image_path_pattern.parent.glob(output_image_path_pattern.name):
-                f.unlink()
-            for f in output_seg_path_pattern.parent.glob(output_seg_path_pattern.name):
-                f.unlink()
-        print(f'Segmentation file not found: {seg_path}')
+        print(f'Error: {seg_path}, Segmentation file not found')
         return
-    
+
     image = nib.load(image_path)
-    image_data = np.asanyarray(image.dataobj)
-    image_data_dtype = getattr(np, image_data.dtype.name)
-    image_data = image_data.astype(np.float64)
     seg = nib.load(seg_path)
-    seg_data = np.asanyarray(seg.dataobj).round().astype(np.uint8)
+
+    # Get image dtype from the image data (preferred over header dtype to avoid data loss)
+    image_data_dtype = getattr(np, np.asanyarray(image.dataobj).dtype.name)
+
+    # Rescale the image to the output dtype range if necessary
+    # Modified from https://github.com/spinalcordtoolbox/spinalcordtoolbox/blob/6.3/spinalcordtoolbox/image.py#L1217
+    if "int" in np.dtype(image_data_dtype).name:
+        image_data = np.asanyarray(image.dataobj).astype(np.float64)
+        image_min, image_max = image_data.min(), image_data.max()
+        dtype_min, dtype_max = np.iinfo(image_data_dtype).min, np.iinfo(image_data_dtype).max
+        if (image_min < dtype_min) or (dtype_max < image_max):
+            data_rescaled = image_data * (dtype_max - dtype_min) / (image_max - image_min)
+            image_data = data_rescaled - (data_rescaled.min() - dtype_min)
+            image = nib.Nifti1Image(image_data.astype(image_data_dtype), image.affine, image.header)
 
     for i in range(augmentations_per_image):
         output_image_path = output_image_path_pattern.with_name(output_image_path_pattern.name.replace('*', f'{i}'))
@@ -227,131 +272,148 @@ def augment(
         if not override and (output_image_path.exists() or output_seg_path.exists()):
             continue
 
-        _aug_redistribute_seg = partial(aug_redistribute_seg, classes=seg_classes)
-        _aug_labels2image = partial(aug_labels2image, classes=seg_classes)
-        downsampling = max(1, 7 / max(image.header.get_zooms()))
-        _aug_anisotropy = partial(aug_anisotropy, downsampling=(min(1.5, downsampling), downsampling))
+        output_image, output_seg = augment(
+            image,
+            seg,
+            labels2image=labels2image,
+            seg_classes=seg_classes
+        )
 
-        # loop until valid augmentation is found
-        for cur_cycle in range(100):
+        # Ensure correct image dtype, affine and header
+        output_image = nib.Nifti1Image(
+            np.asanyarray(output_image.dataobj).astype(image_data_dtype),
+            output_image.affine, output_image.header
+        )
+        output_image.set_data_dtype(image_data_dtype)
+        output_image.set_qform(output_image.affine)
+        output_image.set_sform(output_image.affine)
 
-            augs = []
+        # Make sure output directory exists and save the image
+        output_image_path.parent.mkdir(parents=True, exist_ok=True)
+        nib.save(output_image, output_image_path)
 
-            # Contrast augmentation
+        # Ensure correct segmentation dtype, affine and header
+        output_seg = nib.Nifti1Image(
+            np.asanyarray(output_seg.dataobj).round().astype(np.uint8),
+            output_seg.affine, output_seg.header
+        )
+        output_seg.set_data_dtype(np.uint8)
+        output_seg.set_qform(output_seg.affine)
+        output_seg.set_sform(output_seg.affine)
+
+        # Make sure output directory exists and save the segmentation
+        output_seg_path.parent.mkdir(parents=True, exist_ok=True)
+        nib.save(output_seg, output_seg_path)
+
+def augment(
+        image,
+        seg,
+        labels2image=False,
+        seg_classes=None,
+    ):
+    image_data = np.asanyarray(image.dataobj).astype(np.float64)
+    seg_data = np.asanyarray(seg.dataobj).round().astype(np.uint8)
+
+    _aug_redistribute_seg = partial(aug_redistribute_seg, classes=seg_classes)
+    _aug_labels2image = partial(aug_labels2image, classes=seg_classes)
+    downsampling = max(1, 7 / max(image.header.get_zooms()))
+    _aug_anisotropy = partial(aug_anisotropy, downsampling=(min(1.5, downsampling), downsampling))
+
+    # loop until valid augmentation is found
+    for cur_cycle in range(100):
+
+        augs = []
+
+        # Contrast augmentation
+
+        if rs.rand() < 0.1:
+            augs.append(aug_laplace)
+
+        else:
+
+            # Image form segmentation augmentation
+            if rs.rand() < 0.2:
+                augs.append(aug_clip_values)
+
+            if labels2image and rs.rand() < 0.15:
+                augs.append(_aug_labels2image)
+
+            if rs.rand() < 0.8:
+                augs.append(_aug_redistribute_seg)
+
+            if rs.rand() < 0.3:
+                augs.append(aug_gamma)
 
             if rs.rand() < 0.1:
-                augs.append(aug_laplace)
+                augs.append(aug_histogram_equalization)
 
-            else:
+            if rs.rand() < 0.05:
+                augs.append(aug_log)
 
-                # Image form segmentation augmentation
-                if rs.rand() < 0.2:
-                    augs.append(aug_clip_values)
+            if rs.rand() < 0.05:
+                augs.append(aug_sqrt)
 
-                if labels2image and rs.rand() < 0.15:
-                    augs.append(_aug_labels2image)
+            if rs.rand() < 0.05:
+                augs.append(aug_exp)
 
-                if rs.rand() < 0.8:
-                    augs.append(_aug_redistribute_seg)
+            if rs.rand() < 0.05:
+                augs.append(aug_sin)
 
-                if rs.rand() < 0.3:
-                    augs.append(aug_gamma)
+            if rs.rand() < 0.05:
+                augs.append(aug_sig)
 
-                if rs.rand() < 0.1:
-                    augs.append(aug_histogram_equalization)
+        # Inverse color augmentation
+        if rs.rand() < 0.3:
+            augs.append(aug_inverse)
 
-                if rs.rand() < 0.05:
-                    augs.append(aug_log)
+        # Artifacts augmentation
+        if rs.rand() < 0.7:
+            augs.append(rs.choice([
+                aug_motion,
+                aug_ghosting,
+                aug_spike,
+                aug_bias_field,
+                aug_blur,
+                aug_noise,
+            ]))
 
-                if rs.rand() < 0.05:
-                    augs.append(aug_sqrt)
+        # Spatial augmentation
+        if rs.rand() < 0.3:
+            augs.append(aug_flip)
 
-                if rs.rand() < 0.05:
-                    augs.append(aug_exp)
+        if rs.rand() < 0.7:
+            augs.append(rs.choice([
+                aug_bspline,
+                aug_aff,
+                aug_elastic,
+            ]))
 
-                if rs.rand() < 0.05:
-                    augs.append(aug_sin)
+        # Anisotropy augmentation
+        if rs.rand() < 0.7:
+            augs.append(_aug_anisotropy)
 
-                if rs.rand() < 0.05:
-                    augs.append(aug_sig)
+        # Augment the images
+        output_image_data, output_seg_data = image_data, seg_data
+        for a in augs:
+            output_image_data, output_seg_data = a(output_image_data, output_seg_data)
 
-            # Inverse color augmentation
-            if rs.rand() < 0.3:
-                augs.append(aug_inverse)
+        # Return to original range
+        output_image_data = np.interp(output_image_data, (output_image_data.min(), output_image_data.max()), (image_data.min(), image_data.max()))
 
-            # Artifacts augmentation
-            if rs.rand() < 0.7:
-                augs.append(rs.choice([
-                    aug_motion,
-                    aug_ghosting,
-                    aug_spike,
-                    aug_bias_field,
-                    aug_blur,
-                    aug_noise,
-                ]))
+        # Validate augmentation results and break the loop if valid
+        output_image_min, output_image_max = output_image_data.min(), output_image_data.max()
+        output_image_range = output_image_max - output_image_min
+        output_image_iqr5 = np.percentile(output_image_data, 52.5) - np.percentile(output_image_data, 47.5)
+        output_image_iqr95 = np.percentile(output_image_data, 97.5) - np.percentile(output_image_data, 2.5)
+        if output_image_range > 0 and output_image_iqr5 < 0.99 * output_image_range and output_image_iqr95 > 0.01 * output_image_range:
+            break
+        # print("Invalid augmentation, retrying...")
+    # print(f"\nAugmentations: {[a.func.__name__ if isinstance(a, partial) else a.__name__ for a in augs]}", end='')
 
-            # Spatial augmentation
-            if rs.rand() < 0.3:
-                augs.append(aug_flip)
+    output_image = nib.Nifti1Image(output_image_data, image.affine, image.header)
+    output_seg = nib.Nifti1Image(output_seg_data, seg.affine, seg.header)
 
-            if rs.rand() < 0.7:
-                augs.append(rs.choice([
-                    aug_bspline,
-                    aug_aff,
-                    aug_elastic,
-                ]))
-
-            # Anisotropy augmentation
-            if rs.rand() < 0.7:
-                augs.append(_aug_anisotropy)
-
-            # Augment the images
-            output_image_data, output_seg_data = image_data, seg_data
-            for a in augs:
-                output_image_data, output_seg_data = a(output_image_data, output_seg_data)
-
-            # Return to original range
-            output_image_data = np.interp(output_image_data, (output_image_data.min(), output_image_data.max()), (image_data.min(), image_data.max()))
-
-            # Validate augmentation results and break the loop if valid
-            output_image_min, output_image_max = output_image_data.min(), output_image_data.max()
-            output_image_range = output_image_max - output_image_min
-            output_image_iqr5 = np.percentile(output_image_data, 52.5) - np.percentile(output_image_data, 47.5)
-            output_image_iqr95 = np.percentile(output_image_data, 97.5) - np.percentile(output_image_data, 2.5)
-            if output_image_range > 0 and output_image_iqr5 < 0.99 * output_image_range and output_image_iqr95 > 0.01 * output_image_range:
-                break
-            # print("Invalid augmentation, retrying...")
-
-        # Rescale the image to the output data type if necessary
-        # code from https://github.com/spinalcordtoolbox/spinalcordtoolbox/blob/6.3/spinalcordtoolbox/image.py#L1217
-        if "int" in np.dtype(image_data_dtype).name:
-            # get min/max from output type
-            min_out = np.iinfo(image_data_dtype).min
-            max_out = np.iinfo(image_data_dtype).max
-            min_in = output_image_data.min()
-            max_in = output_image_data.max()
-            if (min_in < min_out) or (max_in > max_out):
-                data_rescaled = output_image_data * (max_out - min_out) / (max_in - min_in)
-                output_image_data = data_rescaled - (data_rescaled.min() - min_out)
-
-        # Create result with original image dtype
-        output_image = nib.Nifti1Image(output_image_data.astype(image_data_dtype), image.affine, image.header)
-        output_image.set_qform(image.affine)
-        output_image.set_sform(image.affine)
-        output_image.set_data_dtype(image_data_dtype)
-        output_seg = nib.Nifti1Image(output_seg_data, seg.affine, seg.header)
-        output_seg.set_qform(seg.affine)
-        output_seg.set_sform(seg.affine)
-        output_seg.set_data_dtype(np.uint8)
-
-        # Make sure output directory exists
-        output_image_path.parent.mkdir(parents=True, exist_ok=True)
-        output_seg_path.parent.mkdir(parents=True, exist_ok=True)
-        
-        # Save mapped segmentation
-        nib.save(output_image, output_image_path)
-        nib.save(output_seg, output_seg_path)
-        # print(f"\n{output_seg_path.name.replace('.nii.gz', '')}: {[a.func.__name__ if isinstance(a, partial) else a.__name__ for a in augs]}", end='')
+    return output_image, output_seg
 
 def aug_clip_values(img, seg, clip_max_fraction=0.4):
     """
@@ -359,19 +421,19 @@ def aug_clip_values(img, seg, clip_max_fraction=0.4):
     """
     # Calculate the minimum and maximum values of the input image
     min_val, max_val = img.min(), img.max()
-    
+
     # Compute the range of values in the image
     range_val = max_val - min_val
-    
+
     # Set a random lower clipping threshold
     clip_min = rs.uniform(0, clip_max_fraction / 2) * range_val + min_val
-    
+
     # Set a random upper clipping threshold
     clip_max = rs.uniform(1 - clip_max_fraction / 2, 1) * range_val + min_val
-    
+
     # Clip the image to the new thresholds
     img_clipped = np.clip(img, clip_min, clip_max)
-    
+
     return img_clipped, seg
 
 def aug_redistribute_seg(img, seg, classes=None, in_seg=0.2):
@@ -396,7 +458,7 @@ def aug_redistribute_seg(img, seg, classes=None, in_seg=0.2):
 
     # Get the unique label values (excluding 0)
     labels = [_ for _ in np.unique(_seg) if _ != 0]
-    
+
     to_add = np.zeros_like(img)
     # Loop over each label value
     for l in labels:
@@ -546,7 +608,7 @@ def aug_bias_field(img, seg):
     subject = tio.RandomBiasField()(tio.Subject(
         image=tio.ScalarImage(tensor=np.expand_dims(img, axis=0)),
         seg=tio.LabelMap(tensor=np.expand_dims(seg, axis=0))
-    ))  
+    ))
     return subject.image.data.squeeze().numpy().astype(np.float64), subject.seg.data.squeeze().numpy().astype(np.uint8)
 
 def aug_blur(img, seg):
@@ -585,7 +647,7 @@ def aug_labels2image(img, seg, leave_background=0.5, classes=None):
     if rs.rand() < leave_background:
         img_min, img_max = np.min(img), np.max(img)
         _img = (img - img_min) / (img_max - img_min)
-        
+
         new_img_min, new_img_max = np.min(new_img), np.max(new_img)
         new_img = (new_img - new_img_min) / (new_img_max - new_img_min)
         new_img[_seg == 0] = _img[_seg == 0]

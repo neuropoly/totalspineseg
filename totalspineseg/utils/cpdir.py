@@ -78,7 +78,7 @@ def main():
 
     # Print the argument values if verbose is enabled
     if verbose:
-        print(textwrap.dedent(f''' 
+        print(textwrap.dedent(f'''
             Running {Path(__file__).stem} with the following params:
             src = "{src}"
             dst = "{dst}"
@@ -90,49 +90,63 @@ def main():
             verbose = {verbose}
         '''))
 
-    # Process the files
-    files_path_list = [_ for __ in [list(src.glob(p)) for p in pattern] for _ in __ if _.is_file()]
-
-    # Create a partially-applied function with the extra arguments
-    partial_cpdir = partial(
-        cpdir,
-        src=src,
-        dst=dst,
+    cpdir_mp(
+        src_path=src,
+        dst_path=dst,
+        pattern=pattern,
         flat=flat,
         replace=replace,
         override=override,
+        max_workers=max_workers
     )
 
-    with mp.Pool() as pool:
-        process_map(partial_cpdir, files_path_list, max_workers=max_workers)
-
-
-def cpdir(
-        file_path,
-        src,
-        dst,
-        flat,
-        replace,
-        override,
+def cpdir_mp(
+        src_path,
+        dst_path,
+        pattern=['**/*'],
+        flat=False,
+        replace={},
+        override=False,
+        max_workers=mp.cpu_count()
     ):
+    src_path = Path(src_path)
+    dst_path = Path(dst_path)
+
+    # Process the files
+    src_path_list = [_ for __ in [list(src_path.glob(p)) for p in pattern] for _ in __ if _.is_file()]
 
     if flat:
-        dst_file_path = dst / file_path.name
+        dst_path_list = [dst_path / _.name for _ in src_path_list]
     else:
-        dst_file_path = dst / file_path.relative_to(src)
+        dst_path_list = [dst_path / _.relative_to(src_path) for _ in src_path_list]
 
     # Replace all regex patterns in replace list
-    for k, v in replace.items():
-        dst_file_path = Path(re.sub(k, v, str(dst_file_path)))
+    for p, r in replace.items():
+        dst_path_list = [Path(re.sub(p, r, str(_))) for _ in dst_path_list]
+
+    process_map(
+        partial(
+            _cpdir,
+            override=override,
+        ),
+        src_path_list,
+        dst_path_list,
+        max_workers=max_workers,
+    )
+
+def _cpdir(
+        src_path,
+        dst_path,
+        override=False,
+    ):
 
     # If the output already exists and we are not overriding it, return
-    if not override and dst_file_path.exists():
+    if not override and dst_path.exists():
         return
 
     # Make sure dst directory exists and copy
-    dst_file_path.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(file_path, dst_file_path)
-
+    dst_path.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(src_path, dst_path)
 
 if __name__ == '__main__':
     main()
