@@ -88,16 +88,16 @@ if [ ! -d "$nnUNet_results"/Dataset${step2_dataset}_* ]; then
 fi
 
 #Convert 4D images to 3D
-totalspineseg_average4d -i "${INPUT_FOLDER}" -o "${OUTPUT_FOLDER}"/input -r
+totalspineseg_average4d -i "${INPUT_FOLDER}" -o "${OUTPUT_FOLDER}"/input --image-suffix "" --output-image-suffix "" -r
+
+# Add _0000 to inputs if not exists to run nnunet
+for f in "${OUTPUT_FOLDER}"/input/*.nii.gz; do if [[ "$f" != *_0000.nii.gz ]]; then mv "$f" "${f/.nii.gz/_0000.nii.gz}"; fi; done
 
 #Transform images to canonical space
 totalspineseg_reorient_canonical -i "${OUTPUT_FOLDER}"/input -o "${OUTPUT_FOLDER}"/input -r
 
 # Make output dir with copy of the input images resampled to 1x1x1mm
 totalspineseg_resample -i "${OUTPUT_FOLDER}"/input -o "${OUTPUT_FOLDER}"/input --image-suffix "" --output-image-suffix "" -r
-
-# Add _0000 to inputs if not exists to run nnunet
-for f in "${OUTPUT_FOLDER}"/input/*.nii.gz; do if [[ "$f" != *_0000.nii.gz ]]; then mv "$f" "${f/.nii.gz/_0000.nii.gz}"; fi; done
 
 # Run step 1 model
 # Check if the final checkpoint exists, if not use the latest checkpoint
