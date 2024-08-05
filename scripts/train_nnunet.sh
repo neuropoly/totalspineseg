@@ -60,7 +60,7 @@ nnUNetTrainer=nnUNetTrainer_16000epochs
 nnUNetPlanner=ExperimentPlanner
 nnUNetPlans=nnUNetPlans
 configuration=3d_fullres
-data_identifier=3d_fullres
+data_identifier=nnUNetPlans_3d_fullres
 
 echo ""
 echo "Running with the following parameters:"
