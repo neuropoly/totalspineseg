@@ -73,8 +73,8 @@ for dsp in "$bids"/*; do
 done
 
 echo "Remove images withot segmentation and segmentation without images"
-for f in "$nnUNet_raw"/$SRC_DATASET/imagesTr/*.nii.gz; do if [ ! -f "$nnUNet_raw"/$SRC_DATASET/labelsTr/$(basename ${f/_0000.nii.gz/.nii.gz}) ]; then rm $f; fi; done
-for f in "$nnUNet_raw"/$SRC_DATASET/labelsTr/*.nii.gz; do if [ ! -f "$nnUNet_raw"/$SRC_DATASET/imagesTr/$(basename ${f/.nii.gz/_0000.nii.gz}) ]; then rm $f; fi; done
+for f in "$nnUNet_raw"/$SRC_DATASET/imagesTr/*.nii.gz; do if [ ! -f "$nnUNet_raw"/$SRC_DATASET/labelsTr/"$(basename "${f/_0000.nii.gz/.nii.gz}")" ]; then rm "$f"; fi; done
+for f in "$nnUNet_raw"/$SRC_DATASET/labelsTr/*.nii.gz; do if [ ! -f "$nnUNet_raw"/$SRC_DATASET/imagesTr/"$(basename "${f/.nii.gz/_0000.nii.gz}")" ]; then rm "$f"; fi; done
 
 echo "Convert 4D images to 3D"
 totalspineseg_average4d -i "$nnUNet_raw"/$SRC_DATASET/imagesTr -o "$nnUNet_raw"/$SRC_DATASET/imagesTr -r
