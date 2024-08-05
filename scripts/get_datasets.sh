@@ -22,8 +22,8 @@ trap "echo Caught Keyboard Interrupt within script. Exiting now.; exit" INT
 # ======================================================================================================================
 
 # set TOTALSPINESEG and TOTALSPINESEG_DATA if not set
-TOTALSPINESEG="$(realpath ${TOTALSPINESEG:-totalspineseg})"
-TOTALSPINESEG_DATA="$(realpath ${TOTALSPINESEG_DATA:-data})"
+TOTALSPINESEG="$(realpath "${TOTALSPINESEG:-totalspineseg}")"
+TOTALSPINESEG_DATA="$(realpath "${TOTALSPINESEG_DATA:-data}")"
 
 # Set the paths to the BIDS data folders
 bids="$TOTALSPINESEG_DATA"/bids

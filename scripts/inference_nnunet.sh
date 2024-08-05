@@ -27,8 +27,8 @@ OUTPUT_FOLDER="$2"
 source "$TOTALSPINESEG"/scripts/add_nnunet_trainer.sh
 
 # set TOTALSPINESEG and TOTALSPINESEG_DATA if not set
-TOTALSPINESEG="$(realpath ${TOTALSPINESEG:-totalspineseg})"
-TOTALSPINESEG_DATA="$(realpath ${TOTALSPINESEG_DATA:-data})"
+TOTALSPINESEG="$(realpath "${TOTALSPINESEG:-totalspineseg}")"
+TOTALSPINESEG_DATA="$(realpath "${TOTALSPINESEG_DATA:-data}")"
 
 # Set the path to the resources folder
 resources="$TOTALSPINESEG"/totalspineseg/resources

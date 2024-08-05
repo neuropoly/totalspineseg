@@ -1,13 +1,13 @@
 #!/bin/bash
 
 # Locate the path to the nnunetv2 library using Python
-NNUNETV2_PATH=$(python3 -c "import nnunetv2; print(nnunetv2.__path__[0])")
+NNUNETV2_PATH="$(python3 -c "import nnunetv2; print(nnunetv2.__path__[0])")"
 
 # Define the target file
 TARGET_FILE="$NNUNETV2_PATH/training/nnUNetTrainer/nnUNetTrainer_16000epochs.py"
 
 # Ensure the target file exists and create it if it is not
-if [ ! -f $TARGET_FILE ]; then
+if [ ! -f "$TARGET_FILE" ]; then
   # Add the class definition to the target file
   cat <<EOL > "$TARGET_FILE"
 import torch

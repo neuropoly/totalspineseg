@@ -30,8 +30,8 @@ FOLD=${2:-0}
 source "$TOTALSPINESEG"/scripts/add_nnunet_trainer.sh
 
 # set TOTALSPINESEG and TOTALSPINESEG_DATA if not set
-TOTALSPINESEG="$(realpath ${TOTALSPINESEG:-totalspineseg})"
-TOTALSPINESEG_DATA="$(realpath ${TOTALSPINESEG_DATA:-data})"
+TOTALSPINESEG="$(realpath "${TOTALSPINESEG:-totalspineseg}")"
+TOTALSPINESEG_DATA="$(realpath "${TOTALSPINESEG_DATA:-data}")"
 
 # RAM requirement in GB
 RAM_REQUIREMENT=8
