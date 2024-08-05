@@ -286,11 +286,11 @@ def map_labels(
         output_seg_data[seg_data==int(orig)] = int(new)
 
     # Update the output segmentation with the update_seg_data where the output_seg_data is 0
-    if update_seg_data:
+    if update_seg_data is not None:
         output_seg_data[output_seg_data == 0] = update_seg_data[output_seg_data == 0]
 
     # Update the output segmentation with the update_from_seg_data where it is not 0
-    if update_from_seg_data:
+    if update_from_seg_data is not None:
         output_seg_data[update_from_seg_data != 0] = update_from_seg_data[update_from_seg_data != 0]
 
     output_seg = nib.Nifti1Image(output_seg_data, seg.affine, seg.header)
