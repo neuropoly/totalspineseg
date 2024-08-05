@@ -54,7 +54,7 @@ datasets_words=()
 # Convert from BIDS to nnUNet dataset, loop over each dataset
 for dsp in "$bids"/*; do
     # Get the dataset name
-    dsn=$(basename $dsp);
+    dsn=$(basename "$dsp");
     # Get dataset word from the dataset name
     dsw=${dsn#data-}; dsw=${dsw%%-*}; dsw=${dsw^^};
 
