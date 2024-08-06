@@ -82,7 +82,7 @@ echo "Working with datasets: ${DATASETS[@]}, fold: $FOLD"
 for d in ${DATASETS[@]}; do
 
     # Get the dataset name
-    d_name=$(basename $(ls -d "$nnUNet_raw"/Dataset${d}_*))
+    d_name=$(basename "$(ls -d "$nnUNet_raw"/Dataset${d}_*)")
 
     if [ ! -f "$nnUNet_preprocessed"/$d_name/${nnUNetPlans}.json ]; then
         echo "Preprocess dataset $d_name"
