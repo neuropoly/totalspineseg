@@ -40,16 +40,16 @@ keywords = [
     'spinal cord'
 ]
 dependencies = [
-    "tqdm",
-    "numpy<2",
-    "nibabel",
-    "gryds",
-    "torchio",
-    "scipy",
-    "Pillow",
-    "nilearn",
-    "SimpleITK",
-    "nnunetv2"
+    "tqdm==4.66.4",
+    "numpy==1.26.4",
+    "nibabel==5.2.1",
+    "gryds==0.0.9",
+    "torchio==0.19.6",
+    "scipy==1.13.1",
+    "pillow==10.3.0",
+    "nilearn==0.10.4",
+    "SimpleITK==2.3.1",
+    "nnunetv2==2.5.1"
 ]
 
 [project.urls]
