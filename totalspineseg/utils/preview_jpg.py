@@ -242,7 +242,7 @@ def _preview_jpg(
             seg.affine
         except:
             seg = freesurfer.load(seg_path)
-            seg = tio.LabelMap(tensor=np.asanyarray(seg.dataobj)[None, ...], affine=seg.affine)
+            seg = tio.LabelMap(tensor=np.asanyarray(seg.dataobj).astype(np.uint8)[None, ...], affine=seg.affine)
         seg = tio.ToCanonical()(seg)
         seg = tio.Resample(image)(seg)
 
