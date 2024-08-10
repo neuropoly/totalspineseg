@@ -67,8 +67,8 @@ def main():
         help='Init labels list for disc ordered by priority (input_label:output_label !!without space!!). for example 4:224 5:219 6:202'
     )
     parser.add_argument(
-        '--output-disc-step', type=int, default=-1,
-        help='The step to take between disc labels in the output, defaults to -1.'
+        '--output-disc-step', type=int, default=1,
+        help='The step to take between disc labels in the output, defaults to 1.'
     )
     parser.add_argument(
         '--vertebrea-labels', type=int, nargs='+', default=[],
@@ -79,32 +79,24 @@ def main():
         help='Init labels list for vertebrae ordered by priority (input_label:output_label !!without space!!). for example 10:41 11:34 12:18'
     )
     parser.add_argument(
-        '--output-vertebrea-step', type=int, default=-1,
-        help='The step to take between vertebrae labels in the output, defaults to -1.'
+        '--output-vertebrea-step', type=int, default=1,
+        help='The step to take between vertebrae labels in the output, defaults to 1.'
     )
     parser.add_argument(
-        '--sacrum-labels', type=int, nargs='+', default=[],
-        help='The sacrum label.'
+        '--map-input', type=str, nargs='+', default=[],
+        help=textwrap.dedent('''
+            A dict mapping labels from input into the output segmentation.
+            The format should be input_label:output_label without any spaces.
+            For example, 14:92 16:201 17:200 to map the input sacrum label 14 to 92, canal label 16 to 201 and spinal cord label 17 to 200.
+        '''),
     )
     parser.add_argument(
-        '--output-sacrum-label', type=int, default=92,
-        help='The sacrum label in the output, defaults to 92.'
-    )
-    parser.add_argument(
-        '--canal-labels', type=int, nargs='+', default=[],
-        help='The Spinal Canal label.'
-    )
-    parser.add_argument(
-        '--output-canal-label', type=int, default=201,
-        help='The Spinal Canal label in the output, defaults to 201.'
-    )
-    parser.add_argument(
-        '--sc-labels', type=int, nargs='+', default=[],
-        help='The Spinal Cord label.'
-    )
-    parser.add_argument(
-        '--output-sc-label', type=int, default=200,
-        help='The Spinal Cord label in the output, defaults to 200.'
+        '--map-output', type=str, nargs='+', default=[],
+        help=textwrap.dedent('''
+            A dict mapping labels from the output of the iterative labeling algorithm into different labels in the output segmentation.
+            The format should be input_label:output_label without any spaces.
+            For example, 40:92 to map the iteratively labeled vertebrae 40 to the sacrum label 92.
+        '''),
     )
     parser.add_argument(
         '--dilation-size', type=int, default=1,
@@ -161,12 +153,8 @@ def main():
     vertebrea_labels = args.vertebrea_labels
     init_vertebrae = dict(args.init_vertebrae)
     output_vertebrea_step = args.output_vertebrea_step
-    sacrum_labels = args.sacrum_labels
-    output_sacrum_label = args.output_sacrum_label
-    canal_labels = args.canal_labels
-    output_canal_label = args.output_canal_label
-    sc_labels = args.sc_labels
-    output_sc_label = args.output_sc_label
+    map_input_list = args.map_input
+    map_output_list = args.map_output
     dilation_size = args.dilation_size
     combine_before_label = args.combine_before_label
     step_diff_label = args.step_diff_label
@@ -191,12 +179,8 @@ def main():
             vertebrea_labels = {vertebrea_labels}
             init_vertebrae = {init_vertebrae}
             output_vertebrea_step = {output_vertebrea_step}
-            sacrum_labels = {sacrum_labels}
-            output_sacrum_label = {output_sacrum_label}
-            canal_labels = {canal_labels}
-            output_canal_label = {output_canal_label}
-            sc_labels = {sc_labels}
-            output_sc_label = {output_sc_label}
+            map_input = {map_input_list}
+            map_output = {map_output_list}
             dilation_size = {dilation_size}
             combine_before_label = {combine_before_label}
             step_diff_label = {step_diff_label}
@@ -205,6 +189,17 @@ def main():
             max_workers = {max_workers}
             verbose = {verbose}
         '''))
+
+    # Load maps into a dict
+    try:
+        map_input_dict = {int(l_in): int(l_out) for l_in, l_out in map(lambda x:x.split(':'), map_input_list)}
+    except:
+        raise ValueError("Input param map_input is not in the right structure. Make sure it is in the right format, e.g., 1:2 3:5")
+
+    try:
+        map_output_dict = {int(l_in): int(l_out) for l_in, l_out in map(lambda x:x.split(':'), map_output_list)}
+    except:
+        raise ValueError("Input param map_output is not in the right structure. Make sure it is in the right format, e.g., 1:2 3:5")
 
     iterative_label_mp(
         segs_path=segs_path,
@@ -220,12 +215,8 @@ def main():
         vertebrea_labels=vertebrea_labels,
         init_vertebrae=init_vertebrae,
         output_vertebrea_step=output_vertebrea_step,
-        sacrum_labels=sacrum_labels,
-        output_sacrum_label=output_sacrum_label,
-        canal_labels=canal_labels,
-        output_canal_label=output_canal_label,
-        sc_labels=sc_labels,
-        output_sc_label=output_sc_label,
+        map_input_dict=map_input_dict,
+        map_output_dict=map_output_dict,
         dilation_size=dilation_size,
         combine_before_label=combine_before_label,
         step_diff_label=step_diff_label,
@@ -244,16 +235,12 @@ def iterative_label_mp(
         output_seg_suffix='',
         disc_labels=[],
         init_disc={},
-        output_disc_step=-1,
+        output_disc_step=1,
         vertebrea_labels=[],
         init_vertebrae={},
-        output_vertebrea_step=-1,
-        sacrum_labels=[],
-        output_sacrum_label=92,
-        canal_labels=[],
-        output_canal_label=201,
-        sc_labels=[],
-        output_sc_label=200,
+        output_vertebrea_step=1,
+        map_input_dict={},
+        map_output_dict={},
         dilation_size=1,
         combine_before_label=False,
         step_diff_label=False,
@@ -284,12 +271,8 @@ def iterative_label_mp(
             vertebrea_labels=vertebrea_labels,
             init_vertebrae=init_vertebrae,
             output_vertebrea_step=output_vertebrea_step,
-            sacrum_labels=sacrum_labels,
-            output_sacrum_label=output_sacrum_label,
-            canal_labels=canal_labels,
-            output_canal_label=output_canal_label,
-            sc_labels=sc_labels,
-            output_sc_label=output_sc_label,
+            map_input_dict=map_input_dict,
+            map_output_dict=map_output_dict,
             dilation_size=dilation_size,
             combine_before_label=combine_before_label,
             step_diff_label=step_diff_label,
@@ -306,16 +289,12 @@ def _iterative_label(
         output_seg_path,
         disc_labels=[],
         init_disc={},
-        output_disc_step=-1,
+        output_disc_step=1,
         vertebrea_labels=[],
         init_vertebrae={},
-        output_vertebrea_step=-1,
-        sacrum_labels=[],
-        output_sacrum_label=92,
-        canal_labels=[],
-        output_canal_label=201,
-        sc_labels=[],
-        output_sc_label=200,
+        output_vertebrea_step=1,
+        map_input_dict={},
+        map_output_dict={},
         dilation_size=1,
         combine_before_label=False,
         step_diff_label=False,
@@ -341,12 +320,8 @@ def _iterative_label(
             vertebrea_labels=vertebrea_labels,
             init_vertebrae=init_vertebrae,
             output_vertebrea_step=output_vertebrea_step,
-            sacrum_labels=sacrum_labels,
-            output_sacrum_label=output_sacrum_label,
-            canal_labels=canal_labels,
-            output_canal_label=output_canal_label,
-            sc_labels=sc_labels,
-            output_sc_label=output_sc_label,
+            map_input_dict=map_input_dict,
+            map_output_dict=map_output_dict,
             dilation_size=dilation_size,
             combine_before_label=combine_before_label,
             step_diff_label=step_diff_label,
@@ -374,16 +349,12 @@ def iterative_label(
         seg,
         disc_labels=[],
         init_disc={},
-        output_disc_step=-1,
+        output_disc_step=1,
         vertebrea_labels=[],
         init_vertebrae={},
-        output_vertebrea_step=-1,
-        sacrum_labels=[],
-        output_sacrum_label=92,
-        canal_labels=[],
-        output_canal_label=201,
-        sc_labels=[],
-        output_sc_label=200,
+        output_vertebrea_step=1,
+        map_input_dict={},
+        map_output_dict={},
         dilation_size=1,
         combine_before_label=False,
         step_diff_label=False,
@@ -487,25 +458,17 @@ def iterative_label(
         for i in range(num_labels):
             output_seg_data[mask_labeled == sorted_labels[i]] = first_label + step * i
 
-    # Set sacrum label
-    if len(sacrum_labels) > 0:
-        output_seg_data[output_seg_data == output_sacrum_label] = 0
-        output_seg_data[np.isin(seg_data, sacrum_labels)] = output_sacrum_label
+    # Use the map to change the iteative algorithm output to the final output
+    for orig, new in map_output_dict.items():
+        if int(orig) in output_seg_data:
+            output_seg_data[output_seg_data == int(new)] = 0
+            output_seg_data[output_seg_data==int(orig)] = int(new)
 
-        # If no sacrum_labels in input try to use the init_vertebrae map of the sacrum
-        sacrum_output_labels = [init_vertebrae[_] for _ in sacrum_labels if _ in init_vertebrae]
-        if output_sacrum_label not in output_seg_data and len(sacrum_output_labels) > 0:
-            output_seg_data[np.isin(output_seg_data, sacrum_output_labels)] = output_sacrum_label
-
-    # Set Spinal Canal label
-    if len(canal_labels) > 0:
-        output_seg_data[output_seg_data == output_canal_label] = 0
-        output_seg_data[np.isin(seg_data, canal_labels)] = output_canal_label
-
-    # Set cord label
-    if len(sc_labels) > 0:
-        output_seg_data[output_seg_data == output_sc_label] = 0
-        output_seg_data[np.isin(seg_data, sc_labels)] = output_sc_label
+    # Use the map to map input labels to the final output
+    for orig, new in map_input_dict.items():
+        if int(orig) in seg_data:
+            output_seg_data[output_seg_data == int(new)] = 0
+            output_seg_data[seg_data==int(orig)] = int(new)
 
     output_seg = nib.Nifti1Image(output_seg_data, seg.affine, seg.header)
 

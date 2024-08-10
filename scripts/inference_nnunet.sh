@@ -118,7 +118,7 @@ totalspineseg_transform_seg2image -i "${OUTPUT_FOLDER}"/step2_input -s "${OUTPUT
 
 # Distinguished odd IVDs based on the C2-C3, C7-T1 and L5-S1 IVD labels output by step 1 model:
 # First we will use an iterative algorithm to label IVDs with the definite labels
-totalspineseg_iterative_label -s "${OUTPUT_FOLDER}"/step2_input -o "${OUTPUT_FOLDER}"/step2_input --seg-suffix _0001 --output-seg-suffix _0001 --disc-labels 1 2 3 4 5 --init-disc 2:224 5:202 3:219 4:207 --combine-before-label -r
+totalspineseg_iterative_label -s "${OUTPUT_FOLDER}"/step2_input -o "${OUTPUT_FOLDER}"/step2_input --seg-suffix _0001 --output-seg-suffix _0001 --disc-labels 1 2 3 4 5 --init-disc 2:224 5:202 3:219 4:207 --output-disc-step -1 -r
 # Then, we map the IVDs labels to the odd IVDs to use as the 2'nd channel, this will also delete labels without odd IVDs
 totalspineseg_map_labels -s "${OUTPUT_FOLDER}"/step2_input -o "${OUTPUT_FOLDER}"/step2_input -m "$resources"/labels_maps/nnunet_step2_input.json --seg-suffix _0001 --output-seg-suffix _0001 -r
 
@@ -134,7 +134,7 @@ nnUNetv2_predict -d $step2_dataset -i "${OUTPUT_FOLDER}"/step2_input -o "${OUTPU
 totalspineseg_largest_component -s "${OUTPUT_FOLDER}"/step2 -o "${OUTPUT_FOLDER}"/output --binarize --dilate 5 -r
 
 # Use an iterative algorithm to to assign an individual label value to each vertebrae and IVD in the final segmentation mask.
-totalspineseg_iterative_label -s "${OUTPUT_FOLDER}"/output -o "${OUTPUT_FOLDER}"/output --sacrum-labels 14 --canal-labels 16 --sc-labels 17 --disc-labels 2 3 4 5 6 7 --vertebrea-labels 9 10 11 12 13 14 --init-disc 4:224 7:202 5:219 6:207 --init-vertebrae 11:40 14:17 12:34 13:23 --step-diff-label --step-diff-disc -r
+totalspineseg_iterative_label -s "${OUTPUT_FOLDER}"/output -o "${OUTPUT_FOLDER}"/output --disc-labels 2 3 4 5 6 7 --vertebrea-labels 9 10 11 12 13 14 --init-disc 4:224 7:202 5:219 6:207 --init-vertebrae 11:40 14:17 12:34 13:23 --step-diff-label --step-diff-disc --output-disc-step -1 --output-vertebrea-step -1 --map-output 40:92 --map-input 14:92 16:201 17:200 -r
 
 # Fill spinal cancal label to include all non cord spinal canal, this will put the spinal canal label in all the voxels (labeled as a backgroupn) between the spinal canal and the spinal cord.
 totalspineseg_fill_canal -s "${OUTPUT_FOLDER}"/output -o "${OUTPUT_FOLDER}"/output --largest-cord --largest-canal -r
