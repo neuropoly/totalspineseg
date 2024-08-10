@@ -106,16 +106,25 @@ totalspineseg_preview_jpg -i "${OUTPUT_FOLDER}"/input -o "${OUTPUT_FOLDER}"/prev
 # Run step 1 model
 # Check if the final checkpoint exists, if not use the latest checkpoint
 if [ -f "$nnUNet_results"/Dataset${step1_dataset}_*/${nnUNetTrainer}__${nnUNetPlans}__${configuration}/fold_${FOLD}/checkpoint_final.pth ]; then CHECKPOINT=checkpoint_final.pth; else CHECKPOINT=checkpoint_latest.pth; fi
-nnUNetv2_predict -d $step1_dataset -i "${OUTPUT_FOLDER}"/input -o "${OUTPUT_FOLDER}"/step1 -f $FOLD -c $configuration -p $nnUNetPlans -tr $nnUNetTrainer -npp $JOBS -nps $JOBS -chk $CHECKPOINT -device $DEVICE
+nnUNetv2_predict -d $step1_dataset -i "${OUTPUT_FOLDER}"/input -o "${OUTPUT_FOLDER}"/step1_raw -f $FOLD -c $configuration -p $nnUNetPlans -tr $nnUNetTrainer -npp $JOBS -nps $JOBS -chk $CHECKPOINT -device $DEVICE
 
 # Generate preview images for step 1
-totalspineseg_preview_jpg -i "${OUTPUT_FOLDER}"/input -s "${OUTPUT_FOLDER}"/step1 -o "${OUTPUT_FOLDER}"/preview --output-suffix _step1 -r
+totalspineseg_preview_jpg -i "${OUTPUT_FOLDER}"/input -s "${OUTPUT_FOLDER}"/step1_raw -o "${OUTPUT_FOLDER}"/preview --output-suffix _step1_raw -r
 
 # Extract the largest connected component of step 1 segmentation after binarization and dilation into the input folder of step 2 model
-totalspineseg_largest_component -s "${OUTPUT_FOLDER}"/step1 -o "${OUTPUT_FOLDER}"/output --binarize --dilate 5 -r
+totalspineseg_largest_component -s "${OUTPUT_FOLDER}"/step1_raw -o "${OUTPUT_FOLDER}"/step1_output --binarize --dilate 5 -r
 
-# We use an iterative algorithm to label IVDs with the definite labels, based on the C2-C3, C7-T1 and L5-S1 IVD labels output by step 1 model.
-totalspineseg_iterative_label -s "${OUTPUT_FOLDER}"/output -o "${OUTPUT_FOLDER}"/output --disc-labels 1 2 3 4 5 --init-disc 2:224 5:202 3:219 4:207 --output-disc-step -1 --map-input 6:92 7:201 8:201 9:200 -r
+# Use an iterative algorithm to label IVDs with the definite labels, based on the C2-C3, C7-T1 and L5-S1 IVD labels output by step 1 model.
+totalspineseg_iterative_label -s "${OUTPUT_FOLDER}"/step1_output -o "${OUTPUT_FOLDER}"/step1_output --disc-labels 1 2 3 4 5 --init-disc 2:224 5:202 3:219 4:207 --output-disc-step -1 --map-input 6:92 7:201 8:201 9:200 -r
+
+# Fill spinal cancal label to include all non cord spinal canal, this will put the spinal canal label in all the voxels (labeled as a backgroupn) between the spinal canal and the spinal cord.
+totalspineseg_fill_canal -s "${OUTPUT_FOLDER}"/step1_output -o "${OUTPUT_FOLDER}"/step1_output --canal-label 201 --cord-label 200 --largest-canal --largest-cord -r
+
+# Transform labels to input images space
+totalspineseg_transform_seg2image -i "${OUTPUT_FOLDER}"/input -s "${OUTPUT_FOLDER}"/step1_output -o "${OUTPUT_FOLDER}"/step1_output -r
+
+# Generate preview images for the step 1 labeled
+totalspineseg_preview_jpg -i "${OUTPUT_FOLDER}"/input -s "${OUTPUT_FOLDER}"/step1_output -o "${OUTPUT_FOLDER}"/preview --output-suffix _step1_output -r
 
 if [ $STEP1 -eq 0 ]; then
 
@@ -123,41 +132,41 @@ if [ $STEP1 -eq 0 ]; then
     totalspineseg_cpdir "${OUTPUT_FOLDER}"/input "${OUTPUT_FOLDER}"/step2_input -p "*_0000.nii.gz" -r
 
     # Crop the images to the bounding box of the non-zero part of the step 1 segmentation (with 10 voxels margin), this will also delete images without segmentation
-    totalspineseg_crop_image2seg -i "${OUTPUT_FOLDER}"/step2_input -s "${OUTPUT_FOLDER}"/output -o "${OUTPUT_FOLDER}"/step2_input -m 10 -r
+    totalspineseg_crop_image2seg -i "${OUTPUT_FOLDER}"/step2_input -s "${OUTPUT_FOLDER}"/step1_output -o "${OUTPUT_FOLDER}"/step2_input -m 10 -r
 
     # Transform step 1 segmentation to the cropped images space
-    totalspineseg_transform_seg2image -i "${OUTPUT_FOLDER}"/step2_input -s "${OUTPUT_FOLDER}"/output -o "${OUTPUT_FOLDER}"/step2_input --output-seg-suffix _0001 -r
+    totalspineseg_transform_seg2image -i "${OUTPUT_FOLDER}"/step2_input -s "${OUTPUT_FOLDER}"/step1_output -o "${OUTPUT_FOLDER}"/step2_input --output-seg-suffix _0001 -r
 
     # Now, we map the IVDs labels from the step1 model output to the odd IVDs to use as the 2'nd channel, this will also delete labels without odd IVDs
     totalspineseg_map_labels -s "${OUTPUT_FOLDER}"/step2_input -o "${OUTPUT_FOLDER}"/step2_input -m "$resources"/labels_maps/nnunet_step2_input.json --seg-suffix _0001 --output-seg-suffix _0001 -r
 
-    # Remove images without the 2'nd channel
-    for f in "${OUTPUT_FOLDER}"/step2_input/*_0000.nii.gz; do if [ ! -f "${f/_0000.nii.gz/_0001.nii.gz}" ]; then rm $f; fi; done
-
     # Generate preview images for step 2 input
     totalspineseg_preview_jpg -i "${OUTPUT_FOLDER}"/input -s "${OUTPUT_FOLDER}"/step2_input -o "${OUTPUT_FOLDER}"/preview --seg-suffix _0001 --output-suffix _step2_input -r
+
+    # Remove images without the 2'nd channel
+    for f in "${OUTPUT_FOLDER}"/step2_input/*_0000.nii.gz; do if [ ! -f "${f/_0000.nii.gz/_0001.nii.gz}" ]; then rm $f; fi; done
 
     # Run step 2 model
     # Check if the final checkpoint exists, if not use the latest checkpoint
     if [ -f "$nnUNet_results"/Dataset${step1_dataset}_*/${nnUNetTrainer}__${nnUNetPlans}__${configuration}/fold_${FOLD}/checkpoint_final.pth ]; then CHECKPOINT=checkpoint_final.pth; else CHECKPOINT=checkpoint_latest.pth; fi
-    nnUNetv2_predict -d $step2_dataset -i "${OUTPUT_FOLDER}"/step2_input -o "${OUTPUT_FOLDER}"/step2 -f $FOLD -c $configuration -p $nnUNetPlans -tr $nnUNetTrainer -npp $JOBS -nps $JOBS -chk $CHECKPOINT -device $DEVICE
+    nnUNetv2_predict -d $step2_dataset -i "${OUTPUT_FOLDER}"/step2_input -o "${OUTPUT_FOLDER}"/step2_raw -f $FOLD -c $configuration -p $nnUNetPlans -tr $nnUNetTrainer -npp $JOBS -nps $JOBS -chk $CHECKPOINT -device $DEVICE
 
     # Generate preview images for step 2
-    totalspineseg_preview_jpg -i "${OUTPUT_FOLDER}"/input -s "${OUTPUT_FOLDER}"/step2 -o "${OUTPUT_FOLDER}"/preview --output-suffix _step2 -r
+    totalspineseg_preview_jpg -i "${OUTPUT_FOLDER}"/input -s "${OUTPUT_FOLDER}"/step2_raw -o "${OUTPUT_FOLDER}"/preview --output-suffix _step2_raw -r
 
     # Extract the largest connected component of step 2 segmentation after binarization and dilation into the output folder
-    totalspineseg_largest_component -s "${OUTPUT_FOLDER}"/step2 -o "${OUTPUT_FOLDER}"/output --binarize --dilate 5 -r
+    totalspineseg_largest_component -s "${OUTPUT_FOLDER}"/step2_raw -o "${OUTPUT_FOLDER}"/step2_output --binarize --dilate 5 -r
 
     # Use an iterative algorithm to to assign an individual label value to each vertebrae and IVD in the final segmentation mask.
-    totalspineseg_iterative_label -s "${OUTPUT_FOLDER}"/output -o "${OUTPUT_FOLDER}"/output --disc-labels 2 3 4 5 6 7 --vertebrea-labels 9 10 11 12 13 14 --init-disc 4:224 7:202 5:219 6:207 --init-vertebrae 11:40 14:17 12:34 13:23 --step-diff-label --step-diff-disc --output-disc-step -1 --output-vertebrea-step -1 --map-output 40:92 --map-input 14:92 16:201 17:200 -r
+    totalspineseg_iterative_label -s "${OUTPUT_FOLDER}"/step2_output -o "${OUTPUT_FOLDER}"/step2_output --disc-labels 2 3 4 5 6 7 --vertebrea-labels 9 10 11 12 13 14 --init-disc 4:224 7:202 5:219 6:207 --init-vertebrae 11:40 14:17 12:34 13:23 --step-diff-label --step-diff-disc --output-disc-step -1 --output-vertebrea-step -1 --map-output 40:92 --map-input 14:92 16:201 17:200 -r
+
+    # Fill spinal cancal label to include all non cord spinal canal, this will put the spinal canal label in all the voxels (labeled as a backgroupn) between the spinal canal and the spinal cord.
+    totalspineseg_fill_canal -s "${OUTPUT_FOLDER}"/step2_output -o "${OUTPUT_FOLDER}"/step2_output --canal-label 201 --cord-label 200 --largest-canal --largest-cord -r
+
+    # Transform labels to input images space
+    totalspineseg_transform_seg2image -i "${OUTPUT_FOLDER}"/input -s "${OUTPUT_FOLDER}"/step2_output -o "${OUTPUT_FOLDER}"/step2_output -r
+
+    # Generate preview images for the final output
+    totalspineseg_preview_jpg -i "${OUTPUT_FOLDER}"/input -s "${OUTPUT_FOLDER}"/step2_output -o "${OUTPUT_FOLDER}"/preview --output-suffix _step2_output -r
 
 fi
-
-# Fill spinal cancal label to include all non cord spinal canal, this will put the spinal canal label in all the voxels (labeled as a backgroupn) between the spinal canal and the spinal cord.
-totalspineseg_fill_canal -s "${OUTPUT_FOLDER}"/output -o "${OUTPUT_FOLDER}"/output --canal-label 201 --cord-label 200 --largest-canal --largest-cord -r
-
-# Transform labels to input images space
-totalspineseg_transform_seg2image -i "${OUTPUT_FOLDER}"/input -s "${OUTPUT_FOLDER}"/output -o "${OUTPUT_FOLDER}"/output -r
-
-# Generate preview images for the final output
-totalspineseg_preview_jpg -i "${OUTPUT_FOLDER}"/input -s "${OUTPUT_FOLDER}"/output -o "${OUTPUT_FOLDER}"/preview --output-suffix _output -r
