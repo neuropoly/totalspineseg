@@ -95,7 +95,7 @@ def main():
         help=textwrap.dedent('''
             A dict mapping labels from the output of the iterative labeling algorithm into different labels in the output segmentation.
             The format should be input_label:output_label without any spaces.
-            For example, 40:92 to map the iteratively labeled vertebrae 40 to the sacrum label 92.
+            For example, 17:92 to map the iteratively labeled vertebrae 17 to the sacrum label 92.
         '''),
     )
     parser.add_argument(
