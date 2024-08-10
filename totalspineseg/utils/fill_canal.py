@@ -59,20 +59,20 @@ def main():
         help='Suffix for output segmentation, defaults to "".'
     )
     parser.add_argument(
-        '--cord-label', type=int, default=200,
-        help='Label used for spinal cord, defaults to 200.'
+        '--canal-label', type=int, default=1,
+        help='Label used for Spinal Canal, defaults to 1.'
     )
     parser.add_argument(
-        '--canal-label', type=int, default=201,
-        help='Label used for Spinal Canal, defaults to 201.'
-    )
-    parser.add_argument(
-        '--largest-cord', action="store_true", default=False,
-        help='Take the largest spinal cord component.'
+        '--cord-label', type=int, default=0,
+        help='Label used for spinal cord, defaults to 0.'
     )
     parser.add_argument(
         '--largest-canal', action="store_true", default=False,
         help='Take the largest spinal canal component.'
+    )
+    parser.add_argument(
+        '--largest-cord', action="store_true", default=False,
+        help='Take the largest spinal cord component.'
     )
     parser.add_argument(
         '--override', '-r', action="store_true", default=False,
@@ -100,10 +100,10 @@ def main():
     prefix = args.prefix
     seg_suffix = args.seg_suffix
     output_seg_suffix = args.output_seg_suffix
-    cord_label = args.cord_label
     canal_label = args.canal_label
-    largest_cord = args.largest_cord
+    cord_label = args.cord_label
     largest_canal = args.largest_canal
+    largest_cord = args.largest_cord
     override = args.override
     max_workers = args.max_workers
     verbose = args.verbose
@@ -118,10 +118,10 @@ def main():
             prefix = "{prefix}"
             seg_suffix = "{seg_suffix}"
             output_seg_suffix = "{output_seg_suffix}"
-            cord_label = {cord_label}
             canal_label = {canal_label}
-            largest_cord = {largest_cord}
+            cord_label = {cord_label}
             largest_canal = {largest_canal}
+            largest_cord = {largest_cord}
             override = {override}
             max_workers = {max_workers}
             verbose = {verbose}
@@ -135,10 +135,10 @@ def main():
         prefix=prefix,
         seg_suffix=seg_suffix,
         output_seg_suffix=output_seg_suffix,
-        cord_label=cord_label,
         canal_label=canal_label,
-        largest_cord=largest_cord,
+        cord_label=cord_label,
         largest_canal=largest_canal,
+        largest_cord=largest_cord,
         override=override,
         max_workers=max_workers,
     )
@@ -151,10 +151,10 @@ def fill_canal_mp(
         prefix='',
         seg_suffix='',
         output_seg_suffix='',
-        cord_label=200,
-        canal_label=201,
-        largest_cord=False,
+        canal_label=1,
+        cord_label=0,
         largest_canal=False,
+        largest_cord=False,
         override=False,
         max_workers=mp.cpu_count(),
     ):
@@ -175,10 +175,10 @@ def fill_canal_mp(
     process_map(
         partial(
             _fill_canal,
-            cord_label=cord_label,
             canal_label=canal_label,
-            largest_cord=largest_cord,
+            cord_label=cord_label,
             largest_canal=largest_canal,
+            largest_cord=largest_cord,
             override=override,
         ),
         seg_path_list,
@@ -189,10 +189,10 @@ def fill_canal_mp(
 def _fill_canal(
         seg_path,
         output_seg_path,
-        cord_label=200,
-        canal_label=201,
-        largest_cord=False,
+        canal_label=1,
+        cord_label=0,
         largest_canal=False,
+        largest_cord=False,
         override=False,
     ):
     seg_path = Path(seg_path)
@@ -207,10 +207,10 @@ def _fill_canal(
 
     output_seg = fill_canal(
         seg,
-        cord_label=cord_label,
         canal_label=canal_label,
-        largest_cord=largest_cord,
+        cord_label=cord_label,
         largest_canal=largest_canal,
+        largest_cord=largest_cord,
     )
 
     # Ensure correct segmentation dtype, affine and header
@@ -228,24 +228,26 @@ def _fill_canal(
 
 def fill_canal(
         seg,
-        cord_label=200,
-        canal_label=201,
-        largest_cord=False,
+        canal_label=1,
+        cord_label=0,
         largest_canal=False,
+        largest_cord=False,
     ):
     output_seg_data = np.asanyarray(seg.dataobj).round().astype(np.uint8)
 
     # Take the largest spinal cord component
-    if largest_cord and cord_label in output_seg_data:
+    if cord_label and largest_cord and cord_label in output_seg_data:
         cord_mask = output_seg_data == cord_label
         cord_mask_largest = largest(cord_mask)
         output_seg_data[cord_mask & ~cord_mask_largest] = canal_label
 
     if canal_label in output_seg_data:
 
+        canal_labels = [cord_label, canal_label] if cord_label else [canal_label]
+
         # Take the largest spinal canal component
         if largest_canal:
-            canal_mask = np.isin(output_seg_data, [cord_label, canal_label])
+            canal_mask = np.isin(output_seg_data, canal_labels)
             canal_mask_largest = largest(canal_mask)
             output_seg_data[canal_mask & ~canal_mask_largest] = 0
 
@@ -254,7 +256,7 @@ def fill_canal(
         # Create an array of y indices
         y_indices = np.broadcast_to(np.arange(output_seg_data.shape[1])[..., np.newaxis], output_seg_data.shape)
 
-        canal_mask = np.isin(output_seg_data, [cord_label, canal_label])
+        canal_mask = np.isin(output_seg_data, canal_labels)
         canal_mask_min_x = np.min(np.where(canal_mask, x_indices, np.inf), axis=0)[np.newaxis, ...]
         canal_mask_max_x = np.max(np.where(canal_mask, x_indices, -np.inf), axis=0)[np.newaxis, ...]
         canal_mask_min_y = np.min(np.where(canal_mask, y_indices, np.inf), axis=1)[:, np.newaxis, :]
@@ -264,7 +266,8 @@ def fill_canal(
                 (x_indices <= canal_mask_max_x) & \
                 (canal_mask_min_y <= y_indices) & \
                 (y_indices <= canal_mask_max_y)
-        output_seg_data[canal_mask & (output_seg_data != cord_label)] = canal_label
+        canal_mask = canal_mask & (output_seg_data != cord_label) if cord_label else canal_mask
+        output_seg_data[canal_mask] = canal_label
 
     output_seg = nib.Nifti1Image(output_seg_data, seg.affine, seg.header)
 
