@@ -122,14 +122,14 @@ Please ensure that your system meets these requirements before proceeding with t
 1. Make sure that the `bash` terminal is opened with the virtual environment (if used) activated (using `source venv/bin/activate` in the installation directory).
 
 1. If you didn't train the model yourself, you should download the model zip file from the release into `$TOTALSPINESEG_DATA/nnUNet/exports` (do not extract the zip files). You can run `mkdir -p "$TOTALSPINESEG_DATA"/nnUNet/exports` to create the folder.
-2. Run the model on a folder containing the images in .nii.gz format:
+1. Run the model on a folder containing the images in .nii.gz format:
    ```bash
    bash "$TOTALSPINESEG"/scripts/inference_nnunet.sh INPUT_FOLDER OUTPUT_FOLDER [-step1]
    ```
 
-   Additionally, you can use the `-step1` parameter to run only the step 1 model, which outputs a single label for all vertebrae, including the sacrum.
+   This will process all .nii.gz files in the INPUT_FOLDER and save the results in the OUTPUT_FOLDER.
 
-This will process all .nii.gz files in the INPUT_FOLDER and save the results in the OUTPUT_FOLDER.
+   Additionally, you can use the `-step1` parameter to run only the step 1 model, which outputs a single label for all vertebrae, including the sacrum.
 
 ## List of Classes
 
