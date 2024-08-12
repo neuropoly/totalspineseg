@@ -158,7 +158,7 @@ if [ $STEP1 -eq 0 ]; then
     totalspineseg_largest_component -s "${OUTPUT_FOLDER}"/step2_raw -o "${OUTPUT_FOLDER}"/step2_output --binarize --dilate 5 -r
 
     # Use an iterative algorithm to to assign an individual label value to each vertebrae and IVD in the final segmentation mask.
-    totalspineseg_iterative_label -s "${OUTPUT_FOLDER}"/step2_output -o "${OUTPUT_FOLDER}"/step2_output --disc-labels 2 3 4 5 6 7 --vertebrea-labels 9 10 11 12 13 14 --init-disc 4:224 7:202 5:219 6:207 --init-vertebrae 11:40 14:17 12:34 13:23 --step-diff-label --step-diff-disc --output-disc-step -1 --output-vertebrea-step -1 --map-output 17:92 --map-input 14:92 16:201 17:200 -r
+    totalspineseg_iterative_label -s "${OUTPUT_FOLDER}"/step2_output -o "${OUTPUT_FOLDER}"/step2_output --disc-labels 1 2 3 4 5 6 7 --vertebrea-labels 9 10 11 12 13 14 --vertebrea-extra-labels 8 --init-disc 4:224 7:202 5:219 6:207 --init-vertebrae 11:40 14:17 12:34 13:23 --step-diff-label --step-diff-disc --output-disc-step -1 --output-vertebrea-step -1 --map-output 17:92 --map-input 14:92 15:201 16:201 17:200 -r
 
     # Fill spinal cancal label to include all non cord spinal canal, this will put the spinal canal label in all the voxels (labeled as a backgroupn) between the spinal canal and the spinal cord.
     totalspineseg_fill_canal -s "${OUTPUT_FOLDER}"/step2_output -o "${OUTPUT_FOLDER}"/step2_output --canal-label 201 --cord-label 200 --largest-canal --largest-cord -r

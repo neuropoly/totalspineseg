@@ -19,9 +19,9 @@ def main():
         '''),
         epilog=textwrap.dedent('''
             Examples:
-            iterative_label -s labels_init -o labels --sacrum-labels 14 --canal-labels 16 --sc-labels 17 --disc-labels 2 3 4 5 6 7 --vertebrea-labels 9 10 11 12 13 14 --init-disc 4:224 7:202 5:219 6:207 --init-vertebrae 11:40 14:17 12:34 13:23 --step-diff-label --step-diff-disc
+            iterative_label -s labels_init -o labels --disc-labels 1 2 3 4 5 6 7 --vertebrea-labels 9 10 11 12 13 14 --vertebrea-extra-labels 8 --init-disc 4:224 7:202 5:219 6:207 --init-vertebrae 11:40 14:17 12:34 13:23 --step-diff-label --step-diff-disc --output-disc-step -1 --output-vertebrea-step -1 --map-output 17:92 --map-input 14:92 16:201 17:200 -r
             For BIDS:
-            iterative_label -s derivatives/labels -o derivatives/labels --sacrum-labels 14 --canal-labels 16 --sc-labels 17 --disc-labels 2 3 4 5 6 7 --vertebrea-labels 9 10 11 12 13 14 --init-disc 4:224 7:202 5:219 6:207 --init-vertebrae 11:40 14:17 12:34 13:23 --step-diff-label --step-diff-disc --seg-suffix "_seg" --output-seg-suffix "_seg_seq" -d "sub-" -u "anat"
+            iterative_label -s derivatives/labels -o derivatives/labels --seg-suffix "_seg" --output-seg-suffix "_seg_seq" -d "sub-" -u "anat" --disc-labels 1 2 3 4 5 6 7 --vertebrea-labels 9 10 11 12 13 14 --vertebrea-extra-labels 8 --init-disc 4:224 7:202 5:219 6:207 --init-vertebrae 11:40 14:17 12:34 13:23 --step-diff-label --step-diff-disc --output-disc-step -1 --output-vertebrea-step -1 --map-output 17:92 --map-input 14:92 16:201 17:200 -r
         '''),
         formatter_class=argparse.RawTextHelpFormatter
     )
@@ -75,6 +75,10 @@ def main():
         help='The vertebrae labels.'
     )
     parser.add_argument(
+        '--vertebrea-extra-labels', type=int, nargs='+', default=[],
+        help='Extra vertebrae labels to add to add to adjacent vertebrae labels.'
+    )
+    parser.add_argument(
         '--init-vertebrae', type=lambda x:map(int, x.split(':')), nargs='+', default=[],
         help='Init labels list for vertebrae ordered by priority (input_label:output_label !!without space!!). for example 10:41 11:34 12:18'
     )
@@ -101,10 +105,6 @@ def main():
     parser.add_argument(
         '--dilation-size', type=int, default=1,
         help='Number of voxels to dilate before finding connected voxels to label, defaults to 1 (No dilation).'
-    )
-    parser.add_argument(
-        '--combine-before-label', action="store_true", default=False,
-        help='Combine all labels before label continue voxels, defaults to false (label continue voxels separatly for each label).'
     )
     parser.add_argument(
         '--step-diff-label', action="store_true", default=False,
@@ -151,12 +151,12 @@ def main():
     init_disc = dict(args.init_disc)
     output_disc_step = args.output_disc_step
     vertebrea_labels = args.vertebrea_labels
+    vertebrea_extra_labels = args.vertebrea_extra_labels
     init_vertebrae = dict(args.init_vertebrae)
     output_vertebrea_step = args.output_vertebrea_step
     map_input_list = args.map_input
     map_output_list = args.map_output
     dilation_size = args.dilation_size
-    combine_before_label = args.combine_before_label
     step_diff_label = args.step_diff_label
     step_diff_disc = args.step_diff_disc
     override = args.override
@@ -177,12 +177,12 @@ def main():
             init_disc = {init_disc}
             output_disc_step = {output_disc_step}
             vertebrea_labels = {vertebrea_labels}
+            vertebrea_extra_labels = {vertebrea_extra_labels}
             init_vertebrae = {init_vertebrae}
             output_vertebrea_step = {output_vertebrea_step}
             map_input = {map_input_list}
             map_output = {map_output_list}
             dilation_size = {dilation_size}
-            combine_before_label = {combine_before_label}
             step_diff_label = {step_diff_label}
             step_diff_disc = {step_diff_disc}
             override = {override}
@@ -213,12 +213,12 @@ def main():
         init_disc=init_disc,
         output_disc_step=output_disc_step,
         vertebrea_labels=vertebrea_labels,
+        vertebrea_extra_labels=vertebrea_extra_labels,
         init_vertebrae=init_vertebrae,
         output_vertebrea_step=output_vertebrea_step,
         map_input_dict=map_input_dict,
         map_output_dict=map_output_dict,
         dilation_size=dilation_size,
-        combine_before_label=combine_before_label,
         step_diff_label=step_diff_label,
         step_diff_disc=step_diff_disc,
         override=override,
@@ -237,12 +237,12 @@ def iterative_label_mp(
         init_disc={},
         output_disc_step=1,
         vertebrea_labels=[],
+        vertebrea_extra_labels=[],
         init_vertebrae={},
         output_vertebrea_step=1,
         map_input_dict={},
         map_output_dict={},
         dilation_size=1,
-        combine_before_label=False,
         step_diff_label=False,
         step_diff_disc=False,
         override=False,
@@ -269,12 +269,12 @@ def iterative_label_mp(
             output_disc_step=output_disc_step,
             init_disc=init_disc,
             vertebrea_labels=vertebrea_labels,
+            vertebrea_extra_labels=vertebrea_extra_labels,
             init_vertebrae=init_vertebrae,
             output_vertebrea_step=output_vertebrea_step,
             map_input_dict=map_input_dict,
             map_output_dict=map_output_dict,
             dilation_size=dilation_size,
-            combine_before_label=combine_before_label,
             step_diff_label=step_diff_label,
             step_diff_disc=step_diff_disc,
             override=override,
@@ -291,12 +291,12 @@ def _iterative_label(
         init_disc={},
         output_disc_step=1,
         vertebrea_labels=[],
+        vertebrea_extra_labels=[],
         init_vertebrae={},
         output_vertebrea_step=1,
         map_input_dict={},
         map_output_dict={},
         dilation_size=1,
-        combine_before_label=False,
         step_diff_label=False,
         step_diff_disc=False,
         override=False,
@@ -318,12 +318,12 @@ def _iterative_label(
             init_disc=init_disc,
             output_disc_step=output_disc_step,
             vertebrea_labels=vertebrea_labels,
+            vertebrea_extra_labels=vertebrea_extra_labels,
             init_vertebrae=init_vertebrae,
             output_vertebrea_step=output_vertebrea_step,
             map_input_dict=map_input_dict,
             map_output_dict=map_output_dict,
             dilation_size=dilation_size,
-            combine_before_label=combine_before_label,
             step_diff_label=step_diff_label,
             step_diff_disc=step_diff_disc,
         )
@@ -346,104 +346,197 @@ def _iterative_label(
     nib.save(output_seg, output_seg_path)
 
 def iterative_label(
-        seg,
-        disc_labels=[],
-        init_disc={},
-        output_disc_step=1,
-        vertebrea_labels=[],
-        init_vertebrae={},
-        output_vertebrea_step=1,
-        map_input_dict={},
-        map_output_dict={},
-        dilation_size=1,
-        combine_before_label=False,
-        step_diff_label=False,
-        step_diff_disc=False,
+        seg: nib.Nifti1Image,
+        disc_labels: list=[],
+        init_disc: dict={},
+        output_disc_step: int=1,
+        vertebrea_labels: list=[],
+        vertebrea_extra_labels: list=[],
+        init_vertebrae: dict={},
+        output_vertebrea_step: int=1,
+        map_input_dict: dict={},
+        map_output_dict: dict={},
+        dilation_size: int=1,
+        step_diff_label: bool=False,
+        step_diff_disc: bool=False,
     ):
+    '''
+    Label Vertebrae, IVDs, Spinal Cord and canal from init segmentation.
+    The algorithm is iterative and works as follows:
+    1. Find connected voxels for each disc label and label them into separate labels
+    2. Find connected voxels for each vertebrae label and label them into separate labels
+    3. Combine sequential vertebrae labels based on some conditions
+    4. Combine extra labels with adjacent vertebrae labels
+    5. Map labels from the iteative algorithm output, to the final output (e.g., map the vertebrae label from the iteative algorithm output to the special sacrum label)
+    6. Map input labels to the final output (e.g., map the input sacrum, canal and spinal cord labels to the output labels)
+
+    Parameters
+    ----------
+    seg : nibabel.nifti1.Nifti1Image
+        Segmentation image
+    disc_labels : list
+        The disc labels
+    init_disc : dict
+        Init labels list for disc ordered by priority (input_label:output_label)
+    output_disc_step : int
+        The step to take between disc labels in the output
+    vertebrea_labels : list
+        The vertebrae labels
+    vertebrea_extra_labels : list
+        Extra vertebrae labels to add to add to adjacent vertebrae labels
+    init_vertebrae : dict
+        Init labels list for vertebrae ordered by priority (input_label:output_label)
+    output_vertebrea_step : int
+        The step to take between vertebrae labels in the output
+    map_input_dict : dict
+        A dict mapping labels from input into the output segmentation
+    map_output_dict : dict
+        A dict mapping labels from the output of the iterative labeling algorithm into different labels in the output segmentation
+    dilation_size : int
+        Number of voxels to dilate before finding connected voxels to label
+    step_diff_label : bool
+        Make step only for different labels
+    step_diff_disc : bool
+        Make step only for different discs
+
+    Returns
+    -------
+    nibabel.nifti1.Nifti1Image
+        Segmentation image with labeled vertebrae, IVDs, Spinal Cord and canal
+    '''
     seg_data = np.asanyarray(seg.dataobj).round().astype(np.uint8)
 
     output_seg_data = np.zeros_like(seg_data)
 
     binary_dilation_structure = iterate_structure(generate_binary_structure(3, 1), dilation_size)
 
+    # Arrays to store the z indexes of the discs sorted superior to inferior
     disc_sorted_z_indexes = []
 
-    for labels, step, init, is_vert in (
-        (disc_labels, output_disc_step, init_disc, False),
-        (vertebrea_labels, output_vertebrea_step, init_vertebrae, True)):
+    # We run the same iterative algorithm for discs and vertebrae
+    for labels, extra_labels, step, init, is_vert in (
+        (disc_labels, [], output_disc_step, init_disc, False),
+        (vertebrea_labels, vertebrea_extra_labels, output_vertebrea_step, init_vertebrae, True)):
 
+        # Skip if no labels are provided
         if len(labels) == 0:
             continue
 
-        # Get labeled
-        if combine_before_label or not is_vert: # Always for discs
-            # Combine all labels before label continue voxels
-            mask_labeled, num_labels = label(binary_dilation(np.isin(seg_data, labels), binary_dilation_structure), np.ones((3, 3, 3)))
+        if is_vert:
+            _labels = [[_] for _ in labels]
         else:
-            mask_labeled, num_labels = np.zeros_like(seg_data), 0
-            for l in labels:
-                mask = seg_data == l
-                # Dilate
-                tmp_mask_labeled, tmp_num_labels = label(binary_dilation(mask, binary_dilation_structure), np.ones((3, 3, 3)))
-                # Undo dilate
-                tmp_mask_labeled *= mask
-                if tmp_num_labels > 0:
-                    mask_labeled[tmp_mask_labeled != 0] = tmp_mask_labeled[tmp_mask_labeled != 0] + num_labels
-                    num_labels += tmp_num_labels
+            # For discs, combine all labels before label continue voxels since the discs not touching each other
+            _labels = [labels]
+
+        # Init labeled segmentation
+        mask_labeled, num_labels = np.zeros_like(seg_data, dtype=np.uint32), 0
+
+        # For each label, find connected voxels and label them into separate labels
+        for l in _labels:
+            mask = np.isin(seg_data, l)
+
+            # Dilate the mask to combine small disconnected regions
+            mask_dilated = binary_dilation(mask, binary_dilation_structure)
+
+            # Label the connected voxels in the dilated mask into separate labels
+            tmp_mask_labeled, tmp_num_labels = label(mask_dilated.astype(np.uint32), np.ones((3, 3, 3)))
+
+            # Undo dilation
+            tmp_mask_labeled *= mask
+
+            # Add current labels to the labeled segmentation
+            if tmp_num_labels > 0:
+                mask_labeled[tmp_mask_labeled != 0] = tmp_mask_labeled[tmp_mask_labeled != 0] + num_labels
+                num_labels += tmp_num_labels
 
         # If no label found, raise error
         if num_labels == 0:
             raise ValueError(f"Some label must be in the segmentation (labels: {labels})")
 
+        # Reduce size of mask_labeled
+        if mask_labeled.max() < np.iinfo(np.uint8).max:
+            mask_labeled = mask_labeled.astype(np.uint8)
+        elif mask_labeled.max() < np.iinfo(np.uint16).max:
+            mask_labeled = mask_labeled.astype(np.uint16)
+
         # Get the z index of the center of mass for each label
-        canonical_mask_labeled = np.asanyarray(nib.as_closest_canonical(nib.Nifti1Image(mask_labeled, seg.affine, seg.header)).dataobj).round().astype(np.uint8)
+        canonical_mask_labeled = np.asanyarray(nib.as_closest_canonical(nib.Nifti1Image(mask_labeled, seg.affine, seg.header)).dataobj).round().astype(mask_labeled.dtype)
         mask_labeled_z_indexes = [_[-1] for _ in center_of_mass(canonical_mask_labeled != 0, canonical_mask_labeled, range(1, num_labels + 1))]
 
-        # Sort the labels by their z-index (reversed)
+        # Sort the labels by their z-index (reversed to go from superior to inferior)
         sorted_z_indexes, sorted_labels = zip(*sorted(zip(mask_labeled_z_indexes,range(1,num_labels+1)))[::-1])
 
+        # In this part we loop over the labels superior to inferior and combine sequential vertebrae labels based on some conditions
         if is_vert:
             # Combine sequential vertebrae labels if they have the same value in the original segmentation
+            # This is useful when part part of the vertebrae is not connected to the main part but have the same odd/even value
             if step_diff_label and len(labels) - len(init) > 1:
                 new_sorted_labels = []
+
+                # Store the previous label and the original label of the previous label
                 prev_l, prev_orig_label = 0, 0
+
+                # Loop over the sorted labels
                 for l in sorted_labels:
+                    # Get the original label of the current label
                     curr_orig_label = seg_data[mask_labeled == l].flat[0]
+
+                    # Combine the current label with the previous label if they have the same original label
                     if curr_orig_label == prev_orig_label:
+                        # Combine the current label with the previous label
                         mask_labeled[mask_labeled == l] = prev_l
                         num_labels -= 1
+
                     else:
+                        # Add the current label to the new sorted labels
                         new_sorted_labels.append(l)
                         prev_l, prev_orig_label = l, curr_orig_label
 
                 # Get the z index of the center of mass for each label
-                canonical_mask_labeled = np.asanyarray(nib.as_closest_canonical(nib.Nifti1Image(mask_labeled, seg.affine, seg.header)).dataobj).round().astype(np.uint8)
+                canonical_mask_labeled = np.asanyarray(nib.as_closest_canonical(nib.Nifti1Image(mask_labeled, seg.affine, seg.header)).dataobj).round().astype(mask_labeled.dtype)
                 mask_labeled_z_indexes = [_[-1] for _ in center_of_mass(canonical_mask_labeled != 0, canonical_mask_labeled, new_sorted_labels)]
 
-                # Sort the labels by their z-index (reversed)
+                # Sort the labels by their z-index (reversed to go from superior to inferior)
                 sorted_z_indexes, sorted_labels = zip(*sorted(zip(mask_labeled_z_indexes, new_sorted_labels))[::-1])
+
+                # Reduce size of mask_labeled
+                if mask_labeled.max() < np.iinfo(np.uint8).max:
+                    mask_labeled = mask_labeled.astype(np.uint8)
+                elif mask_labeled.max() < np.iinfo(np.uint16).max:
+                    mask_labeled = mask_labeled.astype(np.uint16)
 
             # Combine sequential vertebrae labels if there is no disc between them
             if step_diff_disc and len(disc_sorted_z_indexes) > 0:
                 new_sorted_labels = []
+    
+                # Store the previous label and the z index of the previous label
                 prev_l, prev_z = 0, 0
 
                 for l, z in zip(sorted_labels, sorted_z_indexes):
                     # Do not combine first and last vertebrae since it can be C1 or only contain the spinous process
                     if l not in sorted_labels[:2] and l != sorted_labels[-1] and prev_l > 0 and not any(z < _ < prev_z for _ in disc_sorted_z_indexes):
+                        # Combine the current label with the previous label
                         mask_labeled[mask_labeled == l] = prev_l
                         num_labels -= 1
+
                     else:
+                        # Add the current label to the new sorted labels
                         new_sorted_labels.append(l)
                         prev_l, prev_z = l, z
 
                 sorted_labels = new_sorted_labels
 
+                # Reduce size of mask_labeled
+                if mask_labeled.max() < np.iinfo(np.uint8).max:
+                    mask_labeled = mask_labeled.astype(np.uint8)
+                elif mask_labeled.max() < np.iinfo(np.uint16).max:
+                    mask_labeled = mask_labeled.astype(np.uint16)
+
         else:
             # Save the z indexes of the discs
             disc_sorted_z_indexes = sorted_z_indexes
 
-        # Set the first label
+        # Find the most superior label in the segmentation
         first_label = 0
         for k, v in init.items():
             if k in seg_data:
@@ -454,25 +547,81 @@ def iterative_label(
         if first_label == 0:
             raise ValueError(f"Some initiation label must be in the segmentation (init: {list(init.keys())})")
 
+        # Combine extra labels with adjacent vertebrae labels
+        if len(extra_labels) > 0:
+            mask_extra = np.isin(seg_data, extra_labels)
+
+            # Loop over vertebral labels (from inferior because the transverse process make it steal from above)
+            for i in range(num_labels - 1, -1, -1):
+                # Mkae mask for the current vertebrae with filling the holes and dilating it
+                mask = fill(mask_labeled == sorted_labels[i])
+                mask = binary_dilation(mask, iterate_structure(generate_binary_structure(3, 1), 1))
+
+                # Add the intersection of the mask with the extra labels to the current verebrae
+                mask_labeled[mask_extra * mask] = sorted_labels[i]
+
         # Set the output value for the current label
         for i in range(num_labels):
             output_seg_data[mask_labeled == sorted_labels[i]] = first_label + step * i
 
-    # Use the map to change the iteative algorithm output to the final output
+    # Use the map to map labels from the iteative algorithm output, to the final output
+    # This is useful to map the vertebrae label from the iteative algorithm output to the special sacrum label
     for orig, new in map_output_dict.items():
         if int(orig) in output_seg_data:
             output_seg_data[output_seg_data == int(new)] = 0
-            output_seg_data[output_seg_data==int(orig)] = int(new)
+            output_seg_data[output_seg_data == int(orig)] = int(new)
 
     # Use the map to map input labels to the final output
+    # This is useful to map the input sacrum, canal and spinal cord labels to the output labels
     for orig, new in map_input_dict.items():
         if int(orig) in seg_data:
             output_seg_data[output_seg_data == int(new)] = 0
-            output_seg_data[seg_data==int(orig)] = int(new)
+            mask = seg_data == int(orig)
+
+            # Map also all labels that are currently in the mask
+            # This is useful for example if we addedd from extra_labels to the sacrum and we want them to map together with the sacrum
+            mask_labes = [_ for _ in np.unique(output_seg_data[mask]) if _ != 0]
+            if len(mask_labes) > 0:
+                mask |= np.isin(output_seg_data, mask_labes)
+            output_seg_data[mask] = int(new)
 
     output_seg = nib.Nifti1Image(output_seg_data, seg.affine, seg.header)
 
     return output_seg
+
+def fill(mask):
+    '''
+    Fill holes in a binary mask
+
+    Parameters
+    ----------
+    mask : np.ndarray
+        Binary mask
+
+    Returns
+    -------
+    np.ndarray
+        Binary mask with holes filled
+    '''
+
+    # Create an array of x indices with the same shape as the mask
+    x_indices = np.broadcast_to(np.arange(mask.shape[0])[..., np.newaxis, np.newaxis], mask.shape)
+    # Create an array of y indices with the same shape as the mask
+    y_indices = np.broadcast_to(np.arange(mask.shape[1])[..., np.newaxis], mask.shape)
+    # Create an array of z indices with the same shape as the mask
+    z_indices = np.broadcast_to(np.arange(mask.shape[2]), mask.shape)
+
+    mask_min_x = np.min(np.where(mask, x_indices, np.inf), axis=0)[np.newaxis, ...]
+    mask_max_x = np.max(np.where(mask, x_indices, -np.inf), axis=0)[np.newaxis, ...]
+    mask_min_y = np.min(np.where(mask, y_indices, np.inf), axis=1)[:, np.newaxis, :]
+    mask_max_y = np.max(np.where(mask, y_indices, -np.inf), axis=1)[:, np.newaxis, :]
+    mask_min_z = np.min(np.where(mask, z_indices, np.inf), axis=2)[:, :, np.newaxis]
+    mask_max_z = np.max(np.where(mask, z_indices, -np.inf), axis=2)[:, :, np.newaxis]
+
+    return \
+        ((mask_min_x <= x_indices) & (x_indices <= mask_max_x)) | \
+        ((mask_min_y <= y_indices) & (y_indices <= mask_max_y)) | \
+        ((mask_min_z <= z_indices) & (z_indices <= mask_max_z))
 
 if __name__ == '__main__':
     main()
