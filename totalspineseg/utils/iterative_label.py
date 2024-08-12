@@ -359,7 +359,7 @@ def iterative_label(
         dilation_size: int=1,
         step_diff_label: bool=False,
         step_diff_disc: bool=False,
-    ):
+    ) -> nib.Nifti1Image:
     '''
     Label Vertebrae, IVDs, Spinal Cord and canal from init segmentation.
     The algorithm is iterative and works as follows:

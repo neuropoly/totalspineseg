@@ -24,12 +24,12 @@ INPUT_FOLDER="$1"
 OUTPUT_FOLDER="$2"
 if [[ $3 == -step1 ]]; then STEP1=1; else STEP1=0; fi
 
-# ensure the custom nnUNetTrainer is defined in the nnUNet library and add it if it is not
-source "$TOTALSPINESEG"/scripts/add_nnunet_trainer.sh
-
 # set TOTALSPINESEG and TOTALSPINESEG_DATA if not set
 TOTALSPINESEG="$(realpath "${TOTALSPINESEG:-totalspineseg}")"
 TOTALSPINESEG_DATA="$(realpath "${TOTALSPINESEG_DATA:-data}")"
+
+# ensure the custom nnUNetTrainer is defined in the nnUNet library and add it if it is not
+source "$TOTALSPINESEG"/scripts/add_nnunet_trainer.sh
 
 # Set the path to the resources folder
 resources="$TOTALSPINESEG"/totalspineseg/resources

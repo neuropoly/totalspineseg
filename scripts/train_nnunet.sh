@@ -26,12 +26,12 @@ if [ "$DATASETS" == all ]; then DATASETS=(101 102 103); fi
 # Set the fold to work with - default is 0
 FOLD=${2:-0}
 
-# ensure the custom nnUNetTrainer is defined in the nnUNet library and add it if it is not
-source "$TOTALSPINESEG"/scripts/add_nnunet_trainer.sh
-
 # set TOTALSPINESEG and TOTALSPINESEG_DATA if not set
 TOTALSPINESEG="$(realpath "${TOTALSPINESEG:-totalspineseg}")"
 TOTALSPINESEG_DATA="$(realpath "${TOTALSPINESEG_DATA:-data}")"
+
+# ensure the custom nnUNetTrainer is defined in the nnUNet library and add it if it is not
+source "$TOTALSPINESEG"/scripts/add_nnunet_trainer.sh
 
 # RAM requirement in GB
 RAM_REQUIREMENT=8
