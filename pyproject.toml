@@ -69,6 +69,7 @@ totalspineseg_transform_seg2image = "totalspineseg.utils.transform_seg2image:mai
 totalspineseg_reorient_canonical = "totalspineseg.utils.reorient_canonical:main"
 totalspineseg_average4d = "totalspineseg.utils.average4d:main"
 totalspineseg_crop_image2seg = "totalspineseg.utils.crop_image2seg:main"
+totalspineseg_extract_soft = "totalspineseg.utils.extract_soft:main"
 
 [build-system]
 requires = ["pip>=23", "setuptools>=67"]

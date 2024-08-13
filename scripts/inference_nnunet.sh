@@ -23,6 +23,7 @@ trap "echo Caught Keyboard Interrupt within script. Exiting now.; exit" INT
 INPUT_FOLDER="$1"
 OUTPUT_FOLDER="$2"
 if [[ $3 == -step1 ]]; then STEP1=1; else STEP1=0; fi
+if [[ $3 == -soft || $4 == -soft ]]; then SOFT=1; else SOFT=0; fi
 
 # set TOTALSPINESEG and TOTALSPINESEG_DATA if not set
 TOTALSPINESEG="$(realpath "${TOTALSPINESEG:-totalspineseg}")"
@@ -106,7 +107,9 @@ totalspineseg_preview_jpg -i "${OUTPUT_FOLDER}"/input -o "${OUTPUT_FOLDER}"/prev
 # Run step 1 model
 # Check if the final checkpoint exists, if not use the latest checkpoint
 if [ -f "$nnUNet_results"/Dataset${step1_dataset}_*/${nnUNetTrainer}__${nnUNetPlans}__${configuration}/fold_${FOLD}/checkpoint_final.pth ]; then CHECKPOINT=checkpoint_final.pth; else CHECKPOINT=checkpoint_latest.pth; fi
-nnUNetv2_predict -d $step1_dataset -i "${OUTPUT_FOLDER}"/input -o "${OUTPUT_FOLDER}"/step1_raw -f $FOLD -c $configuration -p $nnUNetPlans -tr $nnUNetTrainer -npp $JOBS -nps $JOBS -chk $CHECKPOINT -device $DEVICE
+# Check if the probabilities should be saved
+if [ $SOFT -eq 1 ]; then SAVE_PROBABILITIES=--save_probabilities; else SAVE_PROBABILITIES=""; fi
+nnUNetv2_predict -d $step1_dataset -i "${OUTPUT_FOLDER}"/input -o "${OUTPUT_FOLDER}"/step1_raw -f $FOLD -c $configuration -p $nnUNetPlans -tr $nnUNetTrainer -npp $JOBS -nps $JOBS -chk $CHECKPOINT -device $DEVICE $SAVE_PROBABILITIES
 
 # Generate preview images for step 1
 totalspineseg_preview_jpg -i "${OUTPUT_FOLDER}"/input -s "${OUTPUT_FOLDER}"/step1_raw -o "${OUTPUT_FOLDER}"/preview --output-suffix _step1_raw -r
@@ -125,6 +128,13 @@ totalspineseg_transform_seg2image -i "${OUTPUT_FOLDER}"/input -s "${OUTPUT_FOLDE
 
 # Generate preview images for the step 1 labeled
 totalspineseg_preview_jpg -i "${OUTPUT_FOLDER}"/input -s "${OUTPUT_FOLDER}"/step1_output -o "${OUTPUT_FOLDER}"/preview --output-suffix _step1_output -r
+
+if [ $SOFT -eq 1 ]; then
+    # Extract the spinal cord and spinal canal soft segmentation from the step 1 model output
+    totalspineseg_extract_soft -n "${OUTPUT_FOLDER}"/step1_raw -s "${OUTPUT_FOLDER}"/step1_output -o "${OUTPUT_FOLDER}"/spinal_cord --label 8 --seg-labels 200 --dilate 1 -r
+    totalspineseg_extract_soft -n "${OUTPUT_FOLDER}"/step1_raw -s "${OUTPUT_FOLDER}"/step1_output -o "${OUTPUT_FOLDER}"/spinal_canal --label 6 --seg-labels 200 201 --dilate 1 -r
+    rm "${OUTPUT_FOLDER}"/step1_raw/*.{npz,pkl}
+fi
 
 if [ $STEP1 -eq 0 ]; then
 
