@@ -250,23 +250,23 @@ def extract_levels(
     distances, indices = ndi.distance_transform_edt(~(mask_canal * mask_canal_anterior_line), return_indices=True)
 
     disc_label = c2c3_label
-    out_label = 3
-    while disc_label in seg_data:
-        # Create a mask of the disc
-        mask_disc = seg_data == disc_label
+    # Loop over the discs from C2-C3 to L5-S1 and find the closest voxel in the canal
+    for out_label in range(3, 26):
+        if disc_label in seg_data:
+            # Create a mask of the disc
+            mask_disc = seg_data == disc_label
 
-        # Find the location of the minimum distance in disc
-        disc_closest_to_canal_index = np.unravel_index(np.argmin(np.where(mask_disc, distances, np.inf)), mask_canal.shape)
+            # Find the location of the minimum distance in disc
+            disc_closest_to_canal_index = np.unravel_index(np.argmin(np.where(mask_disc, distances, np.inf)), mask_canal.shape)
 
-        # Get the corresponding closest voxel in the canal
-        canal_closest_to_disc_index = tuple(indices[:, disc_closest_to_canal_index[0], disc_closest_to_canal_index[1], disc_closest_to_canal_index[2]])
+            # Get the corresponding closest voxel in the canal
+            canal_closest_to_disc_index = tuple(indices[:, disc_closest_to_canal_index[0], disc_closest_to_canal_index[1], disc_closest_to_canal_index[2]])
 
-        # Set the output label
-        output_seg_data[canal_closest_to_disc_index] = out_label
+            # Set the output label
+            output_seg_data[canal_closest_to_disc_index] = out_label
 
-        # Update the disc label and output label
+        # Update the disc label
         disc_label += step
-        out_label += 1
 
     if 3 in output_seg_data:
         c2c3_index = np.unravel_index(np.argmax(output_seg_data == 3), seg_data.shape)
