@@ -247,10 +247,10 @@ def _extract_soft(
 
     # Ensure correct segmentation dtype, affine and header
     output_seg = nib.Nifti1Image(
-        np.asanyarray(output_seg.dataobj).astype(np.float16),
+        np.asanyarray(output_seg.dataobj).astype(np.float32),
         output_seg.affine, output_seg.header
     )
-    output_seg.set_data_dtype(np.float16)
+    output_seg.set_data_dtype(np.float32)
     output_seg.set_qform(output_seg.affine)
     output_seg.set_sform(output_seg.affine)
 
@@ -273,14 +273,14 @@ def extract_soft(
     if dilate > 0:
         # Extract the segmentation mask
         seg_data = np.asanyarray(seg.dataobj).round().astype(np.uint8)
-        mask = seg_data.isin(seg_labels)
+        mask = np.isin(seg_data, seg_labels)
 
         # Dilate the mask
         mask = ndi.binary_dilation(mask, ndi.iterate_structure(ndi.generate_binary_structure(3, 1), dilate))
 
         # Get the largest component
         if largest:
-            mask = largest(mask)
+            mask = largest_component(mask)
 
         # Mask the soft segmentation
         output_seg_data[~mask] = 0
@@ -289,7 +289,9 @@ def extract_soft(
 
     return output_seg
 
-def largest(mask):
+def largest_component(mask):
+    if mask.sum() == 0:
+        return mask
     mask_labeled, num_labels = ndi.label(mask, np.ones((3, 3, 3)))
     # Find the label of the largest component
     label_sizes = np.bincount(mask_labeled.ravel())[1:]  # Skip 0 label size

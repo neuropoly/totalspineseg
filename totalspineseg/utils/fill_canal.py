@@ -238,7 +238,7 @@ def fill_canal(
     # Take the largest spinal cord component
     if cord_label and largest_cord and cord_label in output_seg_data:
         cord_mask = output_seg_data == cord_label
-        cord_mask_largest = largest(cord_mask)
+        cord_mask_largest = largest_component(cord_mask)
         output_seg_data[cord_mask & ~cord_mask_largest] = canal_label
 
     if canal_label in output_seg_data:
@@ -248,7 +248,7 @@ def fill_canal(
         # Take the largest spinal canal component
         if largest_canal:
             canal_mask = np.isin(output_seg_data, canal_labels)
-            canal_mask_largest = largest(canal_mask)
+            canal_mask_largest = largest_component(canal_mask)
             output_seg_data[canal_mask & ~canal_mask_largest] = 0
 
         # Create an array of x indices
@@ -273,7 +273,9 @@ def fill_canal(
 
     return output_seg
 
-def largest(mask):
+def largest_component(mask):
+    if mask.sum() == 0:
+        return mask
     mask_labeled, num_labels = ndi.label(mask, np.ones((3, 3, 3)))
     # Find the label of the largest component
     label_sizes = np.bincount(mask_labeled.ravel())[1:]  # Skip 0 label size
