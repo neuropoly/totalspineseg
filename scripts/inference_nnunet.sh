@@ -136,6 +136,9 @@ if [ $SOFT -eq 1 ]; then
     rm "${OUTPUT_FOLDER}"/step1_raw/*.{npz,pkl}
 fi
 
+# Extract the levels of the vertebrae and IVDs from the step 1 model output
+totalspineseg_extract_levels -s "${OUTPUT_FOLDER}"/step1_output -o "${OUTPUT_FOLDER}"/step1_levels --canal-labels 200 201 --c2c3-label 224 --step -1 -r
+
 if [ $STEP1 -eq 0 ]; then
 
     # Copy the original image into the input folder of step 2 model to use as the 1'st channel

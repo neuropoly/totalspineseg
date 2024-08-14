@@ -5,7 +5,7 @@ from functools import partial
 from pathlib import Path
 import numpy as np
 import nibabel as nib
-from scipy.ndimage import label
+import scipy.ndimage as ndi
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -274,7 +274,7 @@ def fill_canal(
     return output_seg
 
 def largest(mask):
-    mask_labeled, num_labels = label(mask, np.ones((3, 3, 3)))
+    mask_labeled, num_labels = ndi.label(mask, np.ones((3, 3, 3)))
     # Find the label of the largest component
     label_sizes = np.bincount(mask_labeled.ravel())[1:]  # Skip 0 label size
     largest_label = label_sizes.argmax() + 1  # +1 because bincount labels start at 0

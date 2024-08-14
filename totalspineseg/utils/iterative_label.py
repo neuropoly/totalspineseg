@@ -1,5 +1,5 @@
 import sys, argparse, textwrap
-from scipy.ndimage import label, binary_dilation, generate_binary_structure, iterate_structure, center_of_mass
+import scipy.ndimage as ndi
 from pathlib import Path
 import numpy as np
 import nibabel as nib
@@ -408,7 +408,7 @@ def iterative_label(
 
     output_seg_data = np.zeros_like(seg_data)
 
-    binary_dilation_structure = iterate_structure(generate_binary_structure(3, 1), dilation_size)
+    binary_dilation_structure = ndi.iterate_structure(ndi.generate_binary_structure(3, 1), dilation_size)
 
     # Arrays to store the z indexes of the discs sorted superior to inferior
     disc_sorted_z_indexes = []
@@ -436,10 +436,10 @@ def iterative_label(
             mask = np.isin(seg_data, l)
 
             # Dilate the mask to combine small disconnected regions
-            mask_dilated = binary_dilation(mask, binary_dilation_structure)
+            mask_dilated = ndi.binary_dilation(mask, binary_dilation_structure)
 
             # Label the connected voxels in the dilated mask into separate labels
-            tmp_mask_labeled, tmp_num_labels = label(mask_dilated.astype(np.uint32), np.ones((3, 3, 3)))
+            tmp_mask_labeled, tmp_num_labels = ndi.label(mask_dilated.astype(np.uint32), np.ones((3, 3, 3)))
 
             # Undo dilation
             tmp_mask_labeled *= mask
@@ -461,7 +461,7 @@ def iterative_label(
 
         # Get the z index of the center of mass for each label
         canonical_mask_labeled = np.asanyarray(nib.as_closest_canonical(nib.Nifti1Image(mask_labeled, seg.affine, seg.header)).dataobj).round().astype(mask_labeled.dtype)
-        mask_labeled_z_indexes = [_[-1] for _ in center_of_mass(canonical_mask_labeled != 0, canonical_mask_labeled, range(1, num_labels + 1))]
+        mask_labeled_z_indexes = [_[-1] for _ in ndi.center_of_mass(canonical_mask_labeled != 0, canonical_mask_labeled, range(1, num_labels + 1))]
 
         # Sort the labels by their z-index (reversed to go from superior to inferior)
         sorted_z_indexes, sorted_labels = zip(*sorted(zip(mask_labeled_z_indexes,range(1,num_labels+1)))[::-1])
@@ -494,7 +494,7 @@ def iterative_label(
 
                 # Get the z index of the center of mass for each label
                 canonical_mask_labeled = np.asanyarray(nib.as_closest_canonical(nib.Nifti1Image(mask_labeled, seg.affine, seg.header)).dataobj).round().astype(mask_labeled.dtype)
-                mask_labeled_z_indexes = [_[-1] for _ in center_of_mass(canonical_mask_labeled != 0, canonical_mask_labeled, new_sorted_labels)]
+                mask_labeled_z_indexes = [_[-1] for _ in ndi.center_of_mass(canonical_mask_labeled != 0, canonical_mask_labeled, new_sorted_labels)]
 
                 # Sort the labels by their z-index (reversed to go from superior to inferior)
                 sorted_z_indexes, sorted_labels = zip(*sorted(zip(mask_labeled_z_indexes, new_sorted_labels))[::-1])
@@ -555,7 +555,7 @@ def iterative_label(
             for i in range(num_labels - 1, -1, -1):
                 # Mkae mask for the current vertebrae with filling the holes and dilating it
                 mask = fill(mask_labeled == sorted_labels[i])
-                mask = binary_dilation(mask, iterate_structure(generate_binary_structure(3, 1), 1))
+                mask = ndi.binary_dilation(mask, ndi.iterate_structure(ndi.generate_binary_structure(3, 1), 1))
 
                 # Add the intersection of the mask with the extra labels to the current verebrae
                 mask_labeled[mask_extra * mask] = sorted_labels[i]

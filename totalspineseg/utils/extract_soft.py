@@ -18,8 +18,8 @@ def main():
     parser = argparse.ArgumentParser(
         description=textwrap.dedent(f'''
         This script processes npz and NIfTI (Neuroimaging Informatics Technology Initiative) segmentation files.
-        It TODO.'''
-        ),
+        It extracts the soft segmentation from the npz file.
+        '''),
         epilog=textwrap.dedent('''
             Examples:
             extract_soft -n npzs -s labels -o canal_soft

@@ -7,7 +7,7 @@ import nibabel as nib
 import numpy as np
 import torchio as tio
 import gryds
-from scipy.ndimage import binary_dilation, generate_binary_structure, iterate_structure, laplace
+import scipy.ndimage as ndi
 from scipy.stats import norm
 import warnings
 
@@ -467,7 +467,7 @@ def aug_redistribute_seg(img, seg, classes=None, in_seg=0.2):
         # Get mean and std of the current label
         l_mean, l_std = np.mean(img[l_mask]), np.std(img[l_mask])
         # Dilate the mask
-        l_mask_dilate = binary_dilation(l_mask, iterate_structure(generate_binary_structure(3, 1), 3))
+        l_mask_dilate = ndi.binary_dilation(l_mask, ndi.iterate_structure(ndi.generate_binary_structure(3, 1), 3))
         # Create mask of the dilated mask excluding the original mask
         l_mask_dilate_excl = l_mask_dilate & ~l_mask
         # Get the mean and std of the substraction of mask from the dilated mask
@@ -542,7 +542,7 @@ def aug_sig(img, seg):
     return aug_transform(img, seg, lambda x:1/(1 + np.exp(-x)))
 
 def aug_laplace(img, seg):
-    return aug_transform(img, seg, lambda x:np.abs(laplace(x)))
+    return aug_transform(img, seg, lambda x:np.abs(ndi.laplace(x)))
 
 def aug_inverse(img, seg):
     img = img.min() + img.max() - img
