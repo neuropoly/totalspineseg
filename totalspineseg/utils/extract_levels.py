@@ -249,24 +249,25 @@ def extract_levels(
     # Compute the distance transform of the canal anterior line
     distances, indices = ndi.distance_transform_edt(~(mask_canal * mask_canal_anterior_line), return_indices=True)
 
-    disc_label = c2c3_label
+    disc_labels = list(range(c2c3_label, c2c3_label + step * 23, step))
+    out_labels = list(range(3, 26))
+    in_seg = np.isin(disc_labels, seg_data)
+
+    map_labels = [(d, o) for d, o, i in zip(disc_labels, out_labels, in_seg) if i]
+
     # Loop over the discs from C2-C3 to L5-S1 and find the closest voxel in the canal
-    for out_label in range(3, 26):
-        if disc_label in seg_data:
-            # Create a mask of the disc
-            mask_disc = seg_data == disc_label
+    for disc_label, out_label in map_labels:
+        # Create a mask of the disc
+        mask_disc = seg_data == disc_label
 
-            # Find the location of the minimum distance in disc
-            disc_closest_to_canal_index = np.unravel_index(np.argmin(np.where(mask_disc, distances, np.inf)), mask_canal.shape)
+        # Find the location of the minimum distance in disc
+        disc_closest_to_canal_index = np.unravel_index(np.argmin(np.where(mask_disc, distances, np.inf)), mask_canal.shape)
 
-            # Get the corresponding closest voxel in the canal
-            canal_closest_to_disc_index = tuple(indices[:, disc_closest_to_canal_index[0], disc_closest_to_canal_index[1], disc_closest_to_canal_index[2]])
+        # Get the corresponding closest voxel in the canal
+        canal_closest_to_disc_index = tuple(indices[:, disc_closest_to_canal_index[0], disc_closest_to_canal_index[1], disc_closest_to_canal_index[2]])
 
-            # Set the output label
-            output_seg_data[canal_closest_to_disc_index] = out_label
-
-        # Update the disc label
-        disc_label += step
+        # Set the output label
+        output_seg_data[canal_closest_to_disc_index] = out_label
 
     if 3 in output_seg_data:
         c2c3_index = np.unravel_index(np.argmax(output_seg_data == 3), seg_data.shape)
