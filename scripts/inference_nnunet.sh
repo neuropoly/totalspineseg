@@ -131,8 +131,8 @@ totalspineseg_preview_jpg -i "${OUTPUT_FOLDER}"/input -s "${OUTPUT_FOLDER}"/step
 
 if [ $SOFT -eq 1 ]; then
     # Extract the spinal cord and spinal canal soft segmentation from the step 1 model output
-    totalspineseg_extract_soft -n "${OUTPUT_FOLDER}"/step1_raw -s "${OUTPUT_FOLDER}"/step1_output -o "${OUTPUT_FOLDER}"/spinal_cord --label 9 --seg-labels 200 --dilate 1 -r
-    totalspineseg_extract_soft -n "${OUTPUT_FOLDER}"/step1_raw -s "${OUTPUT_FOLDER}"/step1_output -o "${OUTPUT_FOLDER}"/spinal_canal --label 7 --seg-labels 200 201 --dilate 1 -r
+    totalspineseg_extract_soft -n "${OUTPUT_FOLDER}"/step1_raw -s "${OUTPUT_FOLDER}"/step1_output -o "${OUTPUT_FOLDER}"/step1_cord --label 9 --seg-labels 200 --dilate 1 -r
+    totalspineseg_extract_soft -n "${OUTPUT_FOLDER}"/step1_raw -s "${OUTPUT_FOLDER}"/step1_output -o "${OUTPUT_FOLDER}"/step1_canal --label 7 --seg-labels 200 201 --dilate 1 -r
     rm "${OUTPUT_FOLDER}"/step1_raw/*.{npz,pkl}
 fi
 
