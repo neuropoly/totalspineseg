@@ -93,7 +93,7 @@ fi
 totalspineseg_average4d -i "${INPUT_FOLDER}" -o "${OUTPUT_FOLDER}"/input --image-suffix "" --output-image-suffix "" -r
 
 # Add _0000 to inputs if not exists to run nnunet
-for f in "${OUTPUT_FOLDER}"/input/*.nii.gz; do if [[ "$f" != *_0000.nii.gz ]]; then mv "$f" "${f/.nii.gz/_0000.nii.gz}"; fi; done
+for f in "${OUTPUT_FOLDER}"/input/*.nii.gz; do mv "$f" "${f/.nii.gz/_0000.nii.gz}"; done
 
 #Transform images to canonical space
 totalspineseg_reorient_canonical -i "${OUTPUT_FOLDER}"/input -o "${OUTPUT_FOLDER}"/input -r
