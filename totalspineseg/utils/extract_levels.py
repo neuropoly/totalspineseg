@@ -226,59 +226,92 @@ def extract_levels(
         c2c3_label: dict,
         step: int,
     ) -> nib.Nifti1Image:
+    '''
+    Extract vertebrae levels from Spinal Canal and Discs.
+
+    The function extracts the vertebrae levels from the input segmentation by finding the closest voxel in the canal centerline to the middle of each disc.
+    The superior voxels in the canal centerline are set to 1 and the middle voxels between C2-C3 and the superior voxels are set to 2.
+
+    Parameters
+    ----------
+    seg : nibabel.Nifti1Image
+        The input segmentation.
+    canal_labels : list
+        The canal labels.
+    c2c3_label : int
+        The label for C2-C3 disc.
+    step : int
+        The step to take between discs labels in the input.
+
+    Returns
+    -------
+    nibabel.Nifti1Image
+        The output segmentation with the vertebrae levels.
+    '''
     seg_data = np.asanyarray(seg.dataobj).round().astype(np.uint8)
 
     output_seg_data = np.zeros_like(seg_data)
 
-    # Create an array of x indices with the same shape as the mask
-    x_indices = np.broadcast_to(np.arange(seg_data.shape[0])[..., np.newaxis, np.newaxis], seg_data.shape)
-    # Create an array of y indices with the same shape as the mask
-    y_indices = np.broadcast_to(np.arange(seg_data.shape[1])[..., np.newaxis], seg_data.shape)
-    # Create an array of z indices with the same shape as the mask
-    z_indices = np.broadcast_to(np.arange(seg_data.shape[2]), seg_data.shape)
+    # Get array of indices for x, y, and z axes
+    x_indices, y_indices, z_indices = np.indices(seg_data.shape)
 
     # Create a mask of the canal
     mask_canal = np.isin(seg_data, canal_labels)
 
-    # Create a mask of a line in the most anterior part of the canal
-    mask_min_x_indices = np.min(np.where(mask_canal, x_indices, np.inf), axis=(0, 1))[np.newaxis, np.newaxis, ...]
-    mask_max_x_indices = np.max(np.where(mask_canal, x_indices, -np.inf), axis=(0, 1))[np.newaxis, np.newaxis, ...]
-    mask_mid_x = mask_canal * (x_indices == ((mask_min_x_indices + mask_max_x_indices) // 2))
-    mask_canal_anterior_line = y_indices == np.max(np.where(mask_mid_x, y_indices, -np.inf), axis=1)[:, np.newaxis, :]
+    # Create a mask the canal centerline by finding the middle voxels in x and y axes for each z index
+    mask_min_x_indices = np.min(x_indices, where=mask_canal, initial=np.iinfo(x_indices.dtype).max, keepdims=True, axis=(0, 1))
+    mask_max_x_indices = np.max(x_indices, where=mask_canal, initial=np.iinfo(x_indices.dtype).min, keepdims=True, axis=(0, 1))
+    mask_mid_x = x_indices == ((mask_min_x_indices + mask_max_x_indices) // 2)
+    mask_min_y_indices = np.min(y_indices, where=mask_canal, initial=np.iinfo(x_indices.dtype).max, keepdims=True, axis=(0, 1))
+    mask_max_y_indices = np.max(y_indices, where=mask_canal, initial=np.iinfo(x_indices.dtype).min, keepdims=True, axis=(0, 1))
+    mask_mid_y = y_indices == ((mask_min_y_indices + mask_max_y_indices) // 2)
+    mask_canal_centerline = mask_canal * mask_mid_x * mask_mid_y
 
-    # Compute the distance transform of the canal anterior line
-    distances, indices = ndi.distance_transform_edt(~(mask_canal * mask_canal_anterior_line), return_indices=True)
+    # Compute the distance transform of the canal centerline
+    distances_from_centerline, closest_centerline_indices = ndi.distance_transform_edt(~mask_canal_centerline, return_indices=True)
 
+    # Get the labels of the discs and the output labels
     disc_labels = list(range(c2c3_label, c2c3_label + step * 23, step))
     out_labels = list(range(3, 26))
-    in_seg = np.isin(disc_labels, seg_data)
 
+    # Filter the discs that are in the segmentation
+    in_seg = np.isin(disc_labels, seg_data)
     map_labels = [(d, o) for d, o, i in zip(disc_labels, out_labels, in_seg) if i]
 
-    # Loop over the discs from C2-C3 to L5-S1 and find the closest voxel in the canal
+    # Loop over the discs from C2-C3 to L5-S1 and find the closest voxel in the canal centerline
     for disc_label, out_label in map_labels:
         # Create a mask of the disc
         mask_disc = seg_data == disc_label
 
-        # Find the location of the minimum distance in disc
-        disc_closest_to_canal_index = np.unravel_index(np.argmin(np.where(mask_disc, distances, np.inf)), mask_canal.shape)
+        # Find the location of the minimum distance in disc from the canal centerline
+        voxel_in_disc_closest_to_centerline = np.unravel_index(np.argmin(np.where(mask_disc, distances_from_centerline, np.inf)), mask_canal.shape)
 
-        # Get the corresponding closest voxel in the canal
-        canal_closest_to_disc_index = tuple(indices[:, disc_closest_to_canal_index[0], disc_closest_to_canal_index[1], disc_closest_to_canal_index[2]])
+        # Get the corresponding closest voxel in the canal centerline
+        voxel_in_centerline_closest_to_disc = tuple(closest_centerline_indices[(...,) + tuple(voxel_in_disc_closest_to_centerline)])
 
         # Set the output label
-        output_seg_data[canal_closest_to_disc_index] = out_label
+        output_seg_data[voxel_in_centerline_closest_to_disc] = out_label
 
+    # If C2-C3 is in the segmentation, set 1 and 2 to the superior voxels in the canal centerline and the middle voxels between C2-C3 and the superior voxels
     if 3 in output_seg_data:
+        # Find the location of the C2-C3 disc
         c2c3_index = np.unravel_index(np.argmax(output_seg_data == 3), seg_data.shape)
-        # Find the location of the superior voxels in mask_canal_anterior_line
-        canal_superior_index = np.unravel_index(np.argmax(mask_canal_anterior_line * z_indices), seg_data.shape)
+
+        # Find the location of the superior voxels in mask_canal_centerline
+        canal_superior_index = np.unravel_index(np.argmax(mask_canal_centerline * z_indices), seg_data.shape)
+
         if canal_superior_index[2] - c2c3_index[2] >= 4:
+            # If the distance between the superior voxels and C2-C3 is more than 4
+            # Set 1 to the superior voxels
             output_seg_data[canal_superior_index] = 1
+
+            # Set 2 to the middle voxels between C2-C3 and the superior voxels
             c1c2_z_index = (canal_superior_index[2] + c2c3_index[2]) // 2
-            c1c2_index = np.unravel_index(np.argmax(mask_canal_anterior_line * (z_indices == c1c2_z_index)), seg_data.shape)
+            c1c2_index = np.unravel_index(np.argmax(mask_canal_centerline * (z_indices == c1c2_z_index)), seg_data.shape)
             output_seg_data[c1c2_index] = 2
+
         elif canal_superior_index[2] - c2c3_index[2] >= 2:
+            # If the distance between the superior voxels and C2-C3 is more than 2 set 2 to the superior voxels
             output_seg_data[canal_superior_index] = 2
 
     output_seg = nib.Nifti1Image(output_seg_data, seg.affine, seg.header)
