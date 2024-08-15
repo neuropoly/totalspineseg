@@ -258,6 +258,10 @@ def extract_levels(
     # Create a mask of the canal
     mask_canal = np.isin(seg_data, canal_labels)
 
+    # If cancl is empty raise an error
+    if not np.any(mask_canal):
+        raise ValueError(f"No canal labels found in the segmentation.")
+
     # Create a mask the canal centerline by finding the middle voxels in x and y axes for each z index
     mask_min_x_indices = np.min(x_indices, where=mask_canal, initial=np.iinfo(x_indices.dtype).max, keepdims=True, axis=(0, 1))
     mask_max_x_indices = np.max(x_indices, where=mask_canal, initial=np.iinfo(x_indices.dtype).min, keepdims=True, axis=(0, 1))
@@ -277,6 +281,10 @@ def extract_levels(
     # Filter the discs that are in the segmentation
     in_seg = np.isin(disc_labels, seg_data)
     map_labels = [(d, o) for d, o, i in zip(disc_labels, out_labels, in_seg) if i]
+
+    # If no disc labels found in the segmentation raise an error
+    if len(map_labels) == 0:
+        raise ValueError(f"No disc labels found in the segmentation.")
 
     # Loop over the discs from C2-C3 to L5-S1 and find the closest voxel in the canal centerline
     for disc_label, out_label in map_labels:
