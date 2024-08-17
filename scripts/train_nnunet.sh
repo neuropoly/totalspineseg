@@ -4,6 +4,13 @@
 # It get also optional parameters DATASET and FOLD.
 # By default, it trains the models for datasets 101 and 102 with fold 0.
 
+# The script excpects the following environment variables to be set:
+#   TOTALSPINESEG: The path to the TotalSpineSeg repository.
+#   TOTALSPINESEG_DATA: The path to the TotalSpineSeg data folder.
+#   TOTALSPINESEG_JOBS: The number of CPU cores to use. Default is the number of CPU cores available.
+#   TOTALSPINESEG_DEVICE: The device to use. Default is "cuda" if available, otherwise "cpu".
+#   TOTALSPINESEG_JOBSNN: The number of jobs to use for the nnUNet. Default is the number of CPU cores available or the available memory in GB divided by 8, whichever is smaller.
+
 # BASH SETTINGS
 # ======================================================================================================================
 
@@ -33,22 +40,25 @@ TOTALSPINESEG_DATA="$(realpath "${TOTALSPINESEG_DATA:-data}")"
 # ensure the custom nnUNetTrainer is defined in the nnUNet library and add it if it is not
 source "$TOTALSPINESEG"/scripts/add_nnunet_trainer.sh
 
-# RAM requirement in GB
-RAM_REQUIREMENT=8
-# Get the number of CPUs, subtract some for system processes
-LEAVE_CPUS=0
-# set CPU_COUNT to be min of $SLURM_JOB_CPUS_PER_NODE if defined and $(lscpu -p | egrep -v '^#' | wc -l)
-CPU_COUNT=${SLURM_JOB_CPUS_PER_NODE:-$(lscpu -p | egrep -v '^#' | wc -l)}
-JOBS_FOR_CPUS=$(($CPU_COUNT - $LEAVE_CPUS < 1 ? 1 : $CPU_COUNT - $LEAVE_CPUS ))
-# Get the total memory in GB divided by RAM_REQUIREMENT, rounded down to nearest integer, and ensure the value is at least 1
-JOBS_FOR_RAMGB=$(( $(awk -v ram_req="$RAM_REQUIREMENT" '/MemTotal/ {print int($2/1024/1024/ram_req < 1 ? 1 : $2/1024/1024/ram_req)}' /proc/meminfo) ))
-# Get the minimum of JOBS_FOR_CPUS and JOBS_FOR_RAMGB
-JOBS=$(( JOBS_FOR_CPUS < JOBS_FOR_RAMGB ? JOBS_FOR_CPUS : JOBS_FOR_RAMGB ))
-# Set the device to cpu if cuda is not available
-DEVICE=$(python3 -c "import torch; print('cuda' if torch.cuda.is_available() else 'cpu')")
+# Get the number of CPUs
+CORES=${SLURM_JOB_CPUS_PER_NODE:-$(lscpu -p | egrep -v '^#' | wc -l)}
 
-export nnUNet_def_n_proc=$JOBS
-export nnUNet_n_proc_DA=$JOBS
+# Get memory in GB
+RAMGB=$(awk '/MemTotal/ {print int($2/1024/1024)}' /proc/meminfo)
+
+# Set the device to cpu if cuda is not available
+DEVICE=${TOTALSPINESEG_DEVICE:-$(python3 -c "import torch; print('cuda' if torch.cuda.is_available() else 'cpu')")}
+
+# Set the number of jobs
+JOBS=${TOTALSPINESEG_JOBS:-$CORES}
+
+# Set the number of jobs for the nnUNet
+JOBSNN=$(( JOBS < $((RAMGB / 8)) ? JOBS : $((RAMGB / 8)) ))
+JOBSNN=$(( JOBSNN < 1 ? 1 : JOBSNN ))
+JOBSNN=${TOTALSPINESEG_JOBSNN:-$JOBSNN}
+
+export nnUNet_def_n_proc=$JOBSNN
+export nnUNet_n_proc_DA=$JOBSNN
 
 # Set nnunet params
 export nnUNet_raw="$TOTALSPINESEG_DATA"/nnUNet/raw
@@ -73,7 +83,7 @@ echo "nnUNetPlanner=${nnUNetPlanner}"
 echo "nnUNetPlans=${nnUNetPlans}"
 echo "configuration=${configuration}"
 echo "data_identifier=${data_identifier}"
-echo "JOBS=${JOBS}"
+echo "JOBSNN=${JOBSNN}"
 echo "DEVICE=${DEVICE}"
 echo ""
 
@@ -86,7 +96,7 @@ for d in ${DATASETS[@]}; do
 
     if [ ! -f "$nnUNet_preprocessed"/$d_name/${nnUNetPlans}.json ]; then
         echo "Preprocess dataset $d_name"
-        nnUNetv2_plan_and_preprocess -d $d -pl $nnUNetPlanner -c $configuration -npfp $JOBS -np $JOBS --verify_dataset_integrity
+        nnUNetv2_plan_and_preprocess -d $d -pl $nnUNetPlanner -c $configuration -npfp $JOBSNN -np $JOBSNN --verify_dataset_integrity
         # Change the patch size to [224, 160, 80] for dataset 103 and [128, 96, 96] for 101 and 102
         if [ $d -eq 103 ]; then
             jq ".configurations[\"${configuration}\"].patch_size = [224, 160, 80]" "$nnUNet_preprocessed"/$d_name/${nnUNetPlans}.json > "$nnUNet_preprocessed"/$d_name/${nnUNetPlans}_new.json
@@ -108,8 +118,8 @@ for d in ${DATASETS[@]}; do
 
     echo "Testing nnUNet model for dataset $d_name"
     mkdir -p "$nnUNet_results"/$d_name/${nnUNetTrainer}__${nnUNetPlans}__${configuration}/fold_${FOLD}/test
-    nnUNetv2_predict -d $d -i "$nnUNet_raw"/$d_name/imagesTs -o "$nnUNet_results"/$d_name/${nnUNetTrainer}__${nnUNetPlans}__${configuration}/fold_${FOLD}/test -f $FOLD -c $configuration -tr $nnUNetTrainer -p $nnUNetPlans -npp $JOBS -nps $JOBS
-    nnUNetv2_evaluate_folder "$nnUNet_raw"/$d_name/labelsTs "$nnUNet_results"/$d_name/${nnUNetTrainer}__${nnUNetPlans}__${configuration}/fold_${FOLD}/test -djfile "$nnUNet_results"/$d_name/${nnUNetTrainer}__${nnUNetPlans}__${configuration}/dataset.json -pfile "$nnUNet_results"/$d_name/${nnUNetTrainer}__${nnUNetPlans}__${configuration}/plans.json -np $JOBS
+    nnUNetv2_predict -d $d -i "$nnUNet_raw"/$d_name/imagesTs -o "$nnUNet_results"/$d_name/${nnUNetTrainer}__${nnUNetPlans}__${configuration}/fold_${FOLD}/test -f $FOLD -c $configuration -tr $nnUNetTrainer -p $nnUNetPlans -npp $JOBSNN -nps $JOBSNN
+    nnUNetv2_evaluate_folder "$nnUNet_raw"/$d_name/labelsTs "$nnUNet_results"/$d_name/${nnUNetTrainer}__${nnUNetPlans}__${configuration}/fold_${FOLD}/test -djfile "$nnUNet_results"/$d_name/${nnUNetTrainer}__${nnUNetPlans}__${configuration}/dataset.json -pfile "$nnUNet_results"/$d_name/${nnUNetTrainer}__${nnUNetPlans}__${configuration}/plans.json -np $JOBSNN
 
     p="$(realpath .)"
     cd "$nnUNet_results"
