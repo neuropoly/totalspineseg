@@ -5,7 +5,6 @@ import nibabel as nib
 import multiprocessing as mp
 from functools import partial
 from tqdm.contrib.concurrent import process_map
-import scipy.ndimage as ndi
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -296,10 +295,10 @@ def extract_levels(
         disc_posterior_voxel_index = np.mean(indices, where=[(mask_disc * indices[1]) == disc_posterior_voxel_index_y], axis=(1, 2, 3)).round().astype(indices.dtype)
 
         # Calculate the distance from disc posterior voxel to each voxel in the canal centerline
-        distances = np.linalg.norm(mask_canal_centerline_indices - disc_posterior_voxel_index[:, None], axis=0)
+        centerline_distances_from_disc = np.linalg.norm(mask_canal_centerline_indices - disc_posterior_voxel_index[:, None], axis=0)
 
         # Find the voxel in the canal centerline closest to the disc posterior voxel
-        voxel_in_centerline_closest_to_disc = tuple(mask_canal_centerline_indices[:, np.argmin(distances)])
+        voxel_in_centerline_closest_to_disc = tuple(mask_canal_centerline_indices[:, np.argmin(centerline_distances_from_disc)])
 
         # Set the output label
         output_seg_data[voxel_in_centerline_closest_to_disc] = out_label
