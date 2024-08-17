@@ -253,7 +253,7 @@ def extract_levels(
     output_seg_data = np.zeros_like(seg_data)
 
     # Get array of indices for x, y, and z axes
-    x_indices, y_indices, z_indices = np.indices(seg_data.shape)
+    indices = np.indices(seg_data.shape)
 
     # Create a mask of the canal
     mask_canal = np.isin(seg_data, canal_labels)
@@ -263,16 +263,16 @@ def extract_levels(
         raise ValueError(f"No canal labels found in the segmentation.")
 
     # Create a mask the canal centerline by finding the middle voxels in x and y axes for each z index
-    mask_min_x_indices = np.min(x_indices, where=mask_canal, initial=np.iinfo(x_indices.dtype).max, keepdims=True, axis=(0, 1))
-    mask_max_x_indices = np.max(x_indices, where=mask_canal, initial=np.iinfo(x_indices.dtype).min, keepdims=True, axis=(0, 1))
-    mask_mid_x = x_indices == ((mask_min_x_indices + mask_max_x_indices) // 2)
-    mask_min_y_indices = np.min(y_indices, where=mask_canal, initial=np.iinfo(x_indices.dtype).max, keepdims=True, axis=(0, 1))
-    mask_max_y_indices = np.max(y_indices, where=mask_canal, initial=np.iinfo(x_indices.dtype).min, keepdims=True, axis=(0, 1))
-    mask_mid_y = y_indices == ((mask_min_y_indices + mask_max_y_indices) // 2)
+    mask_min_x_indices = np.min(indices[0], where=mask_canal, initial=np.iinfo(indices.dtype).max, keepdims=True, axis=(0, 1))
+    mask_max_x_indices = np.max(indices[0], where=mask_canal, initial=np.iinfo(indices.dtype).min, keepdims=True, axis=(0, 1))
+    mask_mid_x = indices[0] == ((mask_min_x_indices + mask_max_x_indices) // 2)
+    mask_min_y_indices = np.min(indices[1], where=mask_canal, initial=np.iinfo(indices.dtype).max, keepdims=True, axis=(0, 1))
+    mask_max_y_indices = np.max(indices[1], where=mask_canal, initial=np.iinfo(indices.dtype).min, keepdims=True, axis=(0, 1))
+    mask_mid_y = indices[1] == ((mask_min_y_indices + mask_max_y_indices) // 2)
     mask_canal_centerline = mask_canal * mask_mid_x * mask_mid_y
 
-    # Compute the distance transform of the canal centerline
-    distances_from_centerline, closest_centerline_indices = ndi.distance_transform_edt(~mask_canal_centerline, return_indices=True)
+    # Get the indices of the canal centerline
+    mask_canal_centerline_indices = np.array(np.nonzero(mask_canal_centerline))
 
     # Get the labels of the discs and the output labels
     disc_labels = list(range(c2c3_label, c2c3_label + step * 23, step))
@@ -291,11 +291,15 @@ def extract_levels(
         # Create a mask of the disc
         mask_disc = seg_data == disc_label
 
-        # Find the location of the minimum distance in disc from the canal centerline
-        voxel_in_disc_closest_to_centerline = np.unravel_index(np.argmin(np.where(mask_disc, distances_from_centerline, np.inf)), mask_canal.shape)
+        # Find the index of the most posterior voxel in the disc
+        disc_posterior_voxel_index_y = np.min(indices[1], where=mask_disc, initial=np.iinfo(indices.dtype).max)
+        disc_posterior_voxel_index = np.mean(indices, where=[(mask_disc * indices[1]) == disc_posterior_voxel_index_y], axis=(1, 2, 3)).round().astype(indices.dtype)
 
-        # Get the corresponding closest voxel in the canal centerline
-        voxel_in_centerline_closest_to_disc = tuple(closest_centerline_indices[(...,) + tuple(voxel_in_disc_closest_to_centerline)])
+        # Calculate the distance from disc posterior voxel to each voxel in the canal centerline
+        distances = np.linalg.norm(mask_canal_centerline_indices - disc_posterior_voxel_index[:, None], axis=0)
+
+        # Find the voxel in the canal centerline closest to the disc posterior voxel
+        voxel_in_centerline_closest_to_disc = tuple(mask_canal_centerline_indices[:, np.argmin(distances)])
 
         # Set the output label
         output_seg_data[voxel_in_centerline_closest_to_disc] = out_label
@@ -305,8 +309,8 @@ def extract_levels(
         # Find the location of the C2-C3 disc
         c2c3_index = np.unravel_index(np.argmax(output_seg_data == 3), seg_data.shape)
 
-        # Find the location of the superior voxels in mask_canal_centerline
-        canal_superior_index = np.unravel_index(np.argmax(mask_canal_centerline * z_indices), seg_data.shape)
+        # Find the location of the superior voxels in the canal centerline
+        canal_superior_index = np.unravel_index(np.argmax(mask_canal_centerline * indices[2]), seg_data.shape)
 
         if canal_superior_index[2] - c2c3_index[2] >= 4:
             # If the distance between the superior voxels and C2-C3 is more than 4
@@ -315,7 +319,7 @@ def extract_levels(
 
             # Set 2 to the middle voxels between C2-C3 and the superior voxels
             c1c2_z_index = (canal_superior_index[2] + c2c3_index[2]) // 2
-            c1c2_index = np.unravel_index(np.argmax(mask_canal_centerline * (z_indices == c1c2_z_index)), seg_data.shape)
+            c1c2_index = np.unravel_index(np.argmax(mask_canal_centerline * (indices[2] == c1c2_z_index)), seg_data.shape)
             output_seg_data[c1c2_index] = 2
 
         elif canal_superior_index[2] - c2c3_index[2] >= 2:
