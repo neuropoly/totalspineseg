@@ -9,8 +9,8 @@
 #   TOTALSPINESEG: The path to the TotalSpineSeg repository.
 #   TOTALSPINESEG_DATA: The path to the TotalSpineSeg data folder.
 #   TOTALSPINESEG_JOBS: The number of CPU cores to use. Default is the number of CPU cores available.
-#   TOTALSPINESEG_DEVICE: The device to use. Default is "cuda" if available, otherwise "cpu".
 #   TOTALSPINESEG_JOBSNN: The number of jobs to use for the nnUNet. Default is the number of CPU cores available or the available memory in GB divided by 8, whichever is smaller.
+#   TOTALSPINESEG_DEVICE: The device to use. Default is "cuda" if available, otherwise "cpu".
 
 # BASH SETTINGS
 # ======================================================================================================================
@@ -45,23 +45,23 @@ resources="$TOTALSPINESEG"/totalspineseg/resources
 CORES=${SLURM_JOB_CPUS_PER_NODE:-$(lscpu -p | egrep -v '^#' | wc -l)}
 
 # Get memory in GB
-RAMGB=$(awk '/MemTotal/ {print int($2/1024/1024)}' /proc/meminfo)
-
-# Set the device to cpu if cuda is not available
-DEVICE=${TOTALSPINESEG_DEVICE:-$(python3 -c "import torch; print('cuda' if torch.cuda.is_available() else 'cpu')")}
+MEMGB=$(awk '/MemTotal/ {print int($2/1024/1024)}' /proc/meminfo)
 
 # Set the number of jobs
 JOBS=${TOTALSPINESEG_JOBS:-$CORES}
 
 # Set the number of jobs for the nnUNet
-JOBSNN=$(( JOBS < $((RAMGB / 8)) ? JOBS : $((RAMGB / 8)) ))
+JOBSNN=$(( JOBS < $((MEMGB / 8)) ? JOBS : $((MEMGB / 8)) ))
 JOBSNN=$(( JOBSNN < 1 ? 1 : JOBSNN ))
 JOBSNN=${TOTALSPINESEG_JOBSNN:-$JOBSNN}
 
-export nnUNet_def_n_proc=$JOBSNN
-export nnUNet_n_proc_DA=$JOBSNN
+# Set the device to cpu if cuda is not available
+DEVICE=${TOTALSPINESEG_DEVICE:-$(python3 -c "import torch; print('cuda' if torch.cuda.is_available() else 'cpu')")}
+
 
 # Set nnunet params
+export nnUNet_def_n_proc=$JOBSNN
+export nnUNet_n_proc_DA=$JOBSNN
 export nnUNet_raw="$TOTALSPINESEG_DATA"/nnUNet/raw
 export nnUNet_preprocessed="$TOTALSPINESEG_DATA"/nnUNet/preprocessed
 export nnUNet_results="$TOTALSPINESEG_DATA"/nnUNet/results
