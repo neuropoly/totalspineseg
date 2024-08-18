@@ -94,14 +94,14 @@ Please ensure that your system meets these requirements before proceeding with t
 
 1. Get the required datasets into `$TOTALSPINESEG_DATA/bids` (make sure you have access to the specified repositories):
    ```bash
-   bash "$TOTALSPINESEG"/scripts/get_datasets.sh
+   bash "$TOTALSPINESEG"/scripts/download_datasets.sh
    ```
 
 1. Temporary step (until all labels are pushed into the repositories): Extract [labels_iso_bids_0524.zip](https://github.com/neuropoly/totalspineseg/releases/download/labels/labels_iso_bids_0524.zip) and merge the `bids` folder (containing the labels) into `$TOTALSPINESEG_DATA/bids`.
 
 1. Prepare datasets in nnUNetv2 structure into `$TOTALSPINESEG_DATA/nnUnet`:
    ```bash
-   bash "$TOTALSPINESEG"/scripts/prepare_nnunet_datasets.sh [DATASET_ID] [-noaug]
+   bash "$TOTALSPINESEG"/scripts/prepare_datasets.sh [DATASET_ID] [-noaug]
    ```
 
    The script optionally accepts `DATASET_ID` as the first positional argument to specify the dataset to prepare. It can be either 101, 102, 103, or all. If `all` is specified, it will prepare all datasets (101, 102, 103). By default, it will prepare datasets 101 and 102.
@@ -110,7 +110,7 @@ Please ensure that your system meets these requirements before proceeding with t
 
 1. Train the model:
    ```bash
-   bash "$TOTALSPINESEG"/scripts/train_nnunet.sh [DATASET_ID [FOLD]]
+   bash "$TOTALSPINESEG"/scripts/train.sh [DATASET_ID [FOLD]]
    ```
 
    The script optionally accepts `DATASET_ID` as the first positional argument to specify the dataset to train. It can be either 101, 102, 103, or all. If `all` is specified, it will train all datasets (101, 102, 103). By default, it will train datasets 101 and 102.
@@ -124,7 +124,7 @@ Please ensure that your system meets these requirements before proceeding with t
 1. If you didn't train the model yourself, you should download the model zip file from the release into `$TOTALSPINESEG_DATA/nnUNet/exports` (do not extract the zip files). You can run `mkdir -p "$TOTALSPINESEG_DATA"/nnUNet/exports` to create the folder.
 1. Run the model on a folder containing the images in .nii.gz format:
    ```bash
-   bash "$TOTALSPINESEG"/scripts/inference_nnunet.sh INPUT_FOLDER OUTPUT_FOLDER [-step1]
+   bash "$TOTALSPINESEG"/scripts/inference.sh INPUT_FOLDER OUTPUT_FOLDER [-step1]
    ```
 
    This will process all .nii.gz files in the INPUT_FOLDER and save the results in the OUTPUT_FOLDER.

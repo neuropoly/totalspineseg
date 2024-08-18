@@ -14,6 +14,6 @@ These files are copied to their respective folders in `$TOTALSPINESEG_DATA/nnUne
 
 - Main project [README](../../../README.md) - For information about the datasets.
 
-- Datasets preparation script: [`prepare_nnunet_datasets.sh`](../../../scripts/prepare_nnunet_datasets.sh) - For information how these files are copied into the destination dataset folder.
+- Datasets preparation script: [`prepare_datasets.sh`](../../../scripts/prepare_datasets.sh) - For information how these files are copied into the destination dataset folder.
 
 - [nnU-Net GitHub repository](https://github.com/MIC-DKFZ/nnUNet) - For information about dataset.json structure and usage.
