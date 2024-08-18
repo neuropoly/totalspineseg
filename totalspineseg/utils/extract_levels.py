@@ -311,8 +311,8 @@ def extract_levels(
         # Find the location of the superior voxels in the canal centerline
         canal_superior_index = np.unravel_index(np.argmax(mask_canal_centerline * indices[2]), seg_data.shape)
 
-        if canal_superior_index[2] - c2c3_index[2] >= 4:
-            # If the distance between the superior voxels and C2-C3 is more than 4
+        if canal_superior_index[2] - c2c3_index[2] >= 8 and output_seg_data.shape[2] - canal_superior_index[2] >= 2:
+            # If C2-C3 at least 8 voxels below the top of the canal and the top of the canal is at least 2 voxels from the top of the image
             # Set 1 to the superior voxels
             output_seg_data[canal_superior_index] = 1
 
@@ -321,8 +321,8 @@ def extract_levels(
             c1c2_index = np.unravel_index(np.argmax(mask_canal_centerline * (indices[2] == c1c2_z_index)), seg_data.shape)
             output_seg_data[c1c2_index] = 2
 
-        elif canal_superior_index[2] - c2c3_index[2] >= 2:
-            # If the distance between the superior voxels and C2-C3 is more than 2 set 2 to the superior voxels
+        elif canal_superior_index[2] - c2c3_index[2] >= 4:
+            # If C2-C3 at least 4 voxels below the top of the canal
             output_seg_data[canal_superior_index] = 2
 
     output_seg = nib.Nifti1Image(output_seg_data, seg.affine, seg.header)
