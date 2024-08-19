@@ -69,7 +69,7 @@ export nnUNet_exports="$TOTALSPINESEG_DATA"/nnUNet/exports
 
 nnUNetTrainer=nnUNetTrainer_16000epochs
 nnUNetPlans=nnUNetPlans
-configuration=3d_fullres
+configuration=3d_fullres_small
 
 echo ""
 echo "Running with the following parameters:"
