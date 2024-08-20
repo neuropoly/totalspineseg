@@ -43,8 +43,8 @@ Our model is trained on those datasets:
 
 ## Dependencies
 
-- Bash terminal
-- [Python](https://www.python.org/) >= 3.9, with pip >= 23 and setuptools >= 67.
+- `bash` terminal
+- [Python](https://www.python.org/) >= 3.9, with pip >= 23 and setuptools >= 67
 
 ## Installation
 
