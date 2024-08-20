@@ -44,33 +44,31 @@ Our model is trained on those datasets:
 ## Dependencies
 
 - Bash terminal
-- [Python](https://www.python.org/) >= 3.9
-- pip >= 23
-- setuptools >= 67
+- [Python](https://www.python.org/) >= 3.9, with pip >= 23 and setuptools >= 67.
 
 ## Installation
 
 1. Open a `bash` terminal in the directory where you want to work.
 
-2. Create and activate a virtual environment (highly recommended):
+1. Create and activate a virtual environment (highly recommended):
    ```bash
    python -m venv venv
    source venv/bin/activate
    ```
 
-3. Clone and install this repository:
+1. Clone and install this repository:
    ```bash
    git clone https://github.com/neuropoly/totalspineseg.git
    python -m pip install -e totalspineseg
    ```
 
-4. For CUDA GPU support, install **PyTorch** following the instructions on their [website](https://pytorch.org/). Be sure to add the `--upgrade` flag to your installation command to replace any existing PyTorch installation.
+1. For CUDA GPU support, install **PyTorch** following the instructions on their [website](https://pytorch.org/). Be sure to add the `--upgrade` flag to your installation command to replace any existing PyTorch installation.
    Example:
      ```bash
      pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 --upgrade
      ```
 
-5. Set the path to TotalSpineSeg and data folders in the virtual environment:
+1. Set the path to TotalSpineSeg and data folders in the virtual environment:
    ```bash
    export TOTALSPINESEG="$(realpath totalspineseg)" && echo "export TOTALSPINESEG=\"$TOTALSPINESEG\"" >> venv/bin/activate
    export TOTALSPINESEG_DATA="$(realpath data)" && echo "export TOTALSPINESEG_DATA=\"$TOTALSPINESEG_DATA\"" >> venv/bin/activate
@@ -85,7 +83,7 @@ To train the TotalSpineSeg model, you will need the following hardware specifica
 
 Please ensure that your system meets these requirements before proceeding with the training process.
 
-1. Make sure that the `bash` terminal is opened with the virtual environment (if used) activated (using `source venv/bin/activate` in the installation directory).
+1. Make sure that the `bash` terminal is opened with the virtual environment (if used) activated (using `source <path to installation directory>/venv/bin/activate`).
 
 1. Ensure training dependencies are installed:
    ```bash
@@ -97,7 +95,12 @@ Please ensure that your system meets these requirements before proceeding with t
    bash "$TOTALSPINESEG"/scripts/download_datasets.sh
    ```
 
-1. Temporary step (until all labels are pushed into the repositories): Extract [labels_iso_bids_0524.zip](https://github.com/neuropoly/totalspineseg/releases/download/labels/labels_iso_bids_0524.zip) and merge the `bids` folder (containing the labels) into `$TOTALSPINESEG_DATA/bids`.
+1. Temporary step (until all labels are pushed into the repositories) - Download labels into `$TOTALSPINESEG_DATA/bids`:
+   ```bash
+   curl -L -O https://github.com/neuropoly/totalspineseg/releases/download/labels/labels_iso_bids_0524.zip
+   unzip -qo labels_iso_bids_0524.zip -d "$TOTALSPINESEG_DATA"
+   rm labels_iso_bids_0524.zip
+   ```
 
 1. Prepare datasets in nnUNetv2 structure into `$TOTALSPINESEG_DATA/nnUnet`:
    ```bash
@@ -119,7 +122,7 @@ Please ensure that your system meets these requirements before proceeding with t
 
 ## Inference
 
-1. Make sure that the `bash` terminal is opened with the virtual environment (if used) activated (using `source venv/bin/activate` in the installation directory).
+1. Make sure that the `bash` terminal is opened with the virtual environment (if used) activated (using `source <path to installation directory>/venv/bin/activate`).
 
 1. If you didn't train the model yourself, you should download the model zip file from the release into `$TOTALSPINESEG_DATA/nnUNet/exports` (do not extract the zip files). You can run `mkdir -p "$TOTALSPINESEG_DATA"/nnUNet/exports` to create the folder.
 1. Run the model on a folder containing the images in .nii.gz format:
