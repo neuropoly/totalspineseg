@@ -127,6 +127,9 @@ def reorient_canonical_mp(
         override=False,
         max_workers=mp.cpu_count(),
     ):
+    '''
+    Wrapper function to handle multiprocessing.
+    '''
     images_path = Path(images_path)
     output_images_path = Path(output_images_path)
 
@@ -156,6 +159,9 @@ def _reorient_canonical(
         output_image_path,
         override=False,
     ):
+    '''
+    Reorient the image to the closest canonical orientation.
+    '''
     image_path = Path(image_path)
     output_image_path = Path(output_image_path)
 

@@ -127,6 +127,9 @@ def average4d_mp(
         override=False,
         max_workers=mp.cpu_count(),
     ):
+    '''
+    Wrapper function to handle multiprocessing.
+    '''
     images_path = Path(images_path)
     output_images_path = Path(output_images_path)
 
@@ -156,6 +159,9 @@ def _average4d(
         output_image_path,
         override=False,
     ):
+    '''
+    Wrapper function to handle IO.
+    '''
     image_path = Path(image_path)
     output_image_path = Path(output_image_path)
 
@@ -195,8 +201,21 @@ def _average4d(
     nib.save(output_image, output_image_path)
 
 def average4d(
-        image,
-    ):
+        image: nib.Nifti1Image,
+    ) -> nib.Nifti1Image:
+    '''
+    Average the last dimension of a 4D image to get a 3D image.
+
+    Parameters
+    ----------
+    image : nibabel.Nifti1Image
+        Input 4D image.
+
+    Returns
+    -------
+    nibabel.Nifti1Image
+        Output 3D image.
+    '''
     output_image_data = np.asanyarray(image.dataobj).astype(np.float64)
 
     # Average the last dimension

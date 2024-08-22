@@ -178,6 +178,9 @@ def extract_soft_mp(
         override=False,
         max_workers=mp.cpu_count(),
     ):
+    '''
+    Wrapper function to handle multiprocessing.
+    '''
     npzs_path = Path(npzs_path)
     segs_path = Path(segs_path)
     output_segs_path = Path(output_segs_path)
@@ -219,6 +222,9 @@ def _extract_soft(
         largest=False,
         override=False,
     ):
+    '''
+    Wrapper function to handle IO.
+    '''
     npz_path = Path(npz_path)
     seg_path = Path(seg_path)
     output_seg_path = Path(output_seg_path)
@@ -260,12 +266,35 @@ def _extract_soft(
 
 def extract_soft(
         npz_data,
-        seg,
-        label=1,
-        seg_labels=[1],
-        dilate=0,
+        seg: nib.Nifti1Image,
+        label: int = 1,
+        seg_labels: list = [1],
+        dilate: int = 0,
         largest=False,
-    ):
+    ) -> nib.Nifti1Image:
+    '''
+    Extract the soft segmentation from the npz data for the given label.
+
+    Parameters
+    ----------
+    npz_data : Any
+        The npz data containing the soft segmentations in 'probabilities' key.
+    seg : nibabel.Nifti1Image
+        The segmentation image to mask the soft segmentation.
+    label : int, optional
+        The label to extract, defaults to 1.
+    seg_labels : list, optional
+        The labels to extract in the segmentation, defaults to [1].
+    dilate : int, optional
+        Number of voxels to dilate the segmentation before masking the soft segmentation, defaults to 0 - no dilation and no masking.
+    largest : bool, optional
+        Take the largest component when using dilate, defaults to False.
+
+    Returns
+    -------
+    nibabel.Nifti1Image
+        The soft segmentation image.
+    '''
     # Extract the soft segmentation
     output_seg_data = np.transpose(npz_data['probabilities'][label - 1], axes=(2, 1, 0))
 

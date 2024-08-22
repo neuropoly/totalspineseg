@@ -109,6 +109,9 @@ def cpdir_mp(
         override=False,
         max_workers=mp.cpu_count()
     ):
+    '''
+    Wrapper function to handle multiprocessing.
+    '''
     src_path = Path(src_path)
     dst_path = Path(dst_path)
 
@@ -139,7 +142,9 @@ def _cpdir(
         dst_path,
         override=False,
     ):
-
+    '''
+    Copy file from src to dst.
+    '''
     # If the output already exists and we are not overriding it, return
     if not override and dst_path.exists():
         return

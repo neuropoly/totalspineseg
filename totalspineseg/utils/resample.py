@@ -137,6 +137,9 @@ def resample_mp(
         override=False,
         max_workers=mp.cpu_count(),
     ):
+    '''
+    Wrapper function to handle multiprocessing.
+    '''
     images_path = Path(images_path)
     output_images_path = Path(output_images_path)
 
@@ -168,6 +171,9 @@ def _resample(
         mm=(1.0, 1.0, 1.0),
         override=False,
     ):
+    '''
+    Wrapper function to handle IO.
+    '''
     image_path = Path(image_path)
     output_image_path = Path(output_image_path)
 
@@ -207,9 +213,24 @@ def _resample(
     nib.save(output_image, output_image_path)
 
 def resample(
-        image,
-        mm=(1.0, 1.0, 1.0),
-    ):
+        image: nib.Nifti1Image,
+        mm: tuple[float, float, float] = (1.0, 1.0, 1.0),
+    ) -> nib.Nifti1Image:
+    '''
+    Resample the image to the target voxel size in mm.
+
+    Parameters
+    ----------
+    image : nibabel.Nifti1Image
+        The input image to resample.
+    mm : tuple[float, float, float]
+        The target voxel size in mm.
+
+    Returns
+    -------
+    nibabel.Nifti1Image
+        The resampled image.
+    '''
     image_data = np.asanyarray(image.dataobj).astype(np.float64)
 
     # Create result

@@ -158,6 +158,9 @@ def fill_canal_mp(
         override=False,
         max_workers=mp.cpu_count(),
     ):
+    '''
+    Wrapper function to handle multiprocessing.
+    '''
     segs_path = Path(segs_path)
     output_segs_path = Path(output_segs_path)
 
@@ -195,6 +198,9 @@ def _fill_canal(
         largest_cord=False,
         override=False,
     ):
+    '''
+    Wrapper function to handle IO.
+    '''
     seg_path = Path(seg_path)
     output_seg_path = Path(output_seg_path)
 
@@ -227,12 +233,33 @@ def _fill_canal(
     nib.save(output_seg, output_seg_path)
 
 def fill_canal(
-        seg,
-        canal_label=1,
-        cord_label=0,
-        largest_canal=False,
-        largest_cord=False,
-    ):
+        seg: nib.Nifti1Image,
+        canal_label: int = 1,
+        cord_label: int = 0,
+        largest_canal: bool = False,
+        largest_cord: bool = False,
+    ) -> nib.Nifti1Image:
+    '''
+    Fill holes in the spinal canal, this will put the spinal canal label in all the voxels (labeled as a background) between the spinal canal and the spinal cord.
+
+    Parameters
+    ----------
+    seg : nibabel.Nifti1Image
+        Segmentation image.
+    canal_label : int, optional
+        Label used for Spinal Canal, defaults to 1.
+    cord_label : int, optional
+        Label used for spinal cord, defaults to 0.
+    largest_canal : bool, optional
+        Take the largest spinal canal component, defaults to False.
+    largest_cord : bool, optional
+        Take the largest spinal cord component, defaults to False.
+
+    Returns
+    -------
+    nibabel.Nifti1Image
+        Output segmentation image with filled spinal canal.
+    '''
     output_seg_data = np.asanyarray(seg.dataobj).round().astype(np.uint8)
 
     # Take the largest spinal cord component

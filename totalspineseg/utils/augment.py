@@ -189,6 +189,9 @@ def augment_mp(
         override=False,
         max_workers=mp.cpu_count(),
     ):
+    '''
+    Wrapper function to handle multiprocessing.
+    '''
     images_path = Path(images_path)
     segs_path = Path(segs_path)
     output_images_path = Path(output_images_path)
@@ -232,6 +235,9 @@ def _augment(
         seg_classes=None,
         override=False,
     ):
+    '''
+    Wrapper function to handle IO.
+    '''
     image_path = Path(image_path)
     seg_path = Path(seg_path)
     output_image_path_pattern = Path(output_image_path_pattern)
@@ -306,11 +312,37 @@ def _augment(
         nib.save(output_seg, output_seg_path)
 
 def augment(
-        image,
-        seg,
-        labels2image=False,
-        seg_classes=None,
-    ):
+        image: nib.Nifti1Image,
+        seg: nib.Nifti1Image,
+        labels2image: bool = False,
+        seg_classes: list | None = None,
+    ) -> tuple[nib.Nifti1Image, nib.Nifti1Image]:
+    '''
+    Augment the image and the segmentation using a random sequence of transformations. Augmentation is performed on the image and the segmentation simultaneously to ensure consistency.
+    Augmentation includes:
+    - Contrast augmentation (Laplace, Gamma, Histogram Equalization, Log, Sqrt, Exp, Sin, Sig, Inverse)
+    - Image from segmentation augmentation
+    - Redistribute segmentation values
+    - Artifacts augmentation (Motion, Ghosting, Spike, Bias Field, Blur, Noise)
+    - Spatial augmentation (Flip, BSpline, Affine, Elastic)
+    - Anisotropy augmentation
+
+    Parameters
+    ----------
+    image : nibabel.Nifti1Image
+        The input image to augment.
+    seg : nibabel.Nifti1Image
+        The input segmentation to augment.
+    labels2image : bool, optional
+        If True, use Random Labels To Image augmentation, by default False.
+    seg_classes : list, optional
+        Define classes of labels for per class augmentation, by default None. E.g. [[202, 224], [18, 19, 92]].
+
+    Returns
+    -------
+    tuple[nibabel.Nifti1Image, nibabel.Nifti1Image]
+        The augmented image and the augmented segmentation.
+    '''
     image_data = np.asanyarray(image.dataobj).astype(np.float64)
     seg_data = np.asanyarray(seg.dataobj).round().astype(np.uint8)
 
@@ -331,10 +363,10 @@ def augment(
 
         else:
 
-            # Image form segmentation augmentation
             if rs.rand() < 0.2:
                 augs.append(aug_clip_values)
 
+            # Image form segmentation augmentation
             if labels2image and rs.rand() < 0.15:
                 augs.append(_aug_labels2image)
 

@@ -164,6 +164,9 @@ def preview_jpg_mp(
         override=False,
         max_workers=mp.cpu_count(),
     ):
+    '''
+    Wrapper function to handle multiprocessing.
+    '''
     images_path = Path(images_path)
     output_path = Path(output_path)
     segs_path = segs_path and Path(segs_path)
@@ -203,6 +206,9 @@ def _preview_jpg(
         sliceloc=0.5,
         override=False,
     ):
+    '''
+    Combine the specified slice of the image and possibly the segmentation file and save the result as a JPG image.
+    '''
     image_path = Path(image_path)
     output_path = Path(output_path)
     seg_path = seg_path and Path(seg_path)

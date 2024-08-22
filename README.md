@@ -90,7 +90,7 @@ Please ensure that your system meets these requirements before proceeding with t
    apt-get install git git-annex jq -y
    ```
 
-1. Get the required datasets into `$TOTALSPINESEG_DATA/bids` (make sure you have access to the specified repositories):
+1. Download the required datasets into `$TOTALSPINESEG_DATA/bids` (make sure you have access to the specified repositories):
    ```bash
    bash "$TOTALSPINESEG"/scripts/download_datasets.sh
    ```

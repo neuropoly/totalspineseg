@@ -142,6 +142,9 @@ def largest_component_mp(
         override=False,
         max_workers=mp.cpu_count(),
     ):
+    '''
+    Wrapper function to handle multiprocessing.
+    '''
     segs_path = Path(segs_path)
     output_segs_path = Path(output_segs_path)
 
@@ -175,6 +178,9 @@ def _largest_component(
         dilate=0,
         override=False,
     ):
+    '''
+    Wrapper function to handle IO.
+    '''
     seg_path = Path(seg_path)
     output_seg_path = Path(output_seg_path)
 
@@ -205,10 +211,27 @@ def _largest_component(
     nib.save(output_seg, output_seg_path)
 
 def largest_component(
-        seg,
-        binarize=False,
-        dilate=0,
-    ):
+        seg: nib.Nifti1Image,
+        binarize: bool = False,
+        dilate: int = 0,
+    ) -> nib.Nifti1Image:
+    '''
+    Leave the largest component for each label in the segmentation.
+
+    Parameters
+    ----------
+    seg : nibabel.Nifti1Image
+        Segmentation image.
+    binarize : bool, optional
+        If provided, binarize the segmentation to non-zero values before taking the largest component, by default False.
+    dilate : int, optional
+        Number of voxels to dilate the segmentation before taking the largest component, by default 0.
+
+    Returns
+    -------
+    nibabel.Nifti1Image
+        Output segmentation image.
+    '''
     seg_data = np.asanyarray(seg.dataobj).round().astype(np.uint8)
 
     if binarize:

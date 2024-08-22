@@ -248,6 +248,9 @@ def iterative_label_mp(
         override=False,
         max_workers=mp.cpu_count(),
     ):
+    '''
+    Wrapper function to handle multiprocessing.
+    '''
     segs_path = Path(segs_path)
     output_segs_path = Path(output_segs_path)
 
@@ -301,6 +304,9 @@ def _iterative_label(
         step_diff_disc=False,
         override=False,
     ):
+    '''
+    Wrapper function to handle IO.
+    '''
     seg_path = Path(seg_path)
     output_seg_path = Path(output_seg_path)
 

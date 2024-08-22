@@ -191,6 +191,9 @@ def map_labels_mp(
         override=False,
         max_workers=mp.cpu_count()
     ):
+    '''
+    Wrapper function to handle multiprocessing.
+    '''
     segs_path = Path(segs_path)
     output_segs_path = Path(output_segs_path)
     update_segs_path = update_segs_path and Path(update_segs_path)
@@ -232,6 +235,9 @@ def _map_labels(
         keep_unmapped=False,
         override=False,
     ):
+    '''
+    Wrapper function to handle IO.
+    '''
     seg_path = Path(seg_path)
     output_seg_path = Path(output_seg_path)
     update_seg_path = update_seg_path and Path(update_seg_path)
@@ -268,12 +274,33 @@ def _map_labels(
     nib.save(output_seg, output_seg_path)
 
 def map_labels(
-        seg,
-        update_seg=None,
-        update_from_seg=None,
-        map_dict={},
-        keep_unmapped=False,
-    ):
+        seg: nib.Nifti1Image,
+        update_seg: nib.Nifti1Image | None = None,
+        update_from_seg: nib.Nifti1Image | None = None,
+        map_dict: dict = {},
+        keep_unmapped: bool = False,
+    ) -> nib.Nifti1Image:
+    '''
+    Map segmentation labels to other, new labels using a dict mapping.
+
+    Parameters
+    ----------
+    seg : nibabel.Nifti1Image
+        Segmentation.
+    update_seg : nibabel.Nifti1Image, optional
+        Segmentation to be updated with all non-zero values of the mapped input labels.
+    update_from_seg : nibabel.Nifti1Image, optional
+        Segmentation to be updated from. We update the mapped input labels with all non-zero values of this segmentations.
+    map_dict : dict, optional
+        Dict mapping each input_label to an output_label, defaults to {}.
+    keep_unmapped : bool, optional
+        Keep unmapped labels as they are in the output segmentation, defaults to False.
+
+    Returns
+    -------
+    nibabel.Nifti1Image
+        Mapped segmentation.
+    '''
     seg_data = np.asanyarray(seg.dataobj).round().astype(np.uint8)
     update_seg_data = update_seg and np.asanyarray(update_seg.dataobj).round().astype(np.uint8)
     update_from_seg_data = update_from_seg and np.asanyarray(update_from_seg.dataobj).round().astype(np.uint8)

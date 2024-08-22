@@ -153,6 +153,9 @@ def crop_image2seg_mp(
         override=False,
         max_workers=mp.cpu_count(),
     ):
+    '''
+    Wrapper function to handle multiprocessing.
+    '''
     images_path = Path(images_path)
     segs_path = Path(segs_path)
     output_images_path = Path(output_images_path)
@@ -188,6 +191,9 @@ def _crop_image2seg(
         margin=0,
         override=False,
     ):
+    '''
+    Wrapper function to handle IO.
+    '''
     image_path = Path(image_path)
     seg_path = Path(seg_path)
     output_image_path = Path(output_image_path)
@@ -235,10 +241,27 @@ def _crop_image2seg(
     nib.save(output_image, output_image_path)
 
 def crop_image2seg(
-        image,
-        seg,
-        margin=0,
-    ):
+        image: nib.Nifti1Image,
+        seg: nib.Nifti1Image,
+        margin: int = 0,
+    ) -> nib.Nifti1Image:
+    '''
+    Crop the image to the non-zero region of the segmentation with a margin.
+
+    Parameters
+    ----------
+    image: nibabel.Nifti1Image
+        The image to crop.
+    seg: nibabel.Nifti1Image
+        The segmentation to use for cropping.
+    margin: int
+        Margin to add to the cropped region in voxels, defaults to 0 - no margin.
+
+    Returns
+    -------
+    nibabel.Nifti1Image
+        The cropped image.
+    '''
     seg_data = np.asanyarray(seg.dataobj).round().astype(np.uint8)
 
     # Get bounding box of the segmentation and crop the image

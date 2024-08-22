@@ -145,6 +145,9 @@ def transform_seg2image_mp(
         override=False,
         max_workers=mp.cpu_count(),
     ):
+    '''
+    Wrapper function to handle multiprocessing.
+    '''
     images_path = Path(images_path)
     segs_path = Path(segs_path)
     output_segs_path = Path(output_segs_path)
@@ -178,6 +181,9 @@ def _transform_seg2image(
         output_seg_path,
         override=False,
     ):
+    '''
+    Wrapper function to handle IO.
+    '''
     image_path = Path(image_path)
     seg_path = Path(seg_path)
     output_seg_path = Path(output_seg_path)
@@ -211,9 +217,24 @@ def _transform_seg2image(
     nib.save(output_seg, output_seg_path)
 
 def transform_seg2image(
-        image,
-        seg,
-    ):
+        image: nib.Nifti1Image,
+        seg: nib.Nifti1Image,
+    ) -> nib.Nifti1Image:
+    '''
+    Transform the segmentation to the image space to have the same origin, spacing, direction and shape as the image.
+
+    Parameters
+    ----------
+    image : nibabel.Nifti1Image
+        Image.
+    seg : nibabel.Nifti1Image
+        Segmentation.
+
+    Returns
+    -------
+    nibabel.Nifti1Image
+        Output segmentation.
+    '''
     image_data = np.asanyarray(image.dataobj).astype(np.float64)
     seg_data = np.asanyarray(seg.dataobj).round().astype(np.uint8)
 
