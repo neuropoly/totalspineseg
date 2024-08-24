@@ -139,7 +139,7 @@ def transform_seg2image_mp(
         prefix='',
         image_suffix='_0000',
         seg_suffix='',
-        output_seg_suffix='_0000',
+        output_seg_suffix='',
         override=False,
         max_workers=mp.cpu_count(),
         quiet=False,

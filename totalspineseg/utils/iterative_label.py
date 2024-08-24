@@ -517,7 +517,7 @@ def iterative_label(
             # Combine sequential vertebrae labels if there is no disc between them
             if step_diff_disc and len(disc_sorted_z_indexes) > 0:
                 new_sorted_labels = []
-    
+
                 # Store the previous label and the z index of the previous label
                 prev_l, prev_z = 0, 0
 

@@ -50,6 +50,7 @@ dependencies = [
     "nilearn==0.10.4",
     "SimpleITK==2.3.1",
     "nnunetv2==2.5.1",
+    "psutil==5.9.3",
 ]
 
 [project.urls]
@@ -71,6 +72,7 @@ totalspineseg_average4d = "totalspineseg.utils.average4d:main"
 totalspineseg_crop_image2seg = "totalspineseg.utils.crop_image2seg:main"
 totalspineseg_extract_soft = "totalspineseg.utils.extract_soft:main"
 totalspineseg_extract_levels = "totalspineseg.utils.extract_levels:main"
+totalspineseg_inference = "totalspineseg.inference:main"
 
 [build-system]
 requires = ["pip>=23", "setuptools>=67"]
