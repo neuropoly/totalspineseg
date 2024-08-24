@@ -14,9 +14,9 @@ def main():
 
     # Description and arguments
     parser = argparse.ArgumentParser(
-        description=textwrap.dedent(f'''
-        This script processes NIfTI (Neuroimaging Informatics Technology Initiative) images and average 4D images last dimension to 3D image.'''
-        ),
+        description=' '.join(f'''
+            This script processes NIfTI (Neuroimaging Informatics Technology Initiative) images and average 4D images last dimension to 3D image.
+        '''.split()),
         epilog=textwrap.dedent('''
             Examples:
             average4d -i images -o images
@@ -35,11 +35,11 @@ def main():
     )
     parser.add_argument(
         '--subject-dir', '-d', type=str, default=None, nargs='?', const='',
-        help=textwrap.dedent('''
+        help=' '.join(f'''
             Is every subject has its oen direcrory.
             If this argument will be provided without value it will look for any directory in the segmentation directory.
             If value also provided it will be used as a prefix to subject directory, defaults to False (no subjet directory).
-        '''),
+        '''.split())
     )
     parser.add_argument(
         '--subject-subdir', '-u', type=str, default='',
@@ -66,15 +66,12 @@ def main():
         help='Max worker to run in parallel proccess, defaults to multiprocessing.cpu_count().'
     )
     parser.add_argument(
-        '--verbose', '-v', type=int, default=1, choices=[0, 1],
-        help='verbose. 0: Display only errors/warnings, 1: Errors/warnings + info messages. Default is 1.'
+        '--quiet', '-q', action="store_true", default=False,
+        help='Do not display inputs and progress bar, defaults to false (display).'
     )
 
     # Parse the command-line arguments
-    try:
-        args = parser.parse_args()
-    except BaseException as e:
-        sys.exit()
+    args = parser.parse_args()
 
     # Get the command-line argument values
     images_path = args.images_dir
@@ -86,10 +83,10 @@ def main():
     output_image_suffix = args.output_image_suffix
     override = args.override
     max_workers = args.max_workers
-    verbose = args.verbose
+    quiet = args.quiet
 
-    # Print the argument values if verbose is enabled
-    if verbose:
+    # Print the argument values if not quiet
+    if not quiet:
         print(textwrap.dedent(f'''
             Running {Path(__file__).stem} with the following params:
             images_path = "{images_path}"
@@ -101,7 +98,7 @@ def main():
             output_image_suffix = "{output_image_suffix}"
             override = {override}
             max_workers = {max_workers}
-            verbose = {verbose}
+            quiet = {quiet}
         '''))
 
     average4d_mp(
@@ -114,6 +111,7 @@ def main():
         output_image_suffix=output_image_suffix,
         override=override,
         max_workers=max_workers,
+        quiet=quiet,
     )
 
 def average4d_mp(
@@ -126,6 +124,7 @@ def average4d_mp(
         output_image_suffix='_0000',
         override=False,
         max_workers=mp.cpu_count(),
+        quiet=False,
     ):
     '''
     Wrapper function to handle multiprocessing.
@@ -152,6 +151,8 @@ def average4d_mp(
         image_path_list,
         output_image_path_list,
         max_workers=max_workers,
+        chunksize=1,
+        disable=quiet,
     )
 
 def _average4d(

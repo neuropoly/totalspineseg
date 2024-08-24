@@ -14,9 +14,9 @@ def main():
 
     # Parse command line arguments
     parser = argparse.ArgumentParser(
-        description=textwrap.dedent(f'''
+        description=' '.join(f'''
             Label Vertebrae, IVDs, Spinal Cord and canal from init segmentation.
-        '''),
+        '''.split()),
         epilog=textwrap.dedent('''
             Examples:
             iterative_label -s labels_init -o labels --disc-labels 1 2 3 4 5 6 7 --vertebrea-labels 9 10 11 12 13 14 --vertebrea-extra-labels 8 --init-disc 4:224 7:202 5:219 6:207 --init-vertebrae 11:40 14:17 12:34 13:23 --step-diff-label --step-diff-disc --output-disc-step -1 --output-vertebrea-step -1 --map-output 17:92 --map-input 14:92 16:201 17:200 -r
@@ -36,11 +36,11 @@ def main():
     )
     parser.add_argument(
         '--subject-dir', '-d', type=str, default=None, nargs='?', const='',
-        help=textwrap.dedent('''
+        help=' '.join(f'''
             Is every subject has its oen direcrory.
             If this argument will be provided without value it will look for any directory in the segmentation directory.
             If value also provided it will be used as a prefix to subject directory (for example "sub-"), defaults to False (no subjet directory).
-        '''),
+        '''.split())
     )
     parser.add_argument(
         '--subject-subdir', '-u', type=str, default='',
@@ -88,19 +88,19 @@ def main():
     )
     parser.add_argument(
         '--map-input', type=str, nargs='+', default=[],
-        help=textwrap.dedent('''
+        help=' '.join(f'''
             A dict mapping labels from input into the output segmentation.
             The format should be input_label:output_label without any spaces.
             For example, 14:92 16:201 17:200 to map the input sacrum label 14 to 92, canal label 16 to 201 and spinal cord label 17 to 200.
-        '''),
+        '''.split())
     )
     parser.add_argument(
         '--map-output', type=str, nargs='+', default=[],
-        help=textwrap.dedent('''
+        help=' '.join(f'''
             A dict mapping labels from the output of the iterative labeling algorithm into different labels in the output segmentation.
             The format should be input_label:output_label without any spaces.
             For example, 17:92 to map the iteratively labeled vertebrae 17 to the sacrum label 92.
-        '''),
+        '''.split())
     )
     parser.add_argument(
         '--dilation-size', type=int, default=1,
@@ -108,18 +108,18 @@ def main():
     )
     parser.add_argument(
         '--step-diff-label', action="store_true", default=False,
-        help=textwrap.dedent('''
+        help=' '.join(f'''
             Make step only for different labels. When looping on the labels on the z axis, it will give a new label to the next label only
-             if it is different from the previous label. This is useful if there are labels for odd and even vertebrae, so the next label will
-             be for even vertebrae only if the previous label was odd. If it is still odd, it should give the same label.
-        '''),
+            if it is different from the previous label. This is useful if there are labels for odd and even vertebrae, so the next label will
+            be for even vertebrae only if the previous label was odd. If it is still odd, it should give the same label.
+        '''.split())
     )
     parser.add_argument(
         '--step-diff-disc', action="store_true", default=False,
-        help=textwrap.dedent('''
+        help=' '.join(f'''
             Make step only for different discs. When looping on the labels on the z axis, it will give a new label to the next label only
-             if there is a disc between them. This exclude the first and last vertebrae since it can be C1 or only contain the spinous process.
-        '''),
+            if there is a disc between them. This exclude the first and last vertebrae since it can be C1 or only contain the spinous process.
+        '''.split())
     )
     parser.add_argument(
         '--override', '-r', action="store_true", default=False,
@@ -130,14 +130,12 @@ def main():
         help='Max worker to run in parallel proccess, defaults to multiprocessing.cpu_count().'
     )
     parser.add_argument(
-        '--verbose', '-v', type=int, default=1, choices=[0, 1],
-        help='Verbosity level. 0: Errors/warnings only, 1: Errors/warnings + info (default: 1)'
+        '--quiet', '-q', action="store_true", default=False,
+        help='Do not display inputs and progress bar, defaults to false (display).'
     )
 
-    try:
-        args = parser.parse_args()
-    except BaseException as e:
-        sys.exit()
+    # Parse the command-line arguments
+    args = parser.parse_args()
 
     # Get arguments
     segs_path = args.segs_dir
@@ -161,9 +159,10 @@ def main():
     step_diff_disc = args.step_diff_disc
     override = args.override
     max_workers = args.max_workers
-    verbose = args.verbose
+    quiet = args.quiet
 
-    if verbose:
+    # Print the argument values if not quiet
+    if not quiet:
         print(textwrap.dedent(f'''
             Running {Path(__file__).stem} with the following params:
             segs_dir = "{segs_path}"
@@ -187,7 +186,7 @@ def main():
             step_diff_disc = {step_diff_disc}
             override = {override}
             max_workers = {max_workers}
-            verbose = {verbose}
+            quiet = {quiet}
         '''))
 
     # Load maps into a dict
@@ -223,6 +222,7 @@ def main():
         step_diff_disc=step_diff_disc,
         override=override,
         max_workers=max_workers,
+        quiet=quiet,
     )
 
 def iterative_label_mp(
@@ -247,6 +247,7 @@ def iterative_label_mp(
         step_diff_disc=False,
         override=False,
         max_workers=mp.cpu_count(),
+        quiet=False,
     ):
     '''
     Wrapper function to handle multiprocessing.
@@ -285,6 +286,8 @@ def iterative_label_mp(
         seg_path_list,
         output_seg_path_list,
         max_workers=max_workers,
+        chunksize=1,
+        disable=quiet,
     )
 
 def _iterative_label(

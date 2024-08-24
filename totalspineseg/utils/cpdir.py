@@ -13,9 +13,9 @@ def main():
 
     # Description and arguments
     parser = argparse.ArgumentParser(
-        description=textwrap.dedent(f'''
-        This script copy files from one folder to another, the destination folder will be created if not exists.'''
-        ),
+        description=' '.join(f'''
+            This script copy files from one folder to another, the destination folder will be created if not exists.
+        '''.split()),
         epilog=textwrap.dedent('''
             Examples:
             cpdir src dst
@@ -42,10 +42,10 @@ def main():
     )
     parser.add_argument(
         '--replace', '-t', type=lambda x:x.split(':'), nargs='+', default=[],
-        help=textwrap.dedent('''
+        help=' '.join(f'''
             Replace string in the destination path befor copying using regex. (e.g. -r "_w.nii.gz:_w_0001.nii.gz").
             Notice that the replacment is done on the full path.
-        ''')
+        '''.split())
     )
     parser.add_argument(
         '--override', '-r', action="store_true", default=False,
@@ -56,15 +56,12 @@ def main():
         help='Max worker to run in parallel proccess, defaults to multiprocessing.cpu_count().'
     )
     parser.add_argument(
-        '--verbose', '-v', type=int, default=1, choices=[0, 1],
-        help='verbose. 0: Display only errors/warnings, 1: Errors/warnings + info messages. Default is 1.'
+        '--quiet', '-q', action="store_true", default=False,
+        help='Do not display inputs and progress bar, defaults to false (display).'
     )
 
     # Parse the command-line arguments
-    try:
-        args = parser.parse_args()
-    except BaseException as e:
-        sys.exit()
+    args = parser.parse_args()
 
     # Get the command-line argument values
     src = args.src
@@ -74,10 +71,10 @@ def main():
     replace = dict(args.replace)
     override = args.override
     max_workers = args.max_workers
-    verbose = args.verbose
+    quiet = args.quiet
 
-    # Print the argument values if verbose is enabled
-    if verbose:
+    # Print the argument values if not quiet
+    if not quiet:
         print(textwrap.dedent(f'''
             Running {Path(__file__).stem} with the following params:
             src = "{src}"
@@ -87,7 +84,7 @@ def main():
             replace = {replace}
             override = {override}
             max_workers = {max_workers}
-            verbose = {verbose}
+            quiet = {quiet}
         '''))
 
     cpdir_mp(
@@ -97,7 +94,8 @@ def main():
         flat=flat,
         replace=replace,
         override=override,
-        max_workers=max_workers
+        max_workers=max_workers,
+        quiet=quiet,
     )
 
 def cpdir_mp(
@@ -107,7 +105,8 @@ def cpdir_mp(
         flat=False,
         replace={},
         override=False,
-        max_workers=mp.cpu_count()
+        max_workers=mp.cpu_count(),
+        quiet=False,
     ):
     '''
     Wrapper function to handle multiprocessing.
@@ -135,6 +134,8 @@ def cpdir_mp(
         src_path_list,
         dst_path_list,
         max_workers=max_workers,
+        chunksize=1,
+        disable=quiet,
     )
 
 def _cpdir(

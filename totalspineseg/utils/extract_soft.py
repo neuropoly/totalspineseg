@@ -16,10 +16,10 @@ def main():
 
     # Description and arguments
     parser = argparse.ArgumentParser(
-        description=textwrap.dedent(f'''
-        This script processes npz and NIfTI (Neuroimaging Informatics Technology Initiative) segmentation files.
-        It extracts the soft segmentation from the npz file.
-        '''),
+        description=' '.join(f'''
+            This script processes npz and NIfTI (Neuroimaging Informatics Technology Initiative) segmentation files.
+            It extracts the soft segmentation from the npz file.
+        '''.split()),
         epilog=textwrap.dedent('''
             Examples:
             extract_soft -n npzs -s labels -o canal_soft
@@ -42,11 +42,11 @@ def main():
     )
     parser.add_argument(
         '--subject-dir', '-d', type=str, default=None, nargs='?', const='',
-        help=textwrap.dedent('''
+        help=' '.join(f'''
             Is every subject has its oen direcrory.
             If this argument will be provided without value it will look for any directory in the segmentation directory.
             If value also provided it will be used as a prefix to subject directory, defaults to False (no subjet directory).
-        '''),
+        '''.split())
     )
     parser.add_argument(
         '--subject-subdir', '-u', type=str, default='',
@@ -93,15 +93,12 @@ def main():
         help='Max worker to run in parallel proccess, defaults to multiprocessing.cpu_count().'
     )
     parser.add_argument(
-        '--verbose', '-v', type=int, default=1, choices=[0, 1],
-        help='verbose. 0: Display only errors/warnings, 1: Errors/warnings + info messages. Default is 1.'
+        '--quiet', '-q', action="store_true", default=False,
+        help='Do not display inputs and progress bar, defaults to false (display).'
     )
 
     # Parse the command-line arguments
-    try:
-        args = parser.parse_args()
-    except BaseException as e:
-        sys.exit()
+    args = parser.parse_args()
 
     # Get the command-line argument values
     npzs_path = args.npzs_dir
@@ -119,10 +116,10 @@ def main():
     largest = args.largest
     override = args.override
     max_workers = args.max_workers
-    verbose = args.verbose
+    quiet = args.quiet
 
-    # Print the argument values if verbose is enabled
-    if verbose:
+    # Print the argument values if not quiet
+    if not quiet:
         print(textwrap.dedent(f'''
             Running {Path(__file__).stem} with the following params:
             npzs_path = "{npzs_path}"
@@ -140,7 +137,7 @@ def main():
             largest = {largest}
             override = {override}
             max_workers = {max_workers}
-            verbose = {verbose}
+            quiet = {quiet}
         '''))
 
     extract_soft_mp(
@@ -159,6 +156,7 @@ def main():
         largest=largest,
         override=override,
         max_workers=max_workers,
+        quiet=quiet,
     )
 
 def extract_soft_mp(
@@ -177,6 +175,7 @@ def extract_soft_mp(
         largest=False,
         override=False,
         max_workers=mp.cpu_count(),
+        quiet=False,
     ):
     '''
     Wrapper function to handle multiprocessing.
@@ -210,6 +209,8 @@ def extract_soft_mp(
         seg_path_list,
         output_segs_path_list,
         max_workers=max_workers,
+        chunksize=1,
+        disable=quiet,
     )
 
 def _extract_soft(

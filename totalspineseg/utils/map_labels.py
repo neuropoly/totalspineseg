@@ -13,9 +13,9 @@ def main():
 
     # Parse command line arguments
     parser = argparse.ArgumentParser(
-        description=textwrap.dedent(f'''
+        description=' '.join(f'''
             Map segmentation labels to other, new labels using json or a dict mapping.
-        '''),
+        '''.split()),
         epilog=textwrap.dedent('''
             Examples:
             map_labels -s labels -o labels_mapped -m map.json
@@ -45,20 +45,20 @@ def main():
     )
     parser.add_argument(
         '--map', '-m', type=str, nargs='+', default=[],
-        help=textwrap.dedent('''
+        help=' '.join(f'''
             JSON file or dict mapping each input_label to an output_label.
             The format should be input_label:output_label without any spaces.
             For example, you can use a JSON file like map.json containing {"1": 2, "2": 15},
             or provide a dict directly like 1:2 2:15
-        '''),
+        '''.split()),
     )
     parser.add_argument(
         '--subject-dir', '-d', type=str, default=None, nargs='?', const='',
-        help=textwrap.dedent('''
+        help=' '.join(f'''
             Is every subject has its oen direcrory.
             If this argument will be provided without value it will look for any directory in the segmentation directory.
             If value also provided it will be used as a prefix to subject directory, defaults to False (no subjet directory).
-        '''),
+        '''.split()),
     )
     parser.add_argument(
         '--subject-subdir', '-u', type=str, default='',
@@ -97,14 +97,12 @@ def main():
         help='Max worker to run in parallel proccess, defaults to multiprocessing.cpu_count().'
     )
     parser.add_argument(
-        '--verbose', '-v', type=int, default=1, choices=[0, 1],
-        help='Verbosity level. 0: Errors/warnings only, 1: Errors/warnings + info (default: 1)'
+        '--quiet', '-q', action="store_true", default=False,
+        help='Do not display inputs and progress bar, defaults to false (display).'
     )
 
-    try:
-        args = parser.parse_args()
-    except BaseException as e:
-        sys.exit()
+    # Parse the command-line arguments
+    args = parser.parse_args()
 
     # Get arguments
     segs_path = args.segs_dir
@@ -122,9 +120,10 @@ def main():
     keep_unmapped = args.keep_unmapped
     override = args.override
     max_workers = args.max_workers
-    verbose = args.verbose
+    quiet = args.quiet
 
-    if verbose:
+    # Print the argument values if not quiet
+    if not quiet:
         print(textwrap.dedent(f'''
             Running {Path(__file__).stem} with the following params:
             segs_dir = "{segs_path}"
@@ -142,7 +141,7 @@ def main():
             keep_unmapped = {keep_unmapped}
             override = {override}
             max_workers = {max_workers}
-            verbose = {verbose}
+            quiet = {quiet}
         '''))
 
     # Load map into a dict
@@ -172,6 +171,7 @@ def main():
         keep_unmapped=keep_unmapped,
         override=override,
         max_workers=max_workers,
+        quiet=quiet,
     )
 
 def map_labels_mp(
@@ -189,7 +189,8 @@ def map_labels_mp(
         update_from_seg_suffix='',
         keep_unmapped=False,
         override=False,
-        max_workers=mp.cpu_count()
+        max_workers=mp.cpu_count(),
+        quiet=False,
     ):
     '''
     Wrapper function to handle multiprocessing.
@@ -224,6 +225,8 @@ def map_labels_mp(
         update_seg_path_list,
         update_from_seg_path_list,
         max_workers=max_workers,
+        chunksize=1,
+        disable=quiet,
     )
 
 def _map_labels(

@@ -14,9 +14,9 @@ def main():
 
     # Parse command line arguments
     parser = argparse.ArgumentParser(
-        description=textwrap.dedent(f'''
+        description=' '.join(f'''
             Fix Spinal Canal label to include all non cord spinal canal, this will put the spinal canal label in all the voxels (labeled as a backgroupn) between the spinal canal and the spinal cord.
-        '''),
+        '''.split()),
         epilog=textwrap.dedent('''
             Examples:
             fill_canal -s labels -o labels_fixed
@@ -36,11 +36,11 @@ def main():
     )
     parser.add_argument(
         '--subject-dir', '-d', type=str, default=None, nargs='?', const='',
-        help=textwrap.dedent('''
+        help=' '.join(f'''
             Is every subject has its oen direcrory.
             If this argument will be provided without value it will look for any directory in the segmentation directory.
             If value also provided it will be used as a prefix to subject directory (for example "sub-"), defaults to False (no subjet directory).
-        '''),
+        '''.split())
     )
     parser.add_argument(
         '--subject-subdir', '-u', type=str, default='',
@@ -83,14 +83,12 @@ def main():
         help='Max worker to run in parallel proccess, defaults to multiprocessing.cpu_count().'
     )
     parser.add_argument(
-        '--verbose', '-v', type=int, default=1, choices=[0, 1],
-        help='Verbosity level. 0: Errors/warnings only, 1: Errors/warnings + info (default: 1)'
+        '--quiet', '-q', action="store_true", default=False,
+        help='Do not display inputs and progress bar, defaults to false (display).'
     )
 
-    try:
-        args = parser.parse_args()
-    except BaseException as e:
-        sys.exit()
+    # Parse the command-line arguments
+    args = parser.parse_args()
 
     # Get arguments
     segs_path = args.segs_dir
@@ -106,9 +104,10 @@ def main():
     largest_cord = args.largest_cord
     override = args.override
     max_workers = args.max_workers
-    verbose = args.verbose
+    quiet = args.quiet
 
-    if verbose:
+    # Print the argument values if not quiet
+    if not quiet:
         print(textwrap.dedent(f'''
             Running {Path(__file__).stem} with the following params:
             segs_dir = "{segs_path}"
@@ -124,7 +123,7 @@ def main():
             largest_cord = {largest_cord}
             override = {override}
             max_workers = {max_workers}
-            verbose = {verbose}
+            quiet = {quiet}
         '''))
 
     fill_canal_mp(
@@ -141,6 +140,7 @@ def main():
         largest_cord=largest_cord,
         override=override,
         max_workers=max_workers,
+        quiet=quiet,
     )
 
 def fill_canal_mp(
@@ -157,6 +157,7 @@ def fill_canal_mp(
         largest_cord=False,
         override=False,
         max_workers=mp.cpu_count(),
+        quiet=False,
     ):
     '''
     Wrapper function to handle multiprocessing.
@@ -187,6 +188,8 @@ def fill_canal_mp(
         seg_path_list,
         output_seg_path_list,
         max_workers=max_workers,
+        chunksize=1,
+        disable=quiet,
     )
 
 def _fill_canal(

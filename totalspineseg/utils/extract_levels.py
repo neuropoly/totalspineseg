@@ -13,9 +13,9 @@ def main():
 
     # Parse command line arguments
     parser = argparse.ArgumentParser(
-        description=textwrap.dedent(f'''
+        description=' '.join(f'''
             Extract vertebrae levels from Spinal Canal and Discs.
-        '''),
+        '''.split()),
         epilog=textwrap.dedent('''
             Examples:
             extract_levels -s labels_init -o labels --disc-labels 1 2 3 4 5 6 7 --vertebrea-labels 9 10 11 12 13 14 --vertebrea-extra-labels 8 --init-disc 4:224 7:202 5:219 6:207 --init-vertebrae 11:40 14:17 12:34 13:23 --step-diff-label --step-diff-disc --output-disc-step -1 --output-vertebrea-step -1 --map-output 17:92 --map-input 14:92 16:201 17:200 -r
@@ -35,11 +35,11 @@ def main():
     )
     parser.add_argument(
         '--subject-dir', '-d', type=str, default=None, nargs='?', const='',
-        help=textwrap.dedent('''
+        help=' '.join(f'''
             Is every subject has its oen direcrory.
             If this argument will be provided without value it will look for any directory in the segmentation directory.
             If value also provided it will be used as a prefix to subject directory (for example "sub-"), defaults to False (no subjet directory).
-        '''),
+        '''.split())
     )
     parser.add_argument(
         '--subject-subdir', '-u', type=str, default='',
@@ -78,14 +78,12 @@ def main():
         help='Max worker to run in parallel proccess, defaults to multiprocessing.cpu_count().'
     )
     parser.add_argument(
-        '--verbose', '-v', type=int, default=1, choices=[0, 1],
-        help='Verbosity level. 0: Errors/warnings only, 1: Errors/warnings + info (default: 1)'
+        '--quiet', '-q', action="store_true", default=False,
+        help='Do not display inputs and progress bar, defaults to false (display).'
     )
 
-    try:
-        args = parser.parse_args()
-    except BaseException as e:
-        sys.exit()
+    # Parse the command-line arguments
+    args = parser.parse_args()
 
     # Get arguments
     segs_path = args.segs_dir
@@ -100,9 +98,10 @@ def main():
     step = args.step
     override = args.override
     max_workers = args.max_workers
-    verbose = args.verbose
+    quiet = args.quiet
 
-    if verbose:
+    # Print the argument values if not quiet
+    if not quiet:
         print(textwrap.dedent(f'''
             Running {Path(__file__).stem} with the following params:
             segs_dir = "{segs_path}"
@@ -117,7 +116,7 @@ def main():
             step = {step}
             override = {override}
             max_workers = {max_workers}
-            verbose = {verbose}
+            quiet = {quiet}
         '''))
 
     extract_levels_mp(
@@ -133,6 +132,7 @@ def main():
         step=step,
         override=override,
         max_workers=max_workers,
+        quiet=quiet,
     )
 
 def extract_levels_mp(
@@ -148,6 +148,7 @@ def extract_levels_mp(
         step=1,
         override=False,
         max_workers=mp.cpu_count(),
+        quiet=False,
     ):
     '''
     Wrapper function to handle multiprocessing.
@@ -177,6 +178,8 @@ def extract_levels_mp(
         seg_path_list,
         output_seg_path_list,
         max_workers=max_workers,
+        chunksize=1,
+        disable=quiet,
     )
 
 def _extract_levels(
