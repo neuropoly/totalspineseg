@@ -38,7 +38,7 @@ TOTALSPINESEG="$(realpath "${TOTALSPINESEG:-totalspineseg}")"
 TOTALSPINESEG_DATA="$(realpath "${TOTALSPINESEG_DATA:-data}")"
 
 # ensure the custom nnUNetTrainer is defined in the nnUNet library and add it if it is not
-source "$TOTALSPINESEG"/scripts/add_nnunet_trainer.sh
+totalspineseg_add_nnunet_trainer
 
 # Get the number of CPUs
 CORES=${SLURM_JOB_CPUS_PER_NODE:-$(lscpu -p | egrep -v '^#' | wc -l)}

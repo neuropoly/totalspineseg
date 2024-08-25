@@ -12,7 +12,7 @@ authors = [
     { name = "Pierre-Louis Benveniste"},
     { name = "Anat Achiron"},
     { name = "Arman Eshaghi"},
-    { name = "Julien Cohen-Adad"}
+    { name = "Julien Cohen-Adad"},
 ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -23,7 +23,7 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Medical Science Apps.",
     "Topic :: Scientific/Engineering :: MRI Images.",
     "Topic :: Scientific/Engineering :: Spinal Cord.",
-    "Topic :: Scientific/Engineering :: Spine."
+    "Topic :: Scientific/Engineering :: Spine.",
 ]
 keywords = [
     'deep learning',
@@ -37,7 +37,7 @@ keywords = [
     'spine',
     'ivd',
     'intervertebral disc',
-    'spinal cord'
+    'spinal cord',
 ]
 dependencies = [
     "tqdm==4.66.4",
@@ -58,6 +58,7 @@ homepage = "https://github.com/neuropoly/totalspineseg"
 repository = "https://github.com/neuropoly/totalspineseg"
 
 [project.scripts]
+totalspineseg = "totalspineseg.inference:main"
 totalspineseg_cpdir = "totalspineseg.utils.cpdir:main"
 totalspineseg_fill_canal = "totalspineseg.utils.fill_canal:main"
 totalspineseg_augment = "totalspineseg.utils.augment:main"
@@ -72,7 +73,7 @@ totalspineseg_average4d = "totalspineseg.utils.average4d:main"
 totalspineseg_crop_image2seg = "totalspineseg.utils.crop_image2seg:main"
 totalspineseg_extract_soft = "totalspineseg.utils.extract_soft:main"
 totalspineseg_extract_levels = "totalspineseg.utils.extract_levels:main"
-totalspineseg_inference = "totalspineseg.inference:main"
+totalspineseg_add_nnunet_trainer = "totalspineseg.utils.add_nnunet_trainer:main"
 
 [build-system]
 requires = ["pip>=23", "setuptools>=67"]

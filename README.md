@@ -127,7 +127,7 @@ Please ensure that your system meets these requirements before proceeding with t
 1. If you didn't train the model yourself, you should download the model zip file from the release into `$TOTALSPINESEG_DATA/nnUNet/exports` (do not extract the zip files). You can run `mkdir -p "$TOTALSPINESEG_DATA"/nnUNet/exports` to create the folder.
 1. Run the model on a folder containing the images in .nii.gz format:
    ```bash
-   bash "$TOTALSPINESEG"/scripts/inference.sh INPUT_FOLDER OUTPUT_FOLDER [-step1]
+   totalspineseg INPUT_FOLDER OUTPUT_FOLDER [-step1]
    ```
 
    This will process all .nii.gz files in the INPUT_FOLDER and save the results in the OUTPUT_FOLDER.
