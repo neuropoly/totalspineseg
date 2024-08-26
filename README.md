@@ -50,6 +50,12 @@ Our model is trained on those datasets:
 
 1. Open a `bash` terminal in the directory where you want to work.
 
+1. Create the installation directory:
+   ```bash
+   mkdir TotalSpineSeg
+   cd TotalSpineSeg
+   ```
+
 1. Create and activate a virtual environment (highly recommended):
    ```bash
    python -m venv venv
@@ -124,13 +130,12 @@ Please ensure that your system meets these requirements before proceeding with t
 
 1. Make sure that the `bash` terminal is opened with the virtual environment (if used) activated (using `source <path to installation directory>/venv/bin/activate`).
 
-1. If you didn't train the model yourself, you should download the model zip file from the release into `$TOTALSPINESEG_DATA/nnUNet/exports` (do not extract the zip files). You can run `mkdir -p "$TOTALSPINESEG_DATA"/nnUNet/exports` to create the folder.
 1. Run the model on a folder containing the images in .nii.gz format:
    ```bash
    totalspineseg INPUT_FOLDER OUTPUT_FOLDER [-step1]
    ```
 
-   This will process all .nii.gz files in the INPUT_FOLDER and save the results in the OUTPUT_FOLDER.
+   This will process all .nii.gz files in the INPUT_FOLDER and save the results in the OUTPUT_FOLDER. If you haven't trained the model, the script will automatically download the pre-trained models from the GitHub release.
 
    Additionally, you can use the `-step1` parameter to run only the step 1 model, which outputs a single label for all vertebrae, including the sacrum.
 
