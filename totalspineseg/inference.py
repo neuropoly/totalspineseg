@@ -1,5 +1,8 @@
 import os, argparse, warnings, json, subprocess, textwrap, torch, totalspineseg, psutil
 from pathlib import Path
+from urllib.request import urlretrieve
+from importlib.metadata import version
+from tqdm import tqdm
 from totalspineseg import *
 
 warnings.filterwarnings("ignore")
@@ -30,11 +33,10 @@ def main():
         help='Run only step 1 of the inference process.'
     )
     parser.add_argument(
-        '--data-dir', '-d', type=Path, default=Path(os.environ.get('TOTALSPINESEG_DATA', 'data')),
+        '--data-dir', '-d', type=Path, default=Path(os.environ.get('TOTALSPINESEG_DATA', '')), required='TOTALSPINESEG_DATA' not in os.environ,
         help=' '.join(f'''
-            Override the default TOTALSPINESEG_DATA environment variable.
-            Default is the environment TOTALSPINESEG_DATA if set,
-            otherwise "data" folder in the current working directory.
+            The path to store the nnUNet data, defaults to the TOTALSPINESEG_DATA environment variable if set.
+            If the TOTALSPINESEG_DATA environment variable is not set, the path must be provided.
         '''.split())
     )
     parser.add_argument(
@@ -90,8 +92,8 @@ def main():
     nnUNetTrainer = 'nnUNetTrainer_16000epochs'
     nnUNetPlans = 'nnUNetPlans'
     configuration = '3d_fullres_small'
-    step1_dataset = 101
-    step2_dataset = 102
+    step1_dataset = 'Dataset101_TotalSpineSeg_step1'
+    step2_dataset = 'Dataset102_TotalSpineSeg_step2'
     fold = 0
 
     # Set nnUNet environment variables
@@ -116,11 +118,30 @@ def main():
 
     # Installing the pretrained models if not already installed
     for dataset in [step1_dataset, step2_dataset]:
-        if not list(nnUNet_results.glob(f'Dataset{dataset}_*')):
-            print(f'Installing the pretrained model for Dataset{dataset}...')
-            zip_file = next(nnUNet_exports.glob(f'Dataset{dataset}_*.zip'), None)
+        if not (nnUNet_results / dataset).is_dir():
+            # If the pretrained model is not installed, install it from zip
+            print(f'Installing the pretrained model for {dataset}...')
+
+            # Check if the zip file exists
+            zip_file = next(nnUNet_exports.glob(f'{dataset}*.zip'), None)
+
             if not zip_file:
-                raise FileNotFoundError(f'No exported model zip file found for Dataset{dataset} in {nnUNet_exports}')
+                # If the zip file is not found, download it from the releases
+                print(f'Downloading the pretrained model for {dataset}...')
+                with tqdm(unit='B', unit_scale=True, miniters=1, unit_divisor=1024, disable=quiet) as pbar:
+                    urlretrieve(
+                        f'https://github.com/neuropoly/totalspineseg/releases/download/r{version("totalspineseg")}/{dataset}.zip',
+                        nnUNet_exports / f'{dataset}.zip',
+                        lambda b, bsize, tsize=None: (pbar.total == tsize or pbar.reset(tsize)) and pbar.update(b * bsize - pbar.n),
+                    )
+
+                # Check if the zip file exists
+                zip_file = next(nnUNet_exports.glob(f'{dataset}*.zip'), None)
+
+            if not zip_file:
+                raise FileNotFoundError(f'Could not download the pretrained model for {dataset}.')
+
+            # Install the pretrained model from the zip file
             subprocess.run(['nnUNetv2_install_pretrained_model_from_zip', str(zip_file)])
 
     if not quiet: print('\n' 'Making input dir with _0000 suffix:')
@@ -177,12 +198,12 @@ def main():
     )
 
     # Check if the final checkpoint exists, if not use the latest checkpoint
-    checkpoint = 'checkpoint_final.pth' if list(nnUNet_results.glob(f'Dataset{step1_dataset}_*/{nnUNetTrainer}__{nnUNetPlans}__{configuration}/fold_{fold}/checkpoint_final.pth')) else 'checkpoint_latest.pth'
+    checkpoint = 'checkpoint_final.pth' if (nnUNet_results / step1_dataset / f'{nnUNetTrainer}__{nnUNetPlans}__{configuration}' / f'fold_{fold}' / 'checkpoint_final.pth').is_file() else 'checkpoint_latest.pth'
 
     if not quiet: print('\n' 'Running step 1 model:')
     subprocess.run([
         'nnUNetv2_predict',
-            '-d', str(step1_dataset),
+            '-d', step1_dataset,
             '-i', str(output_path / 'input'),
             '-o', str(output_path / 'step1_raw'),
             '-f', str(fold),
@@ -380,12 +401,12 @@ def main():
                 f.unlink()
 
         # Check if the final checkpoint exists, if not use the latest checkpoint
-        checkpoint = 'checkpoint_final.pth' if list(nnUNet_results.glob(f'Dataset{step2_dataset}_*/{nnUNetTrainer}__{nnUNetPlans}__{configuration}/fold_{fold}/checkpoint_final.pth')) else 'checkpoint_latest.pth'
+        checkpoint = 'checkpoint_final.pth' if (nnUNet_results / step2_dataset / f'{nnUNetTrainer}__{nnUNetPlans}__{configuration}' / f'fold_{fold}' / 'checkpoint_final.pth').is_file() else 'checkpoint_latest.pth'
 
         if not quiet: print('\n' 'Running step 2 model:')
         subprocess.run([
             'nnUNetv2_predict',
-                '-d', str(step2_dataset),
+                '-d', step2_dataset,
                 '-i', str(output_path / 'step2_input'),
                 '-o', str(output_path / 'step2_raw'),
                 '-f', str(fold),
