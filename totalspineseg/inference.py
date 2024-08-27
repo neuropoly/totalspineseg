@@ -1,7 +1,7 @@
 import os, argparse, warnings, json, subprocess, textwrap, torch, totalspineseg, psutil
 from pathlib import Path
 from urllib.request import urlretrieve
-from importlib.metadata import version
+from importlib.metadata import metadata
 from tqdm import tqdm
 from totalspineseg import *
 
@@ -130,7 +130,8 @@ def main():
                 print(f'Downloading the pretrained model for {dataset}...')
                 with tqdm(unit='B', unit_scale=True, miniters=1, unit_divisor=1024, disable=quiet) as pbar:
                     urlretrieve(
-                        f'https://github.com/neuropoly/totalspineseg/releases/download/r{version("totalspineseg")}/{dataset}.zip',
+                        # Get the download URL from the package metadata in pyproject.toml
+                        dict([_.split(', ') for _ in metadata('totalspineseg').get_all('Project-URL')])[dataset],
                         nnUNet_exports / f'{dataset}.zip',
                         lambda b, bsize, tsize=None: (pbar.total == tsize or pbar.reset(tsize)) and pbar.update(b * bsize - pbar.n),
                     )
