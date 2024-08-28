@@ -65,13 +65,13 @@ Our model is trained on those datasets:
 1. Clone and install this repository:
    ```bash
    git clone https://github.com/neuropoly/totalspineseg.git
-   pip install -e totalspineseg
+   python3 -m pip install -e totalspineseg
    ```
 
 1. For CUDA GPU support, install **PyTorch** following the instructions on their [website](https://pytorch.org/). Be sure to add the `--upgrade` flag to your installation command to replace any existing PyTorch installation.
    Example:
      ```bash
-     pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 --upgrade
+     python3 -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 --upgrade
      ```
 
 1. Set the path to TotalSpineSeg and data folders in the virtual environment:
