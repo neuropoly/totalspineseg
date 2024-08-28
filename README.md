@@ -76,6 +76,7 @@ Our model is trained on those datasets:
 
 1. Set the path to TotalSpineSeg and data folders in the virtual environment:
    ```bash
+   mkdir data
    export TOTALSPINESEG="$(realpath totalspineseg)" && echo "export TOTALSPINESEG=\"$TOTALSPINESEG\"" >> venv/bin/activate
    export TOTALSPINESEG_DATA="$(realpath data)" && echo "export TOTALSPINESEG_DATA=\"$TOTALSPINESEG_DATA\"" >> venv/bin/activate
    ```
