@@ -84,11 +84,19 @@ def main():
     # Add the custom nnUNetTrainer class to the nnUNet library
     add_nnunet_trainer()
 
-    # Set nnUNet paths and variables
+    # Set nnUNet paths
     nnUNet_raw = data_path / 'nnUNet' / 'raw'
     nnUNet_preprocessed = data_path / 'nnUNet' / 'preprocessed'
     nnUNet_results = data_path / 'nnUNet' / 'results'
     nnUNet_exports = data_path / 'nnUNet' / 'exports'
+
+    # Create the nnUNet directories if they do not exist
+    nnUNet_raw.mkdir(parents=True, exist_ok=True)
+    nnUNet_preprocessed.mkdir(parents=True, exist_ok=True)
+    nnUNet_results.mkdir(parents=True, exist_ok=True)
+    nnUNet_exports.mkdir(parents=True, exist_ok=True)
+
+    # Set the nnUNet variables
     nnUNetTrainer = 'nnUNetTrainer_16000epochs'
     nnUNetPlans = 'nnUNetPlans'
     configuration = '3d_fullres_small'
