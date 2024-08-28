@@ -58,14 +58,14 @@ Our model is trained on those datasets:
 
 1. Create and activate a virtual environment (highly recommended):
    ```bash
-   python -m venv venv
+   python3 -m venv venv
    source venv/bin/activate
    ```
 
 1. Clone and install this repository:
    ```bash
    git clone https://github.com/neuropoly/totalspineseg.git
-   python -m pip install -e totalspineseg
+   pip install -e totalspineseg
    ```
 
 1. For CUDA GPU support, install **PyTorch** following the instructions on their [website](https://pytorch.org/). Be sure to add the `--upgrade` flag to your installation command to replace any existing PyTorch installation.
@@ -77,8 +77,10 @@ Our model is trained on those datasets:
 1. Set the path to TotalSpineSeg and data folders in the virtual environment:
    ```bash
    mkdir data
-   export TOTALSPINESEG="$(realpath totalspineseg)" && echo "export TOTALSPINESEG=\"$TOTALSPINESEG\"" >> venv/bin/activate
-   export TOTALSPINESEG_DATA="$(realpath data)" && echo "export TOTALSPINESEG_DATA=\"$TOTALSPINESEG_DATA\"" >> venv/bin/activate
+   export TOTALSPINESEG="$(realpath totalspineseg)"
+   export TOTALSPINESEG_DATA="$(realpath data)"
+   echo "export TOTALSPINESEG=\"$TOTALSPINESEG\"" >> venv/bin/activate
+   echo "export TOTALSPINESEG_DATA=\"$TOTALSPINESEG_DATA\"" >> venv/bin/activate
    ```
 
 ## Training
