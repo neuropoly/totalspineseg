@@ -230,9 +230,9 @@ def _extract_levels(
 
 def extract_levels(
         seg,
-        canal_labels,
-        c2c3_label,
-        step,
+        canal_labels=[],
+        c2c3_label=3,
+        step=1,
     ):
     '''
     Extract vertebrae levels from Spinal Canal and Discs.
