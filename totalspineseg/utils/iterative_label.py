@@ -355,20 +355,20 @@ def _iterative_label(
     nib.save(output_seg, output_seg_path)
 
 def iterative_label(
-        seg: nib.Nifti1Image,
-        disc_labels: list=[],
-        init_disc: dict={},
-        output_disc_step: int=1,
-        vertebrea_labels: list=[],
-        vertebrea_extra_labels: list=[],
-        init_vertebrae: dict={},
-        output_vertebrea_step: int=1,
-        map_input_dict: dict={},
-        map_output_dict: dict={},
-        dilation_size: int=1,
-        step_diff_label: bool=False,
-        step_diff_disc: bool=False,
-    ) -> nib.Nifti1Image:
+        seg,
+        disc_labels=[],
+        init_disc={},
+        output_disc_step=1,
+        vertebrea_labels=[],
+        vertebrea_extra_labels=[],
+        init_vertebrae={},
+        output_vertebrea_step=1,
+        map_input_dict={},
+        map_output_dict={},
+        dilation_size=1,
+        step_diff_label=False,
+        step_diff_disc=False,
+    ):
     '''
     Label Vertebrae, IVDs, Spinal Cord and canal from init segmentation.
     The algorithm is iterative and works as follows:

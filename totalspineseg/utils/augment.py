@@ -313,11 +313,11 @@ def _augment(
         nib.save(output_seg, output_seg_path)
 
 def augment(
-        image: nib.Nifti1Image,
-        seg: nib.Nifti1Image,
-        labels2image: bool = False,
-        seg_classes: list | None = None,
-    ) -> tuple[nib.Nifti1Image, nib.Nifti1Image]:
+        image,
+        seg,
+        labels2image = False,
+        seg_classes = None,
+    ):
     '''
     Augment the image and the segmentation using a random sequence of transformations. Augmentation is performed on the image and the segmentation simultaneously to ensure consistency.
     Augmentation includes:

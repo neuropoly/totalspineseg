@@ -277,12 +277,12 @@ def _map_labels(
     nib.save(output_seg, output_seg_path)
 
 def map_labels(
-        seg: nib.Nifti1Image,
-        update_seg: nib.Nifti1Image | None = None,
-        update_from_seg: nib.Nifti1Image | None = None,
-        map_dict: dict = {},
-        keep_unmapped: bool = False,
-    ) -> nib.Nifti1Image:
+        seg,
+        update_seg = None,
+        update_from_seg = None,
+        map_dict = {},
+        keep_unmapped = False,
+    ):
     '''
     Map segmentation labels to other, new labels using a dict mapping.
 

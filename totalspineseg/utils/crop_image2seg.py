@@ -242,10 +242,10 @@ def _crop_image2seg(
     nib.save(output_image, output_image_path)
 
 def crop_image2seg(
-        image: nib.Nifti1Image,
-        seg: nib.Nifti1Image,
-        margin: int = 0,
-    ) -> nib.Nifti1Image:
+        image,
+        seg,
+        margin = 0,
+    ):
     '''
     Crop the image to the non-zero region of the segmentation with a margin.
 

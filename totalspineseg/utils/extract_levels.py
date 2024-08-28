@@ -229,11 +229,11 @@ def _extract_levels(
     nib.save(output_seg, output_seg_path)
 
 def extract_levels(
-        seg: nib.Nifti1Image,
-        canal_labels: list,
-        c2c3_label: dict,
-        step: int,
-    ) -> nib.Nifti1Image:
+        seg,
+        canal_labels,
+        c2c3_label,
+        step,
+    ):
     '''
     Extract vertebrae levels from Spinal Canal and Discs.
 

@@ -202,8 +202,8 @@ def _average4d(
     nib.save(output_image, output_image_path)
 
 def average4d(
-        image: nib.Nifti1Image,
-    ) -> nib.Nifti1Image:
+        image,
+    ):
     '''
     Average the last dimension of a 4D image to get a 3D image.
 

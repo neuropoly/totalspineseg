@@ -218,9 +218,9 @@ def _transform_seg2image(
     nib.save(output_seg, output_seg_path)
 
 def transform_seg2image(
-        image: nib.Nifti1Image,
-        seg: nib.Nifti1Image,
-    ) -> nib.Nifti1Image:
+        image,
+        seg,
+    ):
     '''
     Transform the segmentation to the image space to have the same origin, spacing, direction and shape as the image.
 

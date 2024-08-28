@@ -214,10 +214,10 @@ def _largest_component(
     nib.save(output_seg, output_seg_path)
 
 def largest_component(
-        seg: nib.Nifti1Image,
-        binarize: bool = False,
-        dilate: int = 0,
-    ) -> nib.Nifti1Image:
+        seg,
+        binarize = False,
+        dilate = 0,
+    ):
     '''
     Leave the largest component for each label in the segmentation.
 

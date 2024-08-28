@@ -214,9 +214,9 @@ def _resample(
     nib.save(output_image, output_image_path)
 
 def resample(
-        image: nib.Nifti1Image,
-        mm: tuple[float, float, float] = (1.0, 1.0, 1.0),
-    ) -> nib.Nifti1Image:
+        image,
+        mm = (1.0, 1.0, 1.0),
+    ):
     '''
     Resample the image to the target voxel size in mm.
 

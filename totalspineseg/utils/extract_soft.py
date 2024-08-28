@@ -267,12 +267,12 @@ def _extract_soft(
 
 def extract_soft(
         npz_data,
-        seg: nib.Nifti1Image,
-        label: int = 1,
-        seg_labels: list = [1],
-        dilate: int = 0,
+        seg,
+        label = 1,
+        seg_labels = [1],
+        dilate = 0,
         largest=False,
-    ) -> nib.Nifti1Image:
+    ):
     '''
     Extract the soft segmentation from the npz data for the given label.
 

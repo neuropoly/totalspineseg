@@ -236,12 +236,12 @@ def _fill_canal(
     nib.save(output_seg, output_seg_path)
 
 def fill_canal(
-        seg: nib.Nifti1Image,
-        canal_label: int = 1,
-        cord_label: int = 0,
-        largest_canal: bool = False,
-        largest_cord: bool = False,
-    ) -> nib.Nifti1Image:
+        seg,
+        canal_label = 1,
+        cord_label = 0,
+        largest_canal = False,
+        largest_cord = False,
+    ):
     '''
     Fill holes in the spinal canal, this will put the spinal canal label in all the voxels (labeled as a background) between the spinal canal and the spinal cord.
 
