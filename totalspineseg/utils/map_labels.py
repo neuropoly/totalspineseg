@@ -45,7 +45,7 @@ def main():
     )
     parser.add_argument(
         '--map', '-m', type=str, nargs='+', default=[],
-        help=' '.join(f'''
+        help=' '.join('''
             JSON file or dict mapping each input_label to an output_label.
             The format should be input_label:output_label without any spaces.
             For example, you can use a JSON file like map.json containing {"1": 2, "2": 15},
