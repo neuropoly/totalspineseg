@@ -241,6 +241,11 @@ def resample(
     output_image_data = subject.image.data.numpy()[0, ...].astype(np.float64)
 
     output_image = nib.Nifti1Image(output_image_data, subject.image.affine, image.header)
+    # Set qform twice to ensure consistent header information
+    # This addresses an issue where the second call to set_qform may alter output_image.header['pixdim']
+    # Applying it here prevents inconsistencies that could arise from later image edits
+    output_image.set_qform(output_image.affine)
+    output_image.set_qform(output_image.affine)
 
     return output_image
 
