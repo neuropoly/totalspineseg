@@ -62,9 +62,9 @@ export nnUNet_preprocessed="$TOTALSPINESEG_DATA"/nnUNet/preprocessed
 export nnUNet_results="$TOTALSPINESEG_DATA"/nnUNet/results
 export nnUNet_exports="$TOTALSPINESEG_DATA"/nnUNet/exports
 
-nnUNetTrainer=nnUNetTrainer_DASegOrd0_NoMirroring
-nnUNetPlanner=nnUNetPlannerResEncL
-nnUNetPlans=nnUNetResEncUNetLPlans_small
+nnUNetTrainer=${3:-nnUNetTrainer_DASegOrd0_NoMirroring}
+nnUNetPlanner=${4:-nnUNetPlannerResEncL}
+nnUNetPlans=${5:-nnUNetResEncUNetLPlans_small}
 configuration=3d_fullres
 data_identifier=nnUNetPlans_3d_fullres
 
@@ -81,9 +81,9 @@ echo "configuration=${configuration}"
 echo "data_identifier=${data_identifier}"
 echo "JOBSNN=${JOBSNN}"
 echo "DEVICE=${DEVICE}"
+echo "DATASETS=${DATASETS[@]}"
+echo "FOLD=${FOLD}"
 echo ""
-
-echo "Working with datasets: ${DATASETS[@]}, fold: $FOLD"
 
 for d in ${DATASETS[@]}; do
     # If d=103, remove _small from nnUNetPlans suffix as it is not used for this dataset
@@ -93,12 +93,12 @@ for d in ${DATASETS[@]}; do
     d_name=$(basename "$(ls -d "$nnUNet_raw"/Dataset${d}_*)")
 
     if [ ! -f "$nnUNet_preprocessed"/$d_name/dataset_fingerprint.json ]; then
-        echo "Extract fingerprint for dataset $d_name"
+        echo "Extracting fingerprint dataset $d_name"
         nnUNetv2_extract_fingerprint -d $d -np $JOBSNN --verify_dataset_integrity
     fi
 
     if [ ! -f "$nnUNet_preprocessed"/$d_name/${nnUNetPlans}.json ]; then
-        echo "Planning nnUNet experiment for dataset $d_name"
+        echo "Planning dataset $d_name"
         nnUNetv2_plan_experiment -d $d -pl $nnUNetPlanner -overwrite_plans_name $nnUNetPlans
         # If plans end with _small, change the patch size to [128, 96, 96]
         if [[ $nnUNetPlans == *_small ]]; then
@@ -107,12 +107,12 @@ for d in ${DATASETS[@]}; do
         fi
     fi
 
-    # If already decompressed do not decompress again
-    if [[ ! $(find "$nnUNet_raw"/$d_name/labelsTr -name "*.nii.gz" | wc -l) -eq $(find "$nnUNet_preprocessed"/$d_name/$data_identifier -name "*.npz" | wc -l) || ! $(find "$nnUNet_raw"/$d_name/labelsTr -name "*.nii.gz" | wc -l) -eq $(find "$nnUNet_preprocessed"/$d_name/$data_identifier -name "*.pkl" | wc -l) ]]; then
+    # If already preprocess do not preprocess again
+    if [[ ! -f "$nnUNet_preprocessed"/$d_name/$data_identifier || ! $(find "$nnUNet_raw"/$d_name/labelsTr -name "*.nii.gz" | wc -l) -eq $(find "$nnUNet_preprocessed"/$d_name/$data_identifier -name "*.npz" | wc -l) || ! $(find "$nnUNet_raw"/$d_name/labelsTr -name "*.nii.gz" | wc -l) -eq $(find "$nnUNet_preprocessed"/$d_name/$data_identifier -name "*.pkl" | wc -l) ]]; then
         nnUNetv2_preprocess -d $d -plans_name $nnUNetPlans -c $configuration -np $JOBSNN
     fi
 
-    echo "Training nnUNet model for dataset $d_name"
+    echo "Training dataset $d_name fold $FOLD"
     # if already decompressed do not decompress again
     if [ $(find "$nnUNet_preprocessed"/$d_name/$data_identifier -name "*.npy" | wc -l) -eq $(( 2 * $(find "$nnUNet_preprocessed"/$d_name/$data_identifier -name "*.npz" | wc -l))) ]; then DECOMPRESSED="--use_compressed"; else DECOMPRESSED=""; fi
     nnUNetv2_train $d $configuration $FOLD -tr $nnUNetTrainer -p $nnUNetPlans --c -device $DEVICE $DECOMPRESSED
