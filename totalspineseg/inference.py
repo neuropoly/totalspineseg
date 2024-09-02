@@ -38,7 +38,7 @@ def main():
     parser.add_argument(
         '--loc', '-l', type=Path, default=None,
         help=' '.join(f'''
-            Folder containing localizers segmentations or a single .nii.gz localizer segmentation to use for detecting first vertebrea and disc if C1 and C2-C3 disc or the Sacrum and L5-S disc not found in the image, Optional.
+            Folder containing localizers segmentations or a single .nii.gz localizer segmentation to use for detecting first vertebrae and disc if C1 and C2-C3 disc or the Sacrum and L5-S disc not found in the image, Optional.
             This is the output of the model applied on localizer images. It can be the output of step 2, or step 1 if you only want to run step 1 (step1 flag).
             The algorithm will transform the localizer to the segmentation space and use it to detect the matching vertebrae and discs.
             Mathcing will based on the magority of the voxels of the first vertebrae or disc in the localizer, that intersect with image.
@@ -544,14 +544,14 @@ def main():
                 output_path / 'step2_output',
                 output_path / 'step2_output',
                 disc_labels=[1, 2, 3, 4, 5, 6, 7],
-                vertebrea_labels=[9, 10, 11, 12, 13, 14],
-                vertebrea_extra_labels=[8],
+                vertebrae_labels=[9, 10, 11, 12, 13, 14],
+                vertebrae_extra_labels=[8],
                 init_disc={4:224, 7:202, 5:219, 6:207},
                 init_vertebrae={11:40, 14:17, 12:34, 13:23},
                 step_diff_label=True,
                 step_diff_disc=True,
                 output_disc_step=-1,
-                output_vertebrea_step=-1,
+                output_vertebrae_step=-1,
                 map_output_dict={17:92},
                 map_input_dict={14:92, 15:201, 16:201, 17:200},
                 override=True,
@@ -564,16 +564,16 @@ def main():
                 output_path / 'step2_output',
                 locs_path=output_path / 'localizers',
                 disc_labels=[1, 2, 3, 4, 5, 6, 7],
-                vertebrea_labels=[9, 10, 11, 12, 13, 14],
-                vertebrea_extra_labels=[8],
+                vertebrae_labels=[9, 10, 11, 12, 13, 14],
+                vertebrae_extra_labels=[8],
                 init_disc={4:224, 7:202},
                 init_vertebrae={11:40, 14:17},
                 loc_disc_labels=list(range(202, 225)),
-                loc_vertebrea_labels=list(range(18, 42)) + [92],
+                loc_vertebrae_labels=list(range(18, 42)) + [92],
                 step_diff_label=True,
                 step_diff_disc=True,
                 output_disc_step=-1,
-                output_vertebrea_step=-1,
+                output_vertebrae_step=-1,
                 map_output_dict={17:92},
                 map_input_dict={14:92, 15:201, 16:201, 17:200},
                 override=True,
