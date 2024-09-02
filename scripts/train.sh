@@ -94,7 +94,11 @@ for d in ${DATASETS[@]}; do
 
     if [ ! -f "$nnUNet_preprocessed"/$d_name/dataset_fingerprint.json ]; then
         echo "Extracting fingerprint dataset $d_name"
-        nnUNetv2_extract_fingerprint -d $d -np $JOBSNN --verify_dataset_integrity
+        # --verify_dataset_integrity not working in nnunetv2==2.4.2
+        # https://github.com/MIC-DKFZ/nnUNet/issues/2144
+        # But nnUNetTrainer_DASegOrd0_NoMirroring not working in nnunetv2==2.5.1
+        # https://github.com/MIC-DKFZ/nnUNet/issues/2480
+        nnUNetv2_extract_fingerprint -d $d -np $JOBSNN #--verify_dataset_integrity
     fi
 
     if [ ! -f "$nnUNet_preprocessed"/$d_name/${nnUNetPlans}.json ]; then
