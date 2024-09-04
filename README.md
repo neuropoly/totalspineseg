@@ -8,6 +8,8 @@ If you use this model, please cite our work:
 Please also cite nnUNet since our work is heavily based on it:
 > Isensee, F., Jaeger, P. F., Kohl, S. A., Petersen, J., & Maier-Hein, K. H. (2021). nnU-Net: a self-configuring method for deep learning-based biomedical image segmentation. Nature methods, 18(2), 203-211.
 
+![Thumbnail](https://github.com/user-attachments/assets/2c1b1ff9-daaa-479f-8d21-01a66b9c9cb4)
+
 ## Table of Contents
 
 - [Model Description](#model-description)
@@ -18,8 +20,6 @@ Please also cite nnUNet since our work is heavily based on it:
 - [Inference](#inference)
 - [Output Examples](#output-examples)
 - [List of Classes](#list-of-classes)
-
-![Thumbnail](https://github.com/neuropoly/totalspineseg/assets/36595323/550a159f-de6c-4817-abee-d98d9ce0c106)
 
 ## Model Description
 
@@ -145,13 +145,17 @@ Please ensure that your system meets these requirements before proceeding with t
 
 ## Output Examples
 
-Here are some examples of the model output:
+TotalSpineSeg demonstrates robust performance across a wide range of imaging parameters. Here are some examples of the model output:
 
 ![Model Output Preview](https://github.com/user-attachments/assets/78da2599-3bf2-4bc0-95b2-328acecd956f)
 
-For a more detailed view, you can check the output examples in PDF format:
+The examples shown above include segmentation results on various contrasts (T1w, T2w, STIR, MTS, T2star, and even CT images), acquisition orientations (sagittal, axial), and resolutions.
+
+For a more detailed view of the output examples, you can check the PDF version:
 
 [Preview PDF](https://github.com/user-attachments/files/16873633/preview.pdf)
+
+The PDF includes step 1 and step 2 results together with the iterative labeling algorithm for each step.
 
 ## List of Classes
 
