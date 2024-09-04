@@ -16,6 +16,7 @@ Please also cite nnUNet since our work is heavily based on it:
 - [Installation](#installation)
 - [Training](#training)
 - [Inference](#inference)
+- [Output Examples](#output-examples)
 - [List of Classes](#list-of-classes)
 
 ![Thumbnail](https://github.com/neuropoly/totalspineseg/assets/36595323/550a159f-de6c-4817-abee-d98d9ce0c106)
@@ -141,6 +142,16 @@ Please ensure that your system meets these requirements before proceeding with t
    This will process all .nii.gz files in the INPUT_FOLDER and save the results in the OUTPUT_FOLDER. If you haven't trained the model, the script will automatically download the pre-trained models from the GitHub release.
 
    Additionally, you can use the `-step1` parameter to run only the step 1 model, which outputs a single label for all vertebrae, including the sacrum.
+
+## Output Examples
+
+Here are some examples of the model output:
+
+![Model Output Preview](https://github.com/user-attachments/assets/78da2599-3bf2-4bc0-95b2-328acecd956f)
+
+For a more detailed view, you can check the output examples in PDF format:
+
+[Preview PDF](https://github.com/user-attachments/files/16873633/preview.pdf)
 
 ## List of Classes
 
