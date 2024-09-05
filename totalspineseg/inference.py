@@ -85,7 +85,7 @@ def main():
     # Get the command-line argument values
     input_path = args.input_dir
     output_path = args.output_dir
-    loc_path = args.localizers_dir
+    locs_path = args.localizers_dir
     suffix = args.suffix
     loc_suffix = args.localizers_suffix
     step1_only = args.step1
@@ -139,7 +139,7 @@ def main():
             Running TotalSpineSeg with the following parameters:
             input_dir = "{input_path}"
             output_dir = "{output_path}"
-            localizers_dir = "{loc_path}"
+            localizers_dir = "{locs_path}"
             suffix = "{suffix}"
             localizers_suffix = "{loc_suffix}"
             step1_only = {step1_only}
@@ -275,7 +275,7 @@ def main():
 
     if not quiet: print('\n' 'Using an iterative algorithm to label IVDs with the definite labels:')
     # Labeling is based on the C2-C3, C7-T1 and L5-S1 IVD labels output by step 1 model.
-    if loc_path is None:
+    if locs_path is None:
         iterative_label_mp(
             output_path / 'step1_output',
             output_path / 'step1_output',
@@ -291,7 +291,7 @@ def main():
         iterative_label_mp(
             output_path / 'step1_output',
             output_path / 'step1_output',
-            locs_path=loc_path,
+            locs_path=locs_path,
             seg_suffix=suffix,
             output_seg_suffix=suffix,
             loc_suffix=loc_suffix,
@@ -498,7 +498,7 @@ def main():
         )
 
         if not quiet: print('\n' 'Using an iterative algorithm to label vertebrae and IVDs:')
-        if loc_path is None:
+        if locs_path is None:
             iterative_label_mp(
                 output_path / 'step2_output',
                 output_path / 'step2_output',
@@ -521,7 +521,7 @@ def main():
             iterative_label_mp(
                 output_path / 'step2_output',
                 output_path / 'step2_output',
-                locs_path=loc_path,
+                locs_path=locs_path,
                 seg_suffix=suffix,
                 output_seg_suffix=suffix,
                 loc_suffix=loc_suffix,
