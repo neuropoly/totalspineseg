@@ -656,12 +656,13 @@ def iterative_label(
             mask = np.isin(loc_data, loc_labels) * np.isin(mask_labeled, sorted_labels)
 
             # Get the first label from sorted_labels that is in the localizer specified labels
-            first_sorted_labels_in_loc = next(np.array(sorted_labels)[np.isin(sorted_labels, mask * mask_labeled)].flat, 0)
+            mask_labeled_masked = mask * mask_labeled
+            first_sorted_labels_in_loc = next(np.array(sorted_labels)[np.isin(sorted_labels, mask_labeled_masked)].flat, 0)
 
             if first_sorted_labels_in_loc > 0:
-                # Get the target label in the segmentation
+                # Get the target label for first_sorted_labels_in_loc - the label from the localizer that has the most voxels in it
                 loc_data_masked = mask * loc_data
-                target = np.argmax(np.bincount(loc_data_masked[mask_labeled == first_sorted_labels_in_loc].flat))
+                target = np.argmax(np.bincount(loc_data_masked[mask_labeled_masked == first_sorted_labels_in_loc].flat))
                 # If target in map_output_dict reverse it from the reversed map
                 # TODO Edge case if multiple keys have the same value, not used in the current implementation
                 target = {v: k for k, v in map_output_dict.items()}.get(target, target)
