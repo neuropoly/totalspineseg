@@ -19,7 +19,7 @@ Please also cite nnUNet since our work is heavily based on it:
 - [Training](#training)
 - [Inference](#inference)
 - [Localizer based labeling](#localizer-based-labeling)
-- [Output Examples](#output-examples)
+- [Examples](#examples)
 - [List of Classes](#list-of-classes)
 
 ## Model Description
@@ -201,7 +201,7 @@ totalspineseg images output --localizers-dir localizers_output/step2_output --su
 
 Note: If the localizer and main image files have the same names (without suffixes), you can omit the `--suffix` and `--localizers-suffix` arguments.
 
-## Output Examples
+## Examples
 
 TotalSpineSeg demonstrates robust performance across a wide range of imaging parameters. Here are some examples of the model output:
 
