@@ -82,7 +82,7 @@ def main():
     )
     parser.add_argument(
         '--loc-disc-labels', type=lambda x:list(range(int(x.split('-')[0]), int(x.split('-')[-1]) + 1)), nargs='+', default=[],
-        help='The disc labels.'
+        help='The disc labels in the localizer used for detecting first disc.'
     )
     parser.add_argument(
         '--vertebrea-labels', type=lambda x:list(range(int(x.split('-')[0]), int(x.split('-')[-1]) + 1)), nargs='+', default=[],
@@ -102,7 +102,7 @@ def main():
     )
     parser.add_argument(
         '--loc-vertebrea-labels', type=lambda x:list(range(int(x.split('-')[0]), int(x.split('-')[-1]) + 1)), nargs='+', default=[],
-        help='The disc labels.'
+        help='The disc labels in the localizer used for detecting first vertebrae.'
     )
     parser.add_argument(
         '--map-input', type=str, nargs='+', default=[],
