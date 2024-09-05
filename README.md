@@ -18,6 +18,7 @@ Please also cite nnUNet since our work is heavily based on it:
 - [Installation](#installation)
 - [Training](#training)
 - [Inference](#inference)
+- [Localizer based labeling](#localizer-based-labeling)
 - [Output Examples](#output-examples)
 - [List of Classes](#list-of-classes)
 
@@ -142,6 +143,65 @@ Please ensure that your system meets these requirements before proceeding with t
    This will process all .nii.gz files in the INPUT_FOLDER and save the results in the OUTPUT_FOLDER. If you haven't trained the model, the script will automatically download the pre-trained models from the GitHub release.
 
    Additionally, you can use the `-step1` parameter to run only the step 1 model, which outputs a single label for all vertebrae, including the sacrum.
+
+### Output Data Structure:
+
+```
+output_folder/
+├── input/                   # Preprocessed input images
+├── preview/                 # Preview images for all steps
+├── step1_raw/               # Raw outputs from step 1 model
+├── step1_output/            # Results of iterative labeling algorithm for step 1
+├── step1_cord/              # Spinal cord soft segmentations
+├── step1_canal/             # Spinal canal soft segmentations
+├── step1_levels/            # Single voxel in canal centerline at each IVD level
+├── step2_raw/               # Raw outputs from step 2 model
+└── step2_output/            # Results of iterative labeling algorithm for step 2 (final output)
+```
+
+Key points:
+- All segmentations in NIfTI (.nii.gz) format
+- Preview images in JPEG format
+- step1_levels: single voxel in canal centerline at each IVD level, numbered from C1 (1 above C1, 2 above C2, etc.)
+- step2_output: final labeled vertebrae, discs, cord, and canal
+
+## Localizer based labeling
+
+TotalSpineSeg supports using localizer images to improve the labeling process, particularly useful for images with different fields of view (FOV) where landmarks like C1 and sacrum may not be visible.
+
+Example of directory structure:
+
+```
+.
+├── images/
+│   ├── sub-01_T2w.nii.gz
+│   └── sub-02_T2w.nii.gz
+└── localizers/
+    ├── sub-01_T1w.nii.gz
+    └── sub-02_T1w.nii.gz
+```
+
+In this example, main images are placed in the `images` folder and corresponding localizer images in the `localizers` folder.
+
+To use localizer-based labeling:
+
+```bash
+# Process localizer images
+totalspineseg localizers localizers_output
+
+# Run model on main images using localizer output
+totalspineseg images output --localizers-dir localizers_output/step2_output --suffix _T2w --localizers-suffix _T1w
+```
+
+- `--localizers-dir`: Specifies the path to the localizer output
+- `--suffix`: Suffix for the main images (e.g., "_T2w")
+- `--localizers-suffix`: Suffix for the localizer images (e.g., "_T1w")
+
+Note: If the localizer and main image files have the same names (without suffixes), you can omit the `--suffix` and `--localizers-suffix` arguments.
+
+This process ensures consistent labeling across images with different FOVs, even when landmarks like C1 or sacrum are not visible. It uses localizer information to accurately label vertebrae and discs in the main image.
+
+![Localizer](https://github.com/user-attachments/assets/5acf0208-a322-46f9-bbde-b3c961a87ec4)
 
 ## Output Examples
 
