@@ -144,7 +144,7 @@ Please ensure that your system meets these requirements before proceeding with t
 
    Additionally, you can use the `-step1` parameter to run only the step 1 model, which outputs a single label for all vertebrae, including the sacrum.
 
-### Output Data Structure:
+**Output Data Structure:**
 
 ```
 output_folder/
@@ -167,7 +167,9 @@ Key points:
 
 ## Localizer based labeling
 
-TotalSpineSeg supports using localizer images to improve the labeling process, particularly useful for images with different fields of view (FOV) where landmarks like C1 and sacrum may not be visible.
+TotalSpineSeg supports using localizer images to improve the labeling process, particularly useful for images with different fields of view (FOV) where landmarks like C1 and sacrum may not be visible. It uses localizer information to accurately label vertebrae and discs in the main image.
+
+![Localizer](https://github.com/user-attachments/assets/5acf0208-a322-46f9-bbde-b3c961a87ec4)
 
 Example of directory structure:
 
@@ -198,10 +200,6 @@ totalspineseg images output --localizers-dir localizers_output/step2_output --su
 - `--localizers-suffix`: Suffix for the localizer images (e.g., "_T1w")
 
 Note: If the localizer and main image files have the same names (without suffixes), you can omit the `--suffix` and `--localizers-suffix` arguments.
-
-This process ensures consistent labeling across images with different FOVs, even when landmarks like C1 or sacrum are not visible. It uses localizer information to accurately label vertebrae and discs in the main image.
-
-![Localizer](https://github.com/user-attachments/assets/5acf0208-a322-46f9-bbde-b3c961a87ec4)
 
 ## Output Examples
 
