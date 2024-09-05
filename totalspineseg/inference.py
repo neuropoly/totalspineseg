@@ -291,11 +291,12 @@ def main():
         iterative_label_mp(
             output_path / 'step1_output',
             output_path / 'step1_output',
+            locs_path=loc_path,
             seg_suffix=suffix,
             output_seg_suffix=suffix,
             loc_suffix=loc_suffix,
             disc_labels=[1, 2, 3, 4, 5],
-            init_disc={2:224, 5:202, 3:219, 4:207},
+            init_disc={2:224, 5:202},
             output_disc_step=-1,
             loc_disc_labels=list(range(202, 225)),
             map_input_dict={6:92, 7:201, 8:201, 9:200},
@@ -520,6 +521,7 @@ def main():
             iterative_label_mp(
                 output_path / 'step2_output',
                 output_path / 'step2_output',
+                locs_path=loc_path,
                 seg_suffix=suffix,
                 output_seg_suffix=suffix,
                 loc_suffix=loc_suffix,
