@@ -386,7 +386,7 @@ def _iterative_label(
 
     # Load segmentation and localizer images
     seg = nib.load(seg_path)
-    loc = loc_path and loc_path.is_file() and nib.load(loc_path)
+    loc = loc_path and (loc_path.is_file() or None) and nib.load(loc_path)
 
     try:
         output_seg = iterative_label(
