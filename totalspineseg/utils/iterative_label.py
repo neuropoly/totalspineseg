@@ -38,7 +38,11 @@ def main():
     )
     parser.add_argument(
         '--locs-dir', '-l', type=Path, default=None,
-        help='Folder containing localizers to use for detecting first vertebrea and disc if init label not found, Optional.'
+        help=' '.join(f'''
+            Folder containing localizers segmentations to use for detecting first vertebrea and disc if init label not found, Optional.
+            The algorithm will transform the localizer to the segmentation space and use it to detect the matching vertebrae and disc if the init label not found.
+            Mathcing will based on the magority of the voxels of the first vertebrae or disc in the localizer, that intersect with the input segmentation.
+        '''.split())
     )
     parser.add_argument(
         '--subject-dir', '-d', type=str, default=None, nargs='?', const='',
