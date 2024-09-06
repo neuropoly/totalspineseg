@@ -1,8 +1,88 @@
+[project]
+name = "totalspineseg"
+version = "20240826"
+requires-python = ">=3.9"
+description = "TotalSpineSeg is a tool for automatic instance segmentation and labeling of all vertebrae, intervertebral discs (IVDs), spinal cord, and spinal canal in MRI images."
+readme = "README.md"
+authors = [
+    { name = "Yehuda Warszawer", email = "yehuda.warszawer@sheba.health.gov.il"},
+    { name = "Nathan Molinier"},
+    { name = "Jan Valosek"},
+    { name = "Emanuel Shirbint"},
+    { name = "Pierre-Louis Benveniste"},
+    { name = "Anat Achiron"},
+    { name = "Arman Eshaghi"},
+    { name = "Julien Cohen-Adad"},
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Image Recognition",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+    "Topic :: Scientific/Engineering :: MRI Images.",
+    "Topic :: Scientific/Engineering :: Spinal Cord.",
+    "Topic :: Scientific/Engineering :: Spine.",
+]
+keywords = [
+    'deep learning',
+    'image segmentation',
+    'semantic segmentation',
+    'medical image analysis',
+    'medical image segmentation',
+    'nnU-Net',
+    'nnunet',
+    'mri',
+    'spine',
+    'ivd',
+    'intervertebral disc',
+    'spinal cord',
+]
+dependencies = [
+    "tqdm",
+    "numpy<2",
+    "nibabel",
+    "gryds",
+    "torchio",
+    "scipy",
+    "pillow",
+    "nilearn",
+    "SimpleITK",
+    "nnunetv2>=2.5.1",
+    "psutil",
+]
+
+[project.urls]
+homepage = "https://github.com/neuropoly/totalspineseg"
+repository = "https://github.com/neuropoly/totalspineseg"
+Dataset101_TotalSpineSeg_step1 = "https://github.com/neuropoly/totalspineseg/releases/download/r20240826/Dataset101_TotalSpineSeg_step1.zip"
+Dataset102_TotalSpineSeg_step2 = "https://github.com/neuropoly/totalspineseg/releases/download/r20240826/Dataset102_TotalSpineSeg_step2.zip"
+
+[project.scripts]
+totalspineseg = "totalspineseg.inference:main"
+totalspineseg_cpdir = "totalspineseg.utils.cpdir:main"
+totalspineseg_fill_canal = "totalspineseg.utils.fill_canal:main"
+totalspineseg_augment = "totalspineseg.utils.augment:main"
+totalspineseg_iterative_label = "totalspineseg.utils.iterative_label:main"
+totalspineseg_largest_component = "totalspineseg.utils.largest_component:main"
+totalspineseg_resample = "totalspineseg.utils.resample:main"
+totalspineseg_preview_jpg = "totalspineseg.utils.preview_jpg:main"
+totalspineseg_map_labels = "totalspineseg.utils.map_labels:main"
+totalspineseg_transform_seg2image = "totalspineseg.utils.transform_seg2image:main"
+totalspineseg_reorient_canonical = "totalspineseg.utils.reorient_canonical:main"
+totalspineseg_average4d = "totalspineseg.utils.average4d:main"
+totalspineseg_crop_image2seg = "totalspineseg.utils.crop_image2seg:main"
+totalspineseg_extract_soft = "totalspineseg.utils.extract_soft:main"
+totalspineseg_extract_levels = "totalspineseg.utils.extract_levels:main"
+totalspineseg_add_nnunet_trainer = "totalspineseg.utils.add_nnunet_trainer:main"
+
 [build-system]
-requires = ["setuptools"]
+requires = ["pip>=23", "setuptools>=67"]
 build-backend = "setuptools.build_meta"
 
-[project]
-name = "totalsegmri"
-version = "0.0.1"
-dependencies = []
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.package-data]
+'totalspineseg' = ['resources/**.json']

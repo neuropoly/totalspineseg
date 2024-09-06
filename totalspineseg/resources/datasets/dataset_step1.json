@@ -1,0 +1,20 @@
+{
+    "channel_names": {
+        "0": "MRI"
+    },
+    "labels": {
+        "background": 0,
+        "disc": [1,2,3,4,5],
+        "disc_C2_C3": 2,
+        "disc_C7_T1": 3,
+        "disc_T12_L1": 4,
+        "disc_L5_S": 5,
+        "vertebrae": 6,
+        "canal": [7,8,9],
+        "csf": 8,
+        "cord": 9
+    },
+    "regions_class_order": [1,2,3,4,5,6,7,8,9],
+    "numTraining": 0,
+    "file_ending": ".nii.gz"
+}

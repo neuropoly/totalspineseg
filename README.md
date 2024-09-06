@@ -1,95 +1,166 @@
 # TotalSpineSeg
 
-Tool for automatic segmentation and labelling of all vertebrae and intervertebral discs (IVDs), spinal cord, and spinal canal. We follow [TotalSegmentator classes](https://github.com/wasserth/TotalSegmentator?tab=readme-ov-file#class-details) with an additional class for IVDs, spinal cord and spinal canal (See list of class [here](#list-of-class)). We used [nnUNet](https://github.com/MIC-DKFZ/nnUNet) as our backbone for model training and inference.
+TotalSpineSeg is a tool for automatic instance segmentation and labeling of all vertebrae, intervertebral discs (IVDs), spinal cord, and spinal canal in MRI images. It follows the [TotalSegmentator classes](https://github.com/wasserth/TotalSegmentator/tree/v1.5.7#class-details) with additional classes for IVDs, spinal cord, and spinal canal (see [list of classes](#list-of-classes)). The model is based on [nnUNet](https://github.com/MIC-DKFZ/nnUNet) as the backbone for training and inference.
 
 If you use this model, please cite our work:
 > Warszawer Y, Molinier N, Valošek J, Shirbint E, Benveniste PL, Achiron A, Eshaghi A and Cohen-Adad J. _Fully Automatic Vertebrae and Spinal Cord Segmentation Using a Hybrid Approach Combining nnU-Net and Iterative Algorithm_.	Proceedings of the 32th Annual Meeting of ISMRM. 2024
 
+Please also cite nnUNet since our work is heavily based on it:
+> Isensee, F., Jaeger, P. F., Kohl, S. A., Petersen, J., & Maier-Hein, K. H. (2021). nnU-Net: a self-configuring method for deep learning-based biomedical image segmentation. Nature methods, 18(2), 203-211.
+
+![Thumbnail](https://github.com/user-attachments/assets/2c1b1ff9-daaa-479f-8d21-01a66b9c9cb4)
+
+## Table of Contents
+
+- [Model Description](#model-description)
+- [Datasets](#datasets)
 - [Dependencies](#dependencies)
 - [Installation](#installation)
-- [First Model](#first-model)
-  - [First Model - Train](#first-model---train)
-  - [First Model - Inference](#first-model---inference)
-- [List of class](#list-of-class)
+- [Training](#training)
+- [Inference](#inference)
+- [Output Examples](#output-examples)
+- [List of Classes](#list-of-classes)
 
-![Thumbnail](https://github.com/neuropoly/totalsegmentator-mri/assets/36595323/ceca5bb7-f370-477a-8b21-9774853948c6)
+## Model Description
+
+TotalSpineSeg uses a hybrid approach that integrates nnU-Net with an iterative algorithm for instance segmentation and labeling of vertebrae, intervertebral discs (IVDs), spinal cord, and spinal canal. The process involves two main steps:
+
+**Step 1**: An nnUnet model (`Dataset101`) was trained to identify 8 classes in total (Figure 1A). This includes 4 main classes: spinal cord, spinal canal, IVDs, and vertebrae. Additionally, it identifies 4 specific IVDs: C2-C3, C7-T1, T12-L1, and L5-S, which represent key anatomical landmarks along the spine. The output segmentation was then processed using an iterative algorithm. This algorithm extracts odd IVDs segmentation based on the C2-C3, C7-T1, T12-L1, and L5-S IVD labels produced by the model (Figure 1B).
+
+**Step 2:** A second nnUNet model (`Dataset102`) was trained to identify 14 classes in total (Figure 1C). This includes 6 main classes: spinal cord, spinal canal, odd IVDs, even IVDs, odd vertebrae, and even vertebrae. Additionally, it identifies 4 specific IVDs: C2-C3, C7-T1, T12-L1, and L5-S, and 4 specific vertebrae: C2, T1, T12, and Sacrum. This model uses two input channels: the MRI image and the odd IVDs extracted from the first step. The output segmentation was then processed using an algorithm that assigns an individual label value to each vertebra and IVD in the final segmentation mask (Figure 1D).
+
+For comparison, we also trained a single model (`Dataset103`) that outputs individual label values for each vertebra and IVD in a single step.
+
+![Figure 1](https://github.com/neuropoly/totalspineseg/assets/36595323/84fae79f-442b-48c3-bcdb-ce4ea857ac59)
+
+**Figure 1**: Illustration of the hybrid method for automatic segmentation of the spine and spinal cord structures. T1w image (A) is used to train model 1, which outputs 8 classes (B). These output labels are processed to extract odd IVDs (C). The T1w and odd IVDs are used as two input channels to train model 2, which outputs 14 classes (D). These output labels are processed to extract individual IVDs and vertebrae (E).
+
+## Datasets
+
+Our model is trained on those datasets:
+- Private whole-spine dataset (Internal access: `git@data.neuro.polymtl.ca:datasets/whole-spine.git`).
+- [SPIDER](https://doi.org/10.5281/zenodo.10159290) project dataset (Internal access: `git@data.neuro.polymtl.ca:datasets/spider-challenge-2023.git`)
+- [Spine Generic Project](https://github.com/spine-generic), including single and multi subject datasets (Public access: `git@github.com:spine-generic/data-single-subject.git` and `git@github.com:spine-generic/data-multi-subject.git`).
 
 ## Dependencies
 
-- [Spinal Cord Toolbox (SCT)](https://github.com/neuropoly/spinalcordtoolbox)
+- `bash` terminal
+- [Python](https://www.python.org/) >= 3.9, with pip >= 23 and setuptools >= 67
 
 ## Installation
 
-1. Open Terminal in a directory you want to work on.
+1. Open a `bash` terminal in the directory where you want to work.
 
-1. Create and activate Virtual Environment (Highly recommanded):
-    ```
-    python -m venv venv
-    source venv/bin/activate
-    ```
+1. Create the installation directory:
+   ```bash
+   mkdir TotalSpineSeg
+   cd TotalSpineSeg
+   ```
 
-1. Install [PyTorch](https://pytorch.org/get-started/locally/) as described on their website.
+1. Create and activate a virtual environment (highly recommended):
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate
+   ```
 
 1. Clone and install this repository:
-    ```
-    git clone https://github.com/neuropoly/totalsegmentator-mri.git
-    python -m pip install -e totalsegmentator-mri
-    ```
+   ```bash
+   git clone https://github.com/neuropoly/totalspineseg.git
+   python3 -m pip install -e totalspineseg
+   ```
 
-1. Install requirements:
-    ```
-    python -m pip install -r totalsegmentator-mri/requirements.txt
-    ```
+1. For CUDA GPU support, install **PyTorch** following the instructions on their [website](https://pytorch.org/). Be sure to add the `--upgrade` flag to your installation command to replace any existing PyTorch installation.
+   Example:
+     ```bash
+     python3 -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 --upgrade
+     ```
 
-## First Model
-A hybrid approach integrating nnU-Net with an iterative algorithm for segmenting vertebrae, IVDs, spinal cord, and spinal canal. To tackle the challenge of having many classes and class imbalance, we developed a two-step training process. A first model (model 1 - 206) was trained (single input channel: image) to identify 4 classes (IVDs, vertebrae, spinal cord and spinal canal) as well as specific IVDs (C2-C3, C7-T1 and L5-S1) representing key anatomical landmarks along the spine, so 7 classes in total (Figure 1A). The output segmentation was processed using an algorithm that distinguished odd and even IVDs based on the C2-C3, C7-T1 and L5-S1 IVD labels output by the model (Figure 1B). Then, a second nnU-Net model (model 2 - 210) was trained (two input channels: 1=image, 2=odd IVDs), to output 12 classes (Figure 1C). Finally, the output of model 2 was processed in order to assign an individual label value to each vertebrae and IVD in the final segmentation mask (Figure 1D).
+1. Set the path to TotalSpineSeg and data folders in the virtual environment:
+   ```bash
+   mkdir data
+   export TOTALSPINESEG="$(realpath totalspineseg)"
+   export TOTALSPINESEG_DATA="$(realpath data)"
+   echo "export TOTALSPINESEG=\"$TOTALSPINESEG\"" >> venv/bin/activate
+   echo "export TOTALSPINESEG_DATA=\"$TOTALSPINESEG_DATA\"" >> venv/bin/activate
+   ```
 
-![Figure 1](https://github.com/neuropoly/totalsegmentator-mri/assets/36595323/3958cbc6-a059-4ccf-b3b1-02dbc3a4a62d)
+## Training
 
-**Figure 1**: Illustration of the hybrid method for automatic segmentation of the spine and spinal cord structures. T1w image (A) is used to train model 1, which outputs 7 classes (B). These output labels are processed to extract odd IVDs (C). The T1w and odd IVDs are used as two input channels to train model 2, which outputs 12 classes (D). These output labels are processed to extract individual IVDs and vertebrae (E).
+To train the TotalSpineSeg model, you will need the following hardware specifications:
+- Approximately 3.5TB of available disk space (for training with data augmentation)
+- RAM capacity of at least 32GB
+- CUDA GPU with at least 8GB of VRAM
 
-### First Model - Train
+Please ensure that your system meets these requirements before proceeding with the training process.
 
-1. Download the corresponding content from [SPIDER dataset](https://doi.org/10.5281/zenodo.10159290) into 'data/raw/spider/images' and 'data/raw/spider/masks' (you can use `mkdir -p data/raw/spider` to create the folder first).
+1. Make sure that the `bash` terminal is opened with the virtual environment (if used) activated (using `source <path to installation directory>/venv/bin/activate`).
 
-1. Make sure `git` and `git-annex` are installed (You can install with `sudo apt-get install git-annex -y`).
+1. Ensure training dependencies are installed:
+   ```bash
+   apt-get install git git-annex jq -y
+   ```
 
-1. Extract [data-multi-subject_PAM50_seg.zip](https://drive.google.com/file/d/1Sq38xLHnVxhLr0s1j27ywbeshNUjo3IP) into 'data/bids/data-multi-subject'.
+1. Download the required datasets into `$TOTALSPINESEG_DATA/bids` (make sure you have access to the specified repositories):
+   ```bash
+   bash "$TOTALSPINESEG"/scripts/download_datasets.sh
+   ```
 
-1. Extract [data-single-subject_PAM50_seg.zip](https://drive.google.com/file/d/1YvuFHL8GDJ5SXlMLORWDjR5SNkDL6TUU) into 'data/bids/data-single-subject'.
+1. Temporary step (until all labels are pushed into the repositories) - Download labels into `$TOTALSPINESEG_DATA/bids`:
+   ```bash
+   curl -L -O https://github.com/neuropoly/totalspineseg/releases/download/labels/labels_iso_bids_0524.zip
+   unzip -qo labels_iso_bids_0524.zip -d "$TOTALSPINESEG_DATA"
+   rm labels_iso_bids_0524.zip
+   ```
 
-1. Extract [whole-spine.zip](https://drive.google.com/file/d/143i0ODmeqohpc4vu5Aa5lnv8LLEyOU0F) (private dataset) into 'data/bids/whole-spine'.
+1. Prepare datasets in nnUNetv2 structure into `$TOTALSPINESEG_DATA/nnUnet`:
+   ```bash
+   bash "$TOTALSPINESEG"/scripts/prepare_datasets.sh [DATASET_ID] [-noaug]
+   ```
 
-1. Get the required datasets from [Spine Generic Project](https://github.com/spine-generic/):
-    ```
-    source totalsegmentator-mri/run/get_spine_generic_datasets.sh
-    ```
+   The script optionally accepts `DATASET_ID` as the first positional argument to specify the dataset to prepare. It can be either 101, 102, 103, or all. If `all` is specified, it will prepare all datasets (101, 102, 103). By default, it will prepare datasets 101 and 102.
 
-1. Prepares SPIDER datasets in [BIDS](https://bids.neuroimaging.io/) structure:
-    ```
-    source totalsegmentator-mri/run/prepare_spider_bids_datasets.sh
-    ```
-
-1. Prepares datasets in nnUNetv2 structure:
-    ```
-    source totalsegmentator-mri/run/prepare_nnunet_datasets.sh
-    ```
+   Additionally, you can use the `-noaug` parameter to prepare the datasets without data augmentations.
 
 1. Train the model:
-    ```
-    source totalsegmentator-mri/run/train_nnunet.sh
-    ```
+   ```bash
+   bash "$TOTALSPINESEG"/scripts/train.sh [DATASET_ID [FOLD]]
+   ```
 
-### First Model - Inference
-Run the model on a folder containing the images in .nii.gz format (Make sure to train the model or extract the trained `nnUNet_results` into `data/nnUNet/nnUNet_results` befor running):
-```
-source totalsegmentator-mri/run/inference_nnunet.sh INPUT_FOLDER OUTPUT_FOLDER
-```
+   The script optionally accepts `DATASET_ID` as the first positional argument to specify the dataset to train. It can be either 101, 102, 103, or all. If `all` is specified, it will train all datasets (101, 102, 103). By default, it will train datasets 101 and 102.
 
-## List of class
+   Additionally, you can specify `FOLD` as the second positional argument to specify the fold. It can be either 0, 1, 2, 3, 4, 5 or all. By default, it will train with fold 0.
 
-|Label|Name|
-|:-----|:-----|
+## Inference
+
+1. Make sure that the `bash` terminal is opened with the virtual environment (if used) activated (using `source <path to installation directory>/venv/bin/activate`).
+
+1. Run the model on a folder containing the images in .nii.gz format:
+   ```bash
+   totalspineseg INPUT_FOLDER OUTPUT_FOLDER [-step1]
+   ```
+
+   This will process all .nii.gz files in the INPUT_FOLDER and save the results in the OUTPUT_FOLDER. If you haven't trained the model, the script will automatically download the pre-trained models from the GitHub release.
+
+   Additionally, you can use the `-step1` parameter to run only the step 1 model, which outputs a single label for all vertebrae, including the sacrum.
+
+## Output Examples
+
+TotalSpineSeg demonstrates robust performance across a wide range of imaging parameters. Here are some examples of the model output:
+
+![Model Output Preview](https://github.com/user-attachments/assets/78da2599-3bf2-4bc0-95b2-328acecd956f)
+
+The examples shown above include segmentation results on various contrasts (T1w, T2w, STIR, MTS, T2star, and even CT images), acquisition orientations (sagittal, axial), and resolutions.
+
+For a more detailed view of the output examples, you can check the PDF version:
+
+[Preview PDF](https://github.com/user-attachments/files/16873633/preview.pdf)
+
+The PDF includes step 1 and step 2 results together with the iterative labeling algorithm for each step.
+
+## List of Classes
+
+| Label | Name |
+|:------|:-----|
 | 18 | vertebrae_L5 |
 | 19 | vertebrae_L4 |
 | 20 | vertebrae_L3 |
