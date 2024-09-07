@@ -159,6 +159,8 @@ output_folder/
 └── step2_output/            # Results of iterative labeling algorithm for step 2 (final output)
 ```
 
+**Important Note:** The spinal cord segmentation provided by TotalSpineSeg is not intended to replace, nor has it been validated for, cross-sectional area (CSA) analysis. Additionally, it has not been tested against spinal cord compressions or MS lesions and should not be used for these purposes. For CSA analysis, please use the validated algorithms available from the [Spinal Cord Toolbox](https://spinalcordtoolbox.com/user_section/tutorials/segmentation.html).
+
 Key points:
 - All segmentations in NIfTI (.nii.gz) format
 - Preview images in JPEG format
