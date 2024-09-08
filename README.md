@@ -135,14 +135,19 @@ Please ensure that your system meets these requirements before proceeding with t
 
 1. Make sure that the `bash` terminal is opened with the virtual environment (if used) activated (using `source <path to installation directory>/venv/bin/activate`).
 
-1. Run the model on a folder containing the images in .nii.gz format:
+1. Run the model on a folder containing the images in .nii.gz format, or on a single .nii.gz file:
    ```bash
-   totalspineseg INPUT_FOLDER OUTPUT_FOLDER [-step1]
+   totalspineseg INPUT OUTPUT_FOLDER [--step1]
    ```
 
-   This will process all .nii.gz files in the INPUT_FOLDER and save the results in the OUTPUT_FOLDER. If you haven't trained the model, the script will automatically download the pre-trained models from the GitHub release.
+   This will process the images in INPUT or the single image and save the results in OUTPUT_FOLDER. If you haven't trained the model, the script will automatically download the pre-trained models from the GitHub release.
 
-   Additionally, you can use the `-step1` parameter to run only the step 1 model, which outputs a single label for all vertebrae, including the sacrum.
+   Additionally, you can use the `--step1` parameter to run only the step 1 model, which outputs a single label for all vertebrae, including the sacrum.
+
+   For more options, you can use the `--help` parameter:
+   ```bash
+   totalspineseg --help
+   ```
 
 **Output Data Structure:**
 
@@ -194,14 +199,14 @@ To use localizer-based labeling:
 totalspineseg localizers localizers_output
 
 # Run model on main images using localizer output
-totalspineseg images output --localizers-dir localizers_output/step2_output --suffix _T2w --localizers-suffix _T1w
+totalspineseg images output --loc localizers_output/step2_output --suffix _T2w --loc-suffix _T1w
 ```
 
-- `--localizers-dir`: Specifies the path to the localizer output
+- `--loc`: Specifies the path to the localizer output
 - `--suffix`: Suffix for the main images (e.g., "_T2w")
-- `--localizers-suffix`: Suffix for the localizer images (e.g., "_T1w")
+- `--loc-suffix`: Suffix for the localizer images (e.g., "_T1w")
 
-Note: If the localizer and main image files have the same names (without suffixes), you can omit the `--suffix` and `--localizers-suffix` arguments.
+Note: If the localizer and main image files have the same names (without suffixes), you can omit the `--suffix` and `--loc-suffix` arguments.
 
 ## Results
 
