@@ -209,7 +209,7 @@ def main():
         (output_path / 'localizers').mkdir(parents=True, exist_ok=True)
 
         # List all localizers in the localizers folder
-        locs = list(loc_path.glob(f'*{loc_suffix}.nii.gz'))
+        locs = list(loc_path.glob(f'*{loc_suffix}.nii.gz')) + list(loc_path.glob(f'sub-*/anat/*{loc_suffix}.nii.gz'))
 
         # Copy the localizers to the output folder
         for image in (output_path / 'input').glob('*_0000.nii.gz'):
@@ -222,6 +222,17 @@ def main():
                 loc = next((_ for _ in locs if fnmatch(image.name, _.name.replace(f'{loc_suffix}.nii.gz', f'{image_suffix}_0000.nii.gz'))), None)
             if loc:
                 shutil.copy(loc, output_path / 'localizers' / image.name.replace('_0000.nii.gz', f'.nii.gz'))
+
+        if not quiet: print('\n' 'Generating preview images for the localizers:')
+        preview_jpg_mp(
+            output_path / 'input',
+            output_path / 'preview',
+            segs_path=output_path / 'localizers',
+            output_suffix='_loc',
+            override=True,
+            max_workers=max_workers,
+            quiet=quiet,
+        )
 
     if not quiet: print('\n' 'Converting 4D images to 3D:')
     average4d_mp(
