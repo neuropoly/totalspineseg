@@ -164,7 +164,7 @@ output_folder/
 └── step2_output/            # Results of iterative labeling algorithm for step 2 (final output)
 ```
 
-**Important Note:** The spinal cord segmentation provided by TotalSpineSeg is not intended to replace, nor has it been validated for, cross-sectional area (CSA) analysis. Additionally, it has not been tested against spinal cord compressions or MS lesions and should not be used for these purposes. For CSA analysis, please use the validated algorithms available from the [Spinal Cord Toolbox](https://spinalcordtoolbox.com/user_section/tutorials/segmentation.html).
+**Important Note:** While TotalSpineSeg provides spinal cord segmentation, it is not intended to replace validated methods for cross-sectional area (CSA) analysis. The spinal cord segmentation from TotalSpineSeg has not been validated for CSA measurements, nor has it been tested on cases involving spinal cord compressions, MS lesions, or other spinal cord abnormalities. For accurate CSA analysis, we strongly recommend using the validated algorithms available in the [Spinal Cord Toolbox](https://spinalcordtoolbox.com/user_section/tutorials/segmentation.html).
 
 Key points:
 - All segmentations in NIfTI (.nii.gz) format
@@ -206,7 +206,7 @@ totalspineseg images output --loc localizers_output/step2_output --suffix _T2w -
 - `--suffix`: Suffix for the main images (e.g., "_T2w")
 - `--loc-suffix`: Suffix for the localizer images (e.g., "_T1w")
 
-Note: If the localizer and main image files have the same names (without suffixes), you can omit the `--suffix` and `--loc-suffix` arguments.
+Note: If the localizer and main image files have the same names, you can omit the `--suffix` and `--loc-suffix` arguments.
 
 ## Results
 
