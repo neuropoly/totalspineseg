@@ -456,7 +456,7 @@ def iterative_label(
 
     output_seg_data = np.zeros_like(seg_data)
 
-    # Get sorted connected components superio-inferior (SI) for the disc and vertebrae labels
+    # Get sorted connected components superio-inferior (SI) for the disc labels
     disc_mask_labeled, disc_num_labels, disc_sorted_labels, disc_sorted_z_indexes = _get_si_sorted_components(
         seg,
         disc_labels,
@@ -484,7 +484,7 @@ def iterative_label(
     )
 
     # Get the first disc label
-    disc_first_label = _get_first_label(
+    superior_disc_output_label = _get_superior_output_label(
         seg,
         loc,
         disc_mask_labeled,
@@ -504,13 +504,17 @@ def iterative_label(
     # Sort the labels by their z-index (reversed to go from superior to inferior)
     sorted_z_indexes, sorted_labels, is_vert = zip(*sorted(zip(sorted_z_indexes, sorted_labels, is_vert))[::-1])
 
-    # Get index of first vert in is_vert
-    # To cover cases with C1 and C2 we have to adjust the first vertebrae label by the position of the first disc
-    vert_first_label = output_c2 + (disc_first_label - output_c2c3) * (output_vertebrae_step / output_disc_step) - (is_vert.index(False) - 1) * output_vertebrae_step
+    # Get the superior output label for the vertebrae based on the superior disc label
+    # For C1 and C2 we have to adjust the first vertebrae label by the position of the first disc with substraction of (is_vert.index(False) - 1) * output_vertebrae_step
+    superior_vert_output_label = output_c2 + (superior_disc_output_label - output_c2c3) * (output_vertebrae_step / output_disc_step) - (is_vert.index(False) - 1) * output_vertebrae_step
+
+    # Label the vertebrae with the output labels superio-inferior
     for i in range(vert_num_labels):
-        output_seg_data[vert_mask_labeled == vert_sorted_labels[i]] = vert_first_label + output_vertebrae_step * i
+        output_seg_data[vert_mask_labeled == vert_sorted_labels[i]] = superior_vert_output_label + output_vertebrae_step * i
+
+    # Label the discs with the output labels superio-inferior
     for i in range(disc_num_labels):
-        output_seg_data[disc_mask_labeled == disc_sorted_labels[i]] = disc_first_label + output_disc_step * i
+        output_seg_data[disc_mask_labeled == disc_sorted_labels[i]] = superior_disc_output_label + output_disc_step * i
 
     # Use the map to map labels from the iteative algorithm output, to the final output
     # This is useful to map the vertebrae label from the iteative algorithm output to the special sacrum label
@@ -703,7 +707,7 @@ def _merge_vertebrae_labels(
 
     return mask_labeled, num_labels, list(sorted_labels), list(sorted_z_indexes)
 
-def _get_first_label(
+def _get_superior_output_label(
         seg,
         loc,
         mask_labeled,
@@ -730,14 +734,14 @@ def _get_first_label(
         ).data.numpy()[0, ...].astype(np.uint8)
 
     # Find the most superior label in the segmentation
-    first_label = 0
+    superior_output_label = 0
     for k, v in init.items():
         if k in seg_data:
-            first_label = v - step * sorted_labels.index(mask_labeled[seg_data == k].flat[0])
+            superior_output_label = v - step * sorted_labels.index(mask_labeled[seg_data == k].flat[0])
             break
 
     # If no init label found, set it from the localizer
-    if first_label == 0 and loc_data is not None:
+    if superior_output_label == 0 and loc_data is not None:
         # Make mask for the intersection of the localizer labels and the labels in the segmentation
         mask = np.isin(loc_data, loc_labels) * np.isin(mask_labeled, sorted_labels)
 
@@ -752,17 +756,17 @@ def _get_first_label(
             # If target in map_output_dict reverse it from the reversed map
             # TODO Edge case if multiple keys have the same value, not used in the current implementation
             target = {v: k for k, v in map_output_dict.items()}.get(target, target)
-            first_label = target - step * sorted_labels.index(first_sorted_labels_in_loc)
+            superior_output_label = target - step * sorted_labels.index(first_sorted_labels_in_loc)
 
     # If no init label found, set the default superior label
-    if first_label == 0 and default_superior > 0:
-        first_label = default_superior
+    if superior_output_label == 0 and default_superior > 0:
+        superior_output_label = default_superior
 
     # If no init label found, print error
-    if first_label == 0:
+    if superior_output_label == 0:
         raise ValueError(f"Some initiation label must be in the segmentation (init: {list(init.keys())})")
 
-    return first_label
+    return superior_output_label
 
 def _fill(mask):
     '''
