@@ -737,7 +737,7 @@ def _get_superior_output_label(
     superior_output_label = 0
     for k, v in init.items():
         if k in seg_data:
-            superior_output_label = v - step * sorted_labels.index(mask_labeled[seg_data == k].flat[0])
+            superior_output_label = v - step * sorted_labels.index(np.argmax(np.bincount(mask_labeled[seg_data == k].flat)))
             break
 
     # If no init label found, set it from the localizer
