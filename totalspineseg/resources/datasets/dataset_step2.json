@@ -10,17 +10,14 @@
         "disc_C7_T1": 3,
         "disc_T12_L1": 4,
         "disc_L5_S": 5,
-        "vertebrae": [6,7,8,9,10,11,12],
+        "vertebrae": [6,7,8,9],
         "vertebrae_O": 7,
         "vertebrae_E": 8,
-        "vertebrae_C2": 9,
-        "vertebrae_T1": 10,
-        "vertebrae_T12": 11,
-        "sacrum": 12,
-        "canal": [13,14],
-        "cord": 14
+        "sacrum": 9,
+        "canal": [10,11],
+        "cord": 11
     },
-    "regions_class_order": [1,2,3,4,5,6,7,8,9,10,11,12,13,14],
+    "regions_class_order": [1,2,3,4,5,6,7,8,9,10,11],
     "numTraining": 0,
     "file_ending": ".nii.gz"
 }
