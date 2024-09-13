@@ -20,10 +20,12 @@ def main():
         '''.split()),
         epilog=textwrap.dedent('''
             Examples:
-            iterative_label -s labels_init -o labels --disc-labels 1-7 --vertebrae-labels 9-14 --vertebrae-extra-labels 8 --init-disc 4:224 7:202 5:219 6:207 --output-disc-step -1 --output-vertebrae-step -1 --map-output 17:92 --map-input 14:92 16:201 17:200 --output-c2c3 224 --output-c2 40 -r
-            iterative_label -s labels_init -o labels -l localizers --disc-labels 1-7 --vertebrae-labels 9-14 --vertebrae-extra-labels 8 --init-disc 4:224 7:202 --output-disc-step -1 --output-vertebrae-step -1 --loc-disc-labels 202-224 --map-output 17:92 --map-input 14:92 16:201 17:200 --output-c2c3 224 --output-c2 40 -r
+            iterative_label -s labels_init -o labels --selected-disc-landmarks 2 5 3 4 --disc-labels 1-5 --disc-landmark-labels 2 3 4 5 --disc-landmark-output-labels 60 70 90 100 --map-input 6:50 7:2 8:2 9:1 -r
+            iterative_label -s labels_init -o labels --selected-disc-landmarks 2 5 3 4 --disc-labels 1-7 --disc-landmark-labels 4 5 6 7 --disc-landmark-output-labels 60 70 90 100 --vertebrae-labels 9-14 --vertebrae-landmark-output-labels 12 20 40 50 --vertebrae-extra-labels 8 --map-output 17:50 --map-input 14:50 15:2 16:2 17:1 -r
+            iterative_label -s labels_init -o labels -l localizers --selected-disc-landmarks 2 5 --disc-labels 1-5 --disc-landmark-labels 2 3 4 5 --disc-landmark-output-labels 60 70 90 100 --map-input 6:50 7:2 8:2 9:1 --loc-disc-labels 60-100 -r
+            iterative_label -s labels_init -o labels -l localizers --selected-disc-landmarks 4 7 --disc-labels 1-7 --disc-landmark-labels 4 5 6 7 --disc-landmark-output-labels 60 70 90 100 --vertebrae-labels 9-14 --vertebrae-landmark-output-labels 12 20 40 50 --vertebrae-extra-labels 8 --map-output 17:50 --map-input 14:50 15:2 16:2 17:1 --loc-disc-labels 60-100 -r
             For BIDS:
-            iterative_label -s derivatives/labels -o derivatives/labels --seg-suffix "_seg" --output-seg-suffix "_seg_seq" -d "sub-" -u "anat" --disc-labels 1 2 3 4 5 6 7 --vertebrae-labels 9 10 11 12 13 14 --vertebrae-extra-labels 8 --init-disc 4:224 7:202 5:219 6:207 --output-disc-step -1 --output-vertebrae-step -1 --map-output 17:92 --map-input 14:92 16:201 17:200 --output-c2c3 224 --output-c2 40 -r
+            iterative_label -s derivatives/labels -o derivatives/labels --seg-suffix "_seg" --output-seg-suffix "_seg_seq" -d "sub-" -u "anat" --selected-disc-landmarks 2 5 3 4 --disc-labels 1-5 --disc-landmark-labels 2 3 4 5 --disc-landmark-output-labels 60 70 90 100 --map-input 6:50 7:2 8:2 9:1 -r
         '''),
         formatter_class=argparse.RawTextHelpFormatter
     )
@@ -73,40 +75,48 @@ def main():
         help='Localizer suffix, defaults to "".'
     )
     parser.add_argument(
+        '--selected-disc-landmarks', type=int, nargs='+', default=[],
+        help='The selected disc labels to use as a landmark from the disc_landmark_labels.'
+    )
+    parser.add_argument(
         '--disc-labels', type=lambda x:list(range(int(x.split('-')[0]), int(x.split('-')[-1]) + 1)), nargs='+', default=[],
         help='The disc labels.'
     )
     parser.add_argument(
-        '--init-disc', type=lambda x:map(int, x.split(':')), nargs='+', default=[],
-        help='Init labels list for disc ordered by priority (input_label:output_label !!without space!!). for example 4:224 5:219 6:202'
+        '--disc-landmark-labels', type=int, nargs=4,
+        help='All disc labels that can be used as a landmark: C2C3, C7T1, T12L1 and L5S1.'
     )
     parser.add_argument(
-        '--output-c2c3', type=int, default=0,
-        help='The output label for C2C3, used to calculate the first vertebrae label, defaults to 0.'
+        '--disc-landmark-output-labels', type=int, nargs=4,
+        help='List of output labels for discs C2C3, C7T1, T12L1 and L5S1.'
     )
     parser.add_argument(
-        '--output-disc-step', type=int, default=1,
+        '--disc-output-step', type=int, default=1,
         help='The step to take between disc labels in the output, defaults to 1.'
-    )
-    parser.add_argument(
-        '--loc-disc-labels', type=lambda x:list(range(int(x.split('-')[0]), int(x.split('-')[-1]) + 1)), nargs='+', default=[],
-        help='The disc labels in the localizer used for detecting first disc.'
     )
     parser.add_argument(
         '--vertebrae-labels', type=lambda x:list(range(int(x.split('-')[0]), int(x.split('-')[-1]) + 1)), nargs='+', default=[],
         help='The vertebrae labels.'
     )
     parser.add_argument(
+        '--vertebrae-landmark-output-labels', type=int, nargs=4,
+        help='List of output labels for vertebrae C3, T1, L1, Sacrum.'
+    )
+    parser.add_argument(
+        '--vertebrae-output-step', type=int, default=1,
+        help='The step to take between vertebrae labels in the output, defaults to 1.'
+    )
+    parser.add_argument(
         '--vertebrae-extra-labels', type=lambda x:list(range(int(x.split('-')[0]), int(x.split('-')[-1]) + 1)), nargs='+', default=[],
         help='Extra vertebrae labels to add to add to adjacent vertebrae labels.'
     )
     parser.add_argument(
-        '--output-c2', type=int, default=0,
-        help='The output label for C2, used to calculate the first vertebrae label, defaults to 0.'
+        '--region-max-sizes', type=int, nargs=4, default=[5, 12, 6, 1],
+        help='The maximum number of discs/vertebrae for each region (Cervical from C3, Thoracic, Lumbar, Sacrum), defaults to [5, 12, 6, 1].'
     )
     parser.add_argument(
-        '--output-vertebrae-step', type=int, default=1,
-        help='The step to take between vertebrae labels in the output, defaults to 1.'
+        '--loc-disc-labels', type=lambda x:list(range(int(x.split('-')[0]), int(x.split('-')[-1]) + 1)), nargs='+', default=[],
+        help='The disc labels in the localizer used for detecting first disc.'
     )
     parser.add_argument(
         '--map-input', type=str, nargs='+', default=[],
@@ -158,15 +168,17 @@ def main():
     seg_suffix = args.seg_suffix
     output_seg_suffix = args.output_seg_suffix
     loc_suffix = args.loc_suffix
+    selected_disc_landmarks = args.selected_disc_landmarks
     disc_labels = [_ for __ in args.disc_labels for _ in (__ if isinstance(__, list) else [__])]
-    init_disc = dict(args.init_disc)
-    output_c2c3 = args.output_c2c3
-    output_disc_step = args.output_disc_step
-    loc_disc_labels = [_ for __ in args.loc_disc_labels for _ in (__ if isinstance(__, list) else [__])]
+    disc_landmark_labels = args.disc_landmark_labels
+    disc_landmark_output_labels = args.disc_landmark_output_labels
+    disc_output_step = args.disc_output_step
     vertebrae_labels = [_ for __ in args.vertebrae_labels for _ in (__ if isinstance(__, list) else [__])]
+    vertebrae_landmark_output_labels = args.vertebrae_landmark_output_labels
+    vertebrae_output_step = args.vertebrae_output_step
     vertebrae_extra_labels = [_ for __ in args.vertebrae_extra_labels for _ in (__ if isinstance(__, list) else [__])]
-    output_c2 = args.output_c2
-    output_vertebrae_step = args.output_vertebrae_step
+    region_max_sizes = args.region_max_sizes
+    loc_disc_labels = [_ for __ in args.loc_disc_labels for _ in (__ if isinstance(__, list) else [__])]
     map_input_list = args.map_input
     map_output_list = args.map_output
     dilation_size = args.dilation_size
@@ -188,15 +200,17 @@ def main():
             seg_suffix = "{seg_suffix}"
             output_seg_suffix = "{output_seg_suffix}"
             loc_suffix = "{loc_suffix}"
+            selected_disc_landmarks = {selected_disc_landmarks}
             disc_labels = {disc_labels}
-            init_disc = {init_disc}
-            output_c2c3 = {output_c2c3}
-            output_disc_step = {output_disc_step}
-            loc_disc_labels = {loc_disc_labels}
+            disc_landmark_labels = {disc_landmark_labels}
+            disc_landmark_output_labels = {disc_landmark_output_labels}
+            disc_output_step = {disc_output_step}
             vertebrae_labels = {vertebrae_labels}
+            vertebrae_landmark_output_labels = {vertebrae_landmark_output_labels}
+            vertebrae_output_step = {vertebrae_output_step}
             vertebrae_extra_labels = {vertebrae_extra_labels}
-            output_c2 = {output_c2}
-            output_vertebrae_step = {output_vertebrae_step}
+            region_max_sizes = {region_max_sizes}
+            loc_disc_labels = {loc_disc_labels}
             map_input = {map_input_list}
             map_output = {map_output_list}
             dilation_size = {dilation_size}
@@ -227,15 +241,17 @@ def main():
         seg_suffix=seg_suffix,
         output_seg_suffix=output_seg_suffix,
         loc_suffix=loc_suffix,
+        selected_disc_landmarks=selected_disc_landmarks,
         disc_labels=disc_labels,
-        init_disc=init_disc,
-        output_c2c3=output_c2c3,
-        output_disc_step=output_disc_step,
-        loc_disc_labels=loc_disc_labels,
+        disc_landmark_labels=disc_landmark_labels,
+        disc_landmark_output_labels=disc_landmark_output_labels,
+        disc_output_step=disc_output_step,
         vertebrae_labels=vertebrae_labels,
+        vertebrae_landmark_output_labels=vertebrae_landmark_output_labels,
+        vertebrae_output_step=vertebrae_output_step,
         vertebrae_extra_labels=vertebrae_extra_labels,
-        output_c2=output_c2,
-        output_vertebrae_step=output_vertebrae_step,
+        region_max_sizes=region_max_sizes,
+        loc_disc_labels=loc_disc_labels,
         map_input_dict=map_input_dict,
         map_output_dict=map_output_dict,
         dilation_size=dilation_size,
@@ -255,15 +271,17 @@ def iterative_label_mp(
         seg_suffix='',
         output_seg_suffix='',
         loc_suffix='',
+        selected_disc_landmarks=[],
         disc_labels=[],
-        init_disc={},
-        output_c2c3=0,
-        output_disc_step=1,
-        loc_disc_labels=[],
+        disc_landmark_labels=[],
+        disc_landmark_output_labels=[],
+        disc_output_step=1,
         vertebrae_labels=[],
+        vertebrae_landmark_output_labels=[],
+        vertebrae_output_step=1,
         vertebrae_extra_labels=[],
-        output_c2=0,
-        output_vertebrae_step=1,
+        region_max_sizes=[5, 12, 6, 1],
+        loc_disc_labels=[],
         map_input_dict={},
         map_output_dict={},
         dilation_size=1,
@@ -294,15 +312,17 @@ def iterative_label_mp(
     process_map(
         partial(
             _iterative_label,
+            selected_disc_landmarks=selected_disc_landmarks,
             disc_labels=disc_labels,
-            output_c2c3=output_c2c3,
-            output_disc_step=output_disc_step,
-            loc_disc_labels=loc_disc_labels,
-            init_disc=init_disc,
+            disc_landmark_labels=disc_landmark_labels,
+            disc_landmark_output_labels=disc_landmark_output_labels,
+            disc_output_step=disc_output_step,
             vertebrae_labels=vertebrae_labels,
+            vertebrae_landmark_output_labels=vertebrae_landmark_output_labels,
+            vertebrae_output_step=vertebrae_output_step,
             vertebrae_extra_labels=vertebrae_extra_labels,
-            output_c2=output_c2,
-            output_vertebrae_step=output_vertebrae_step,
+            region_max_sizes=region_max_sizes,
+            loc_disc_labels=loc_disc_labels,
             map_input_dict=map_input_dict,
             map_output_dict=map_output_dict,
             dilation_size=dilation_size,
@@ -321,15 +341,17 @@ def _iterative_label(
         seg_path,
         output_seg_path,
         loc_path=None,
+        selected_disc_landmarks=[],
         disc_labels=[],
-        init_disc={},
-        output_c2c3=0,
-        output_disc_step=1,
-        loc_disc_labels=[],
+        disc_landmark_labels=[],
+        disc_landmark_output_labels=[],
+        disc_output_step=1,
         vertebrae_labels=[],
+        vertebrae_landmark_output_labels=[],
+        vertebrae_output_step=1,
         vertebrae_extra_labels=[],
-        output_c2=0,
-        output_vertebrae_step=1,
+        region_max_sizes=[5, 12, 6, 1],
+        loc_disc_labels=[],
         map_input_dict={},
         map_output_dict={},
         dilation_size=1,
@@ -355,19 +377,21 @@ def _iterative_label(
         output_seg = iterative_label(
             seg,
             loc,
+            selected_disc_landmarks=selected_disc_landmarks,
             disc_labels=disc_labels,
-            init_disc=init_disc,
-            output_c2c3=output_c2c3,
-            output_disc_step=output_disc_step,
-            loc_disc_labels=loc_disc_labels,
+            disc_landmark_labels=disc_landmark_labels,
+            disc_landmark_output_labels=disc_landmark_output_labels,
+            disc_output_step=disc_output_step,
             vertebrae_labels=vertebrae_labels,
+            vertebrae_landmark_output_labels=vertebrae_landmark_output_labels,
+            vertebrae_output_step=vertebrae_output_step,
             vertebrae_extra_labels=vertebrae_extra_labels,
-            output_c2=output_c2,
-            output_vertebrae_step=output_vertebrae_step,
+            region_max_sizes=region_max_sizes,
+            loc_disc_labels=loc_disc_labels,
             map_input_dict=map_input_dict,
             map_output_dict=map_output_dict,
             dilation_size=dilation_size,
-            default_superior_disc=default_superior_disc,
+            disc_default_superior_output=default_superior_disc,
         )
     except ValueError as e:
         output_seg_path.is_file() and output_seg_path.unlink()
@@ -390,19 +414,21 @@ def _iterative_label(
 def iterative_label(
         seg,
         loc=None,
+        selected_disc_landmarks=[],
         disc_labels=[],
-        init_disc={},
-        output_c2c3=0,
-        output_disc_step=1,
-        loc_disc_labels=[],
+        disc_landmark_labels=[],
+        disc_landmark_output_labels=[],
+        disc_output_step=1,
         vertebrae_labels=[],
+        vertebrae_landmark_output_labels=[],
+        vertebrae_output_step=1,
         vertebrae_extra_labels=[],
-        output_c2=0,
-        output_vertebrae_step=1,
+        region_max_sizes=[5, 12, 6, 1],
+        loc_disc_labels=[],
         map_input_dict={},
         map_output_dict={},
         dilation_size=1,
-        default_superior_disc=0,
+        disc_default_superior_output=0,
     ):
     '''
     Label Vertebrae, IVDs, Spinal Cord and canal from init segmentation.
@@ -411,8 +437,12 @@ def iterative_label(
     2. Find connected voxels for each vertebrae label and label them into separate labels
     3. Combine sequential vertebrae labels based on some conditions
     4. Combine extra labels with adjacent vertebrae labels
-    5. Map labels from the iteative algorithm output, to the final output (e.g., map the vertebrae label from the iteative algorithm output to the special sacrum label)
-    6. Map input labels to the final output (e.g., map the input sacrum, canal and spinal cord labels to the output labels)
+    5. Find the landmark disc labels and output labels
+    6. Label the discs with the output labels
+    7. Find the matching vertebrae labels to the discs landmarks
+    8. Label the vertebrae with the output labels
+    9. Map labels from the iteative algorithm output, to the final output (e.g., map the vertebrae label from the iteative algorithm output to the special sacrum label)
+    10. Map input labels to the final output (e.g., map the input sacrum, canal and spinal cord labels to the output labels)
 
     Parameters
     ----------
@@ -420,24 +450,28 @@ def iterative_label(
         Segmentation image
     loc : nibabel.nifti1.Nifti1Image
         Localizer image to use for detecting first vertebrae and disc (optional)
+    selected_disc_landmarks : list
+        List of disc labels to use as a landmark from the disc_landmark_labels
     disc_labels : list
-        The disc labels
-    init_disc : dict
-        Init labels list for disc ordered by priority (input_label:output_label)
-    output_c2c3 : int
-        The output label for C2C3, used to calculate the first vertebrae label
-    output_disc_step : int
+        The disc labels in the segmentation
+    disc_landmark_labels : list
+        All disc labels that can be used as a landmark: [C2C3, C7T1, T12L1, L5S1]
+    disc_landmark_output_labels : list
+        List of output labels for discs [C2C3, C7T1, T12L1, L5S1]
+    disc_output_step : int
         The step to take between disc labels in the output
-    loc_disc_labels : list
-        Localizer labels to use for detecting first disc
     vertebrae_labels : list
-        The vertebrae labels
+        The vertebrae labels in the segmentation
+    vertebrae_landmark_output_labels : list
+        List of output labels for vertebrae [C3, T1, L1, Sacrum]
+    vertebrae_output_step : int
+        The step to take between vertebrae labels in the output
     vertebrae_extra_labels : list
         Extra vertebrae labels to add to add to adjacent vertebrae labels
-    output_c2 : int
-        The output label for C2, used to calculate the first vertebrae label
-    output_vertebrae_step : int
-        The step to take between vertebrae labels in the output
+    region_max_sizes : list
+        The maximum number of discs/vertebrae for each region (Cervical from C3, Thoracic, Lumbar, Sacrum).
+    loc_disc_labels : list
+        Localizer labels to use for detecting first disc
     map_input_dict : dict
         A dict mapping labels from input into the output segmentation
     map_output_dict : dict
@@ -461,6 +495,7 @@ def iterative_label(
         seg,
         disc_labels,
         dilation_size,
+        combine_labels=True,
     )
 
     # Get sorted connected components superio-inferior (SI) for the vertebrae labels
@@ -468,53 +503,140 @@ def iterative_label(
         seg,
         vertebrae_labels,
         dilation_size,
-        combine_labels=True,
     )
 
-    # Combine sequential vertebrae labels based on some conditions
-    vert_mask_labeled, vert_num_labels, vert_sorted_labels, vert_sorted_z_indexes = _merge_vertebrae_labels(
+    # Combine sequential vertebrae labels if they have the same value in the original segmentation
+    vert_mask_labeled, vert_num_labels, vert_sorted_labels, vert_sorted_z_indexes = _merge_vertebrae_with_same_label(
         seg,
         vertebrae_labels,
         vert_mask_labeled,
         vert_num_labels,
         vert_sorted_labels,
         vert_sorted_z_indexes,
+    )
+
+    # Combine sequential vertebrae labels if there is no disc between them
+    vert_mask_labeled, vert_num_labels, vert_sorted_labels, vert_sorted_z_indexes = _merge_vertebrae_labels_with_no_disc_between(
+        seg,
+        vert_mask_labeled,
+        vert_num_labels,
+        vert_sorted_labels,
+        vert_sorted_z_indexes,
         disc_sorted_z_indexes,
+    )
+
+    # Combine extra labels with adjacent vertebrae labels
+    vert_mask_labeled, vert_num_labels, vert_sorted_labels, vert_sorted_z_indexes = _merge_extra_labels_with_adjacent_vertebrae(
+        seg,
+        vert_mask_labeled,
+        vert_num_labels,
+        vert_sorted_labels,
+        vert_sorted_z_indexes,
         vertebrae_extra_labels,
     )
 
-    # Get the first disc label
-    superior_disc_output_label = _get_superior_output_label(
+    # Get the landmark disc labels and output labels - {label in sorted labels: output label}
+    # TODO Currently only the first 2 landmark from selected_disc_landmarks is used, to get all landmarks see TODO in the function
+    map_disc_sorted_labels_landmark2output = _get_landmark_output_labels(
         seg,
         loc,
         disc_mask_labeled,
         disc_sorted_labels,
-        init_disc,
-        output_disc_step,
+        selected_disc_landmarks,
+        disc_landmark_labels,
+        disc_landmark_output_labels,
         loc_disc_labels,
-        default_superior_disc,
-        map_output_dict,
+        disc_default_superior_output,
     )
 
-    # Sort the combined disc+vert labels by their z-index
-    sorted_labels = vert_sorted_labels + disc_sorted_labels
-    sorted_z_indexes = vert_sorted_z_indexes + disc_sorted_z_indexes
-    is_vert = [True] * len(vert_sorted_labels) + [False] * len(disc_sorted_labels)
+    # Build a list containing all possible labels for the disc ordered superio-inferior
+    all_possible_disc_output_labels = []
+    for l, s in zip(disc_landmark_output_labels, region_max_sizes):
+        for i in range(s):
+            all_possible_disc_output_labels.append(l + i * disc_output_step)
 
-    # Sort the labels by their z-index (reversed to go from superior to inferior)
-    sorted_z_indexes, sorted_labels, is_vert = zip(*sorted(zip(sorted_z_indexes, sorted_labels, is_vert))[::-1])
+    # Make a dict mapping the sorted disc labels to the output labels
+    map_disc_sorted_labels_2output = {}
 
-    # Get the superior output label for the vertebrae based on the superior disc label
-    # For C1 and C2 we have to adjust the first vertebrae label by the position of the first disc with substraction of (is_vert.index(False) - 1) * output_vertebrae_step
-    superior_vert_output_label = output_c2 + (superior_disc_output_label - output_c2c3) * (output_vertebrae_step / output_disc_step) - (is_vert.index(False) - 1) * output_vertebrae_step
+    # We loop over all the landmarks starting from the most superior
+    for l in [_ for _ in disc_sorted_labels if _ in map_disc_sorted_labels_landmark2output]:
+        # Get the index of the current landmark in the sorted disc labels
+        start_l = disc_sorted_labels.index(l)
 
-    # Label the vertebrae with the output labels superio-inferior
-    for i in range(vert_num_labels):
-        output_seg_data[vert_mask_labeled == vert_sorted_labels[i]] = superior_vert_output_label + output_vertebrae_step * i
+        # Get the index of the current landmark in the list of all possible disc output labels
+        start_o = all_possible_disc_output_labels.index(map_disc_sorted_labels_landmark2output[l])
+
+        # If this is the most superior landmark, we have to adjust the start indexes to start from the most superior label in the image
+        if len(map_disc_sorted_labels_2output) == 0:
+            start_l, start_o = max(0, start_l - start_o), max(0, start_o - start_l)
+
+        # Map the sorted disc labels to the output labels
+        # This will ovveride the mapping from the previous landmarks for all labels inferior to the current landmark
+        for l, o in zip(disc_sorted_labels[start_l:], all_possible_disc_output_labels[start_o:]):
+            map_disc_sorted_labels_2output[l] = o
 
     # Label the discs with the output labels superio-inferior
-    for i in range(disc_num_labels):
-        output_seg_data[disc_mask_labeled == disc_sorted_labels[i]] = superior_disc_output_label + output_disc_step * i
+    for l, o in map_disc_sorted_labels_2output.items():
+        output_seg_data[disc_mask_labeled == l] = o
+
+    if vert_num_labels > 0:
+        # Build a list containing all possible labels for the vertebrae ordered superio-inferior
+        # We start with the C1 and C2 labels as the first landmark is the C3 vertebrae
+        all_possible_vertebrae_output_labels = [
+            vertebrae_landmark_output_labels[0] - 2 * vertebrae_output_step,
+            vertebrae_landmark_output_labels[0] - vertebrae_output_step
+        ]
+        for l, s in zip(vertebrae_landmark_output_labels, region_max_sizes):
+            for i in range(s):
+                all_possible_vertebrae_output_labels.append(l + i * vertebrae_output_step)
+
+        # Sort the combined disc+vert labels by their z-index
+        sorted_labels = vert_sorted_labels + disc_sorted_labels
+        sorted_z_indexes = vert_sorted_z_indexes + disc_sorted_z_indexes
+        is_vert = [True] * len(vert_sorted_labels) + [False] * len(disc_sorted_labels)
+
+        # Sort the labels by their z-index (reversed to go from superior to inferior)
+        sorted_z_indexes, sorted_labels, is_vert = zip(*sorted(zip(sorted_z_indexes, sorted_labels, is_vert))[::-1])
+
+        # Make a dict mapping disc to vertebrae labels
+        disc_landmark_output_labels_2vert = dict(zip(disc_landmark_output_labels, vertebrae_landmark_output_labels))
+
+        # Make a dict mapping the sorted vertebrae labels to the output labels
+        map_vert_sorted_labels_2output = {}
+
+        # We loop over all the landmarks starting from the most superior
+        for l_disc in [_ for _ in disc_sorted_labels if _ in map_disc_sorted_labels_landmark2output]:
+            # Get the index of the current landmark in the sorted disc labels
+            sorted_labels_l_disc_idx = list(zip(sorted_labels, is_vert)).index((l_disc, False))
+
+            # Continue if no more vertebrae labels
+            if True not in is_vert[sorted_labels_l_disc_idx:]:
+                continue
+
+            # Get te vert label that is just next to the l_disc label
+            l = next(_l for _l, _ in list(zip(sorted_labels, is_vert))[sorted_labels_l_disc_idx:] if _)
+
+            # Get the index of the current landmark in the sorted vertebrae labels
+            start_l = vert_sorted_labels.index(l)
+
+            # Get the output disc label for the l_disc
+            l_disc_output = map_disc_sorted_labels_2output[l_disc]
+
+            # Get the index of the current vert landmark in the list of all possible vertebrae output labels
+            start_o = all_possible_vertebrae_output_labels.index(disc_landmark_output_labels_2vert[l_disc_output])
+
+            # If this is the most superior landmark, we have to adjust the start indexes to start from the most superior label in the image
+            if len(map_vert_sorted_labels_2output) == 0:
+                start_l, start_o = max(0, start_l - start_o), max(0, start_o - start_l)
+
+            # Map the sorted vert labels to the output labels
+            # This will ovveride the mapping from the previous landmarks for all labels inferior to the current landmark
+            for l, o in zip(vert_sorted_labels[start_l:], all_possible_vertebrae_output_labels[start_o:]):
+                map_vert_sorted_labels_2output[l] = o
+
+        # Label the vertebrae with the output labels superio-inferior
+        for l, o in map_vert_sorted_labels_2output.items():
+            output_seg_data[vert_mask_labeled == l] = o
 
     # Use the map to map labels from the iteative algorithm output, to the final output
     # This is useful to map the vertebrae label from the iteative algorithm output to the special sacrum label
@@ -559,10 +681,10 @@ def _get_si_sorted_components(
         return None, 0, [], []
 
     if combine_labels:
-        _labels = [[_] for _ in labels]
-    else:
         # For discs, combine all labels before label continue voxels since the discs not touching each other
         _labels = [labels]
+    else:
+        _labels = [[_] for _ in labels]
 
     # Init labeled segmentation
     mask_labeled, num_labels = np.zeros_like(seg_data, dtype=np.uint32), 0
@@ -604,126 +726,165 @@ def _get_si_sorted_components(
 
     return mask_labeled, num_labels, list(sorted_labels), list(sorted_z_indexes)
 
-def _merge_vertebrae_labels(
+def _merge_vertebrae_with_same_label(
         seg,
         labels,
         mask_labeled,
         num_labels,
         sorted_labels,
         sorted_z_indexes,
-        disc_sorted_z_indexes,
-        extra_labels,
     ):
     '''
-    Combine sequential vertebrae labels based on some conditions.
+    Combine sequential vertebrae labels if they have the same value in the original segmentation.
+    This is useful when part part of the vertebrae is not connected to the main part but have the same odd/even value.
     '''
-    if num_labels == 0:
+    if num_labels == 0 or len(labels) <= 1:
         return mask_labeled, num_labels, sorted_labels, sorted_z_indexes
 
     seg_data = np.asanyarray(seg.dataobj).round().astype(np.uint8)
-    # Combine sequential vertebrae labels if they have the same value in the original segmentation
-    # This is useful when part part of the vertebrae is not connected to the main part but have the same odd/even value
-    if len(labels) > 1:
-        new_sorted_labels = []
 
-        # Store the previous label and the original label of the previous label
-        prev_l, prev_orig_label = 0, 0
+    new_sorted_labels = []
 
-        # Loop over the sorted labels
-        for l in sorted_labels:
-            # Get the original label of the current label
-            curr_orig_label = seg_data[mask_labeled == l].flat[0]
+    # Store the previous label and the original label of the previous label
+    prev_l, prev_orig_label = 0, 0
 
-            # Combine the current label with the previous label if they have the same original label
-            if curr_orig_label == prev_orig_label:
-                # Combine the current label with the previous label
-                mask_labeled[mask_labeled == l] = prev_l
-                num_labels -= 1
+    # Loop over the sorted labels
+    for l in sorted_labels:
+        # Get the original label of the current label
+        curr_orig_label = seg_data[mask_labeled == l].flat[0]
 
-            else:
-                # Add the current label to the new sorted labels
-                new_sorted_labels.append(l)
-                prev_l, prev_orig_label = l, curr_orig_label
+        # Combine the current label with the previous label if they have the same original label
+        if curr_orig_label == prev_orig_label:
+            # Combine the current label with the previous label
+            mask_labeled[mask_labeled == l] = prev_l
+            num_labels -= 1
 
-        # Get the z index of the center of mass for each label
-        canonical_mask_labeled = np.asanyarray(nib.as_closest_canonical(nib.Nifti1Image(mask_labeled, seg.affine, seg.header)).dataobj).round().astype(mask_labeled.dtype)
-        mask_labeled_z_indexes = [_[-1] for _ in ndi.center_of_mass(canonical_mask_labeled != 0, canonical_mask_labeled, new_sorted_labels)]
+        else:
+            # Add the current label to the new sorted labels
+            new_sorted_labels.append(l)
+            prev_l, prev_orig_label = l, curr_orig_label
 
-        # Sort the labels by their z-index (reversed to go from superior to inferior)
-        sorted_z_indexes, sorted_labels = zip(*sorted(zip(mask_labeled_z_indexes, new_sorted_labels))[::-1])
+    sorted_labels = new_sorted_labels
 
-        # Reduce size of mask_labeled
-        if mask_labeled.max() < np.iinfo(np.uint8).max:
-            mask_labeled = mask_labeled.astype(np.uint8)
-        elif mask_labeled.max() < np.iinfo(np.uint16).max:
-            mask_labeled = mask_labeled.astype(np.uint16)
-
-    # Combine sequential vertebrae labels if there is no disc between them
-    if len(disc_sorted_z_indexes) > 0:
-        new_sorted_labels = []
-
-        # Store the previous label and the z index of the previous label
-        prev_l, prev_z = 0, 0
-
-        for l, z in zip(sorted_labels, sorted_z_indexes):
-            # Do not combine first and last vertebrae since it can be C1 or only contain the spinous process
-            if l not in sorted_labels[:2] and l != sorted_labels[-1] and prev_l > 0 and not any(z < _ < prev_z for _ in disc_sorted_z_indexes):
-                # Combine the current label with the previous label
-                mask_labeled[mask_labeled == l] = prev_l
-                num_labels -= 1
-
-            else:
-                # Add the current label to the new sorted labels
-                new_sorted_labels.append(l)
-                prev_l, prev_z = l, z
-
-        sorted_labels = new_sorted_labels
-
-        # Reduce size of mask_labeled
-        if mask_labeled.max() < np.iinfo(np.uint8).max:
-            mask_labeled = mask_labeled.astype(np.uint8)
-        elif mask_labeled.max() < np.iinfo(np.uint16).max:
-            mask_labeled = mask_labeled.astype(np.uint16)
-
-    # Combine extra labels with adjacent vertebrae labels
-    if len(extra_labels) > 0:
-        mask_extra = np.isin(seg_data, extra_labels)
-
-        # Loop over vertebral labels (from inferior because the transverse process make it steal from above)
-        for i in range(num_labels - 1, -1, -1):
-            # Mkae mask for the current vertebrae with filling the holes and dilating it
-            mask = _fill(mask_labeled == sorted_labels[i])
-            mask = ndi.binary_dilation(mask, ndi.iterate_structure(ndi.generate_binary_structure(3, 1), 1))
-
-            # Add the intersection of the mask with the extra labels to the current verebrae
-            mask_labeled[mask_extra * mask] = sorted_labels[i]
+    # Reduce size of mask_labeled
+    if mask_labeled.max() < np.iinfo(np.uint8).max:
+        mask_labeled = mask_labeled.astype(np.uint8)
+    elif mask_labeled.max() < np.iinfo(np.uint16).max:
+        mask_labeled = mask_labeled.astype(np.uint16)
 
     # Get the z index of the center of mass for each label
     canonical_mask_labeled = np.asanyarray(nib.as_closest_canonical(nib.Nifti1Image(mask_labeled, seg.affine, seg.header)).dataobj).round().astype(mask_labeled.dtype)
     mask_labeled_z_indexes = [_[-1] for _ in ndi.center_of_mass(canonical_mask_labeled != 0, canonical_mask_labeled, sorted_labels)]
 
     # Sort the labels by their z-index (reversed to go from superior to inferior)
-    sorted_z_indexes, sorted_labels = zip(*sorted(zip(mask_labeled_z_indexes, new_sorted_labels))[::-1])
+    sorted_z_indexes, sorted_labels = zip(*sorted(zip(mask_labeled_z_indexes, sorted_labels))[::-1])
 
     return mask_labeled, num_labels, list(sorted_labels), list(sorted_z_indexes)
 
-def _get_superior_output_label(
+def _merge_vertebrae_labels_with_no_disc_between(
+        seg,
+        mask_labeled,
+        num_labels,
+        sorted_labels,
+        sorted_z_indexes,
+        disc_sorted_z_indexes,
+    ):
+    '''
+    Combine sequential vertebrae labels if there is no disc between them.
+    '''
+    if num_labels == 0 or len(disc_sorted_z_indexes) == 0:
+        return mask_labeled, num_labels, sorted_labels, sorted_z_indexes
+
+    new_sorted_labels = []
+
+    # Store the previous label and the z index of the previous label
+    prev_l, prev_z = 0, 0
+
+    for l, z in zip(sorted_labels, sorted_z_indexes):
+        # Do not combine first and last vertebrae since it can be C1 or only contain the spinous process
+        if l not in sorted_labels[:2] and l != sorted_labels[-1] and prev_l > 0 and not any(z < _ < prev_z for _ in disc_sorted_z_indexes):
+            # Combine the current label with the previous label
+            mask_labeled[mask_labeled == l] = prev_l
+            num_labels -= 1
+
+        else:
+            # Add the current label to the new sorted labels
+            new_sorted_labels.append(l)
+            prev_l, prev_z = l, z
+
+    sorted_labels = new_sorted_labels
+
+    # Reduce size of mask_labeled
+    if mask_labeled.max() < np.iinfo(np.uint8).max:
+        mask_labeled = mask_labeled.astype(np.uint8)
+    elif mask_labeled.max() < np.iinfo(np.uint16).max:
+        mask_labeled = mask_labeled.astype(np.uint16)
+
+    # Get the z index of the center of mass for each label
+    canonical_mask_labeled = np.asanyarray(nib.as_closest_canonical(nib.Nifti1Image(mask_labeled, seg.affine, seg.header)).dataobj).round().astype(mask_labeled.dtype)
+    mask_labeled_z_indexes = [_[-1] for _ in ndi.center_of_mass(canonical_mask_labeled != 0, canonical_mask_labeled, sorted_labels)]
+
+    # Sort the labels by their z-index (reversed to go from superior to inferior)
+    sorted_z_indexes, sorted_labels = zip(*sorted(zip(mask_labeled_z_indexes, sorted_labels))[::-1])
+
+    return mask_labeled, num_labels, list(sorted_labels), list(sorted_z_indexes)
+
+def _merge_extra_labels_with_adjacent_vertebrae(
+        seg,
+        mask_labeled,
+        num_labels,
+        sorted_labels,
+        sorted_z_indexes,
+        extra_labels,
+    ):
+    '''
+    Combine extra labels with adjacent vertebrae labels.
+    This is useful for combining remaining of general vertebrae labels that introduce for region based training but not used in the final segmentation.
+    '''
+    if num_labels == 0 or len(extra_labels) == 0:
+        return mask_labeled, num_labels, sorted_labels, sorted_z_indexes
+
+    seg_data = np.asanyarray(seg.dataobj).round().astype(np.uint8)
+
+    mask_extra = np.isin(seg_data, extra_labels)
+
+    # Loop over vertebral labels (from inferior because the transverse process make it steal from above)
+    for i in range(num_labels - 1, -1, -1):
+        # Mkae mask for the current vertebrae with filling the holes and dilating it
+        mask = _fill(mask_labeled == sorted_labels[i])
+        mask = ndi.binary_dilation(mask, ndi.iterate_structure(ndi.generate_binary_structure(3, 1), 1))
+
+        # Add the intersection of the mask with the extra labels to the current verebrae
+        mask_labeled[mask_extra * mask] = sorted_labels[i]
+
+    # Get the z index of the center of mass for each label
+    canonical_mask_labeled = np.asanyarray(nib.as_closest_canonical(nib.Nifti1Image(mask_labeled, seg.affine, seg.header)).dataobj).round().astype(mask_labeled.dtype)
+    mask_labeled_z_indexes = [_[-1] for _ in ndi.center_of_mass(canonical_mask_labeled != 0, canonical_mask_labeled, sorted_labels)]
+
+    # Sort the labels by their z-index (reversed to go from superior to inferior)
+    sorted_z_indexes, sorted_labels = zip(*sorted(zip(mask_labeled_z_indexes, sorted_labels))[::-1])
+
+    return mask_labeled, num_labels, list(sorted_labels), list(sorted_z_indexes)
+
+def _get_landmark_output_labels(
         seg,
         loc,
         mask_labeled,
         sorted_labels,
-        init,
-        step,
+        selected_landmarks,
+        landmark_labels,
+        landmark_output_labels,
         loc_labels,
-        default_superior,
-        map_output_dict,
+        default_superior_output,
     ):
     '''
-    Get the first label for the iterative labeling algorithm.
+    Get dict mapping labels from sorted_labels to the output labels based on the landmarks in the segmentation or localizer.
     '''
     seg_data = np.asanyarray(seg.dataobj).round().astype(np.uint8)
 
     loc_data = loc and np.asanyarray(loc.dataobj).round().astype(np.uint8)
+
+    map_landmark_labels = dict(zip(landmark_labels, landmark_output_labels))
 
     # If localizer is provided, transform it to the segmentation space
     if loc_data is not None:
@@ -733,40 +894,54 @@ def _get_superior_output_label(
             tio.LabelMap(tensor=loc_data[None, ...], affine=loc.affine)
         ).data.numpy()[0, ...].astype(np.uint8)
 
-    # Find the most superior label in the segmentation
-    superior_output_label = 0
-    for k, v in init.items():
-        if k in seg_data:
-            superior_output_label = v - step * sorted_labels.index(np.argmax(np.bincount(mask_labeled[seg_data == k].flat)))
+    # Init dict to store the output labels for the landmarks
+    map_landmark_outputs = {}
+
+    # First we try to look for the landmarks in the segmentation
+    for l in selected_landmarks:
+        ############################################################################################################
+        # TODO Remove this reake when we trust all the landmarks to get all landmarks instead of the first 2
+        if len(map_landmark_outputs) > 0 and selected_landmarks.index(l) > 1:
             break
+        ############################################################################################################
+        if l in map_landmark_labels and l in seg_data:
+            map_landmark_outputs[np.argmax(np.bincount(mask_labeled[seg_data == l].flat))] = map_landmark_labels[l]
 
     # If no init label found, set it from the localizer
-    if superior_output_label == 0 and loc_data is not None:
+    if len(map_landmark_outputs) == 0 and loc_data is not None:
         # Make mask for the intersection of the localizer labels and the labels in the segmentation
         mask = np.isin(loc_data, loc_labels) * np.isin(mask_labeled, sorted_labels)
-
-        # Get the first label from sorted_labels that is in the localizer specified labels
         mask_labeled_masked = mask * mask_labeled
-        first_sorted_labels_in_loc = next(np.array(sorted_labels)[np.isin(sorted_labels, mask_labeled_masked)].flat, 0)
+        loc_data_masked = mask * loc_data
 
-        if first_sorted_labels_in_loc > 0:
-            # Get the target label for first_sorted_labels_in_loc - the label from the localizer that has the most voxels in it
-            loc_data_masked = mask * loc_data
-            target = np.argmax(np.bincount(loc_data_masked[mask_labeled_masked == first_sorted_labels_in_loc].flat))
-            # If target in map_output_dict reverse it from the reversed map
-            # TODO Edge case if multiple keys have the same value, not used in the current implementation
-            target = {v: k for k, v in map_output_dict.items()}.get(target, target)
-            superior_output_label = target - step * sorted_labels.index(first_sorted_labels_in_loc)
+        # First we try to look for the landmarks in the localizer
+        # TODO Edge case if map_output_dict used for discs, but it is not used in the current implementation
+        for output_label in np.array(landmark_output_labels)[np.isin(landmark_output_labels, loc_data_masked)].tolist():
+            # Map the label with the most voxels in the localizer landmark to the output label
+            map_landmark_outputs[np.argmax(np.bincount(mask_labeled_masked[loc_data_masked == output_label].flat))] = output_label
+
+        if len(map_landmark_outputs) == 0:
+            # Get the first label from sorted_labels that is in the localizer specified labels
+            first_sorted_labels_in_loc = next(np.array(sorted_labels)[np.isin(sorted_labels, mask_labeled_masked)].flat, 0)
+
+            if first_sorted_labels_in_loc > 0:
+                # Get the output label for first_sorted_labels_in_loc, the label from the localizer that has the most voxels in it
+                map_landmark_outputs[first_sorted_labels_in_loc] = np.argmax(np.bincount(loc_data_masked[mask_labeled_masked == first_sorted_labels_in_loc].flat))
 
     # If no init label found, set the default superior label
-    if superior_output_label == 0 and default_superior > 0:
-        superior_output_label = default_superior
+    if len(map_landmark_outputs) == 0 and default_superior_output > 0:
+        map_landmark_outputs[sorted_labels[0]] = default_superior_output
 
     # If no init label found, print error
-    if superior_output_label == 0:
-        raise ValueError(f"Some initiation label must be in the segmentation (init: {list(init.keys())})")
+    if len(map_landmark_outputs) == 0:
+        if loc_data is not None:
+            raise ValueError(
+                f"At least one of the landmarks must be in the segmentation or localizer (landmarks: {selected_landmarks}. "
+                f"Check {loc_labels}), make sure the localizer is in the same space as the segmentation"
+            )
+        raise ValueError(f"At least one of the landmarks must be in the segmentation or localizer (landmarks: {selected_landmarks})")
 
-    return superior_output_label
+    return map_landmark_outputs
 
 def _fill(mask):
     '''
