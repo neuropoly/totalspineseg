@@ -583,8 +583,8 @@ def iterative_label(
         # Build a list containing all possible labels for the vertebrae ordered superio-inferior
         # We start with the C1 and C2 labels as the first landmark is the C3 vertebrae
         all_possible_vertebrae_output_labels = [
-            vertebrae_landmark_output_labels[0] - 2 * vertebrae_output_step,
-            vertebrae_landmark_output_labels[0] - vertebrae_output_step
+            vertebrae_landmark_output_labels[0] - 2 * vertebrae_output_step, # C1
+            vertebrae_landmark_output_labels[0] - vertebrae_output_step # C2
         ]
         for l, s in zip(vertebrae_landmark_output_labels, region_max_sizes):
             for i in range(s):
@@ -599,7 +599,7 @@ def iterative_label(
         sorted_z_indexes, sorted_labels, is_vert = zip(*sorted(zip(sorted_z_indexes, sorted_labels, is_vert))[::-1])
 
         # Make a dict mapping disc to vertebrae labels
-        disc_landmark_output_labels_2vert = dict(zip(disc_landmark_output_labels, vertebrae_landmark_output_labels))
+        disc_output_labels_2vert = dict(zip(all_possible_disc_output_labels, all_possible_vertebrae_output_labels[2:]))
 
         # Make a dict mapping the sorted vertebrae labels to the output labels
         map_vert_sorted_labels_2output = {}
@@ -613,8 +613,8 @@ def iterative_label(
             if True not in is_vert[sorted_labels_l_disc_idx:]:
                 continue
 
-            # Get te vert label that is just next to the l_disc label
-            l = next(_l for _l, _ in list(zip(sorted_labels, is_vert))[sorted_labels_l_disc_idx:] if _)
+            # Get te vert label that is just next to the l_disc label inferiorly
+            l = next(_l for _l, _is_v in list(zip(sorted_labels, is_vert))[sorted_labels_l_disc_idx:] if _is_v)
 
             # Get the index of the current landmark in the sorted vertebrae labels
             start_l = vert_sorted_labels.index(l)
@@ -623,7 +623,7 @@ def iterative_label(
             l_disc_output = map_disc_sorted_labels_2output[l_disc]
 
             # Get the index of the current vert landmark in the list of all possible vertebrae output labels
-            start_o = all_possible_vertebrae_output_labels.index(disc_landmark_output_labels_2vert[l_disc_output])
+            start_o = all_possible_vertebrae_output_labels.index(disc_output_labels_2vert[l_disc_output])
 
             # If this is the most superior landmark, we have to adjust the start indexes to start from the most superior label in the image
             if len(map_vert_sorted_labels_2output) == 0:

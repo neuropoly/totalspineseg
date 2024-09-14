@@ -62,8 +62,8 @@ def main():
         help='The labels to extract alternate elements from.'
     )
     parser.add_argument(
-        '--from-second', action="store_true", default=False,
-        help='Start from the second label, defaults to false (start from the first label).'
+        '--prioratize-labels', type=lambda x:list(range(int(x.split('-')[0]), int(x.split('-')[-1]) + 1)), nargs='+', default=[],
+        help='Specify labels that will be prioratized in the output, the first label in the list will be included in the output, defaults to [] (The first label in the list that is in the segmentation).'
     )
     parser.add_argument(
         '--override', '-r', action="store_true", default=False,
@@ -90,7 +90,7 @@ def main():
     seg_suffix = args.seg_suffix
     output_seg_suffix = args.output_seg_suffix
     labels = [_ for __ in args.labels for _ in (__ if isinstance(__, list) else [__])]
-    from_second = args.from_second
+    prioratize_labels = [_ for __ in args.prioratize_labels for _ in (__ if isinstance(__, list) else [__])]
     override = args.override
     max_workers = args.max_workers
     quiet = args.quiet
@@ -107,7 +107,7 @@ def main():
             seg_suffix = "{seg_suffix}"
             output_seg_suffix = "{output_seg_suffix}"
             labels = {labels}
-            from_second = {from_second}
+            prioratize_labels = {prioratize_labels}
             override = {override}
             max_workers = {max_workers}
             quiet = {quiet}
@@ -122,7 +122,7 @@ def main():
         seg_suffix=seg_suffix,
         output_seg_suffix=output_seg_suffix,
         labels=labels,
-        from_second=from_second,
+        prioratize_labels=prioratize_labels,
         override=override,
         max_workers=max_workers,
         quiet=quiet,
@@ -137,7 +137,7 @@ def extract_alternate_mp(
         seg_suffix='',
         output_seg_suffix='',
         labels=[],
-        from_second=False,
+        prioratize_labels=[],
         override=False,
         max_workers=mp.cpu_count(),
         quiet=False,
@@ -163,7 +163,7 @@ def extract_alternate_mp(
         partial(
             _extract_alternate,
             labels=labels,
-            from_second=from_second,
+            prioratize_labels=prioratize_labels,
             override=override,
         ),
         seg_path_list,
@@ -177,7 +177,7 @@ def _extract_alternate(
         seg_path,
         output_seg_path,
         labels=[],
-        from_second=False,
+        prioratize_labels=[],
         override=False,
     ):
     '''
@@ -197,7 +197,7 @@ def _extract_alternate(
         output_seg = extract_alternate(
             seg,
             labels=labels,
-            from_second=from_second,
+            prioratize_labels=prioratize_labels,
         )
     except ValueError as e:
         output_seg_path.is_file() and output_seg_path.unlink()
@@ -220,7 +220,7 @@ def _extract_alternate(
 def extract_alternate(
         seg,
         labels=[],
-        from_second=False,
+        prioratize_labels=[],
     ):
     '''
     Extract vertebrae levels from Spinal Canal and Discs.
@@ -234,8 +234,8 @@ def extract_alternate(
         The input segmentation.
     labels : list of int
         The labels to extract alternate elements from.
-    from_second : bool
-        Start from the second label, defaults to False.
+    prioratize_labels : list of int
+        Specify labels that will be prioratized in the output, the first label in the list will be included in the output.
 
     Returns
     -------
@@ -246,7 +246,16 @@ def extract_alternate(
 
     output_seg_data = np.zeros_like(seg_data)
 
-    selected_labels = np.array(labels)[np.isin(labels, seg_data)][1 if from_second else 0::2]
+    # Get the labels in the segmentation
+    labels = np.array(labels)[np.isin(labels, seg_data)]
+
+    # Get the labels to prioratize in the output that are in the segmentation and in the labels
+    prioratize_labels = np.array(prioratize_labels)[np.isin(prioratize_labels, labels)]
+
+    selected_labels = labels[::2]
+
+    if len(prioratize_labels) > 0 and prioratize_labels[0] not in selected_labels:
+        selected_labels = labels[1::2]
 
     output_seg_data[np.isin(seg_data, selected_labels)] = 1
 
