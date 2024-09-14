@@ -268,16 +268,19 @@ def extract_levels(
     # Get the indices of the canal centerline
     mask_canal_centerline_indices = np.array(np.nonzero(mask_canal_centerline))
 
-    # Get the labels of the discs and the output labels
-    out_labels = list(range(3, 3 + len(disc_labels)))
-
-    # Filter the discs that are in the segmentation
-    in_seg = np.isin(disc_labels, seg_data)
-    map_labels = [(d, o) for d, o, i in zip(disc_labels, out_labels, in_seg) if i]
+    # Get the labels of the discs in the segmentation
+    disc_labels_in_seg = np.array(disc_labels)[np.isin(disc_labels, seg_data)]
 
     # If no disc labels found in the segmentation raise an error
-    if len(map_labels) == 0:
+    if len(disc_labels_in_seg) == 0:
         raise ValueError(f"No disc labels found in the segmentation.")
+
+    # Get the labels of the discs and the output labels
+    first_disk_idx = disc_labels.index(disc_labels_in_seg[0])
+    out_labels = list(range(3 + first_disk_idx, 3 + first_disk_idx + len(disc_labels_in_seg)))
+
+    # Filter the discs that are in the segmentation
+    map_labels = dict(zip(disc_labels_in_seg, out_labels))
 
     # Loop over the discs from C2-C3 to L5-S1 and find the closest voxel in the canal centerline
     for disc_label, out_label in map_labels:
