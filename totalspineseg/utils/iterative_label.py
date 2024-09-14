@@ -490,6 +490,9 @@ def iterative_label(
 
     output_seg_data = np.zeros_like(seg_data)
 
+    # Region default sizes for the discs and vertebrae (Cervical, Thoracic, Lumbar, Sacrum)
+    region_default_sizes=[5, 12, 5, 1],
+
     # Get sorted connected components superio-inferior (SI) for the disc labels
     disc_mask_labeled, disc_num_labels, disc_sorted_labels, disc_sorted_z_indexes = _get_si_sorted_components(
         seg,
@@ -555,20 +558,38 @@ def iterative_label(
         for i in range(s):
             all_possible_disc_output_labels.append(l + i * disc_output_step)
 
+    # Make a list containing all possible labels for the vertebrae ordered superio-inferior with the default region sizes
+    all_default_disc_output_labels = []
+    for l, s in zip(disc_landmark_output_labels, region_default_sizes):
+        for i in range(s):
+            all_default_disc_output_labels.append(l + i * disc_output_step)
+
     # Make a dict mapping the sorted disc labels to the output labels
     map_disc_sorted_labels_2output = {}
 
     # We loop over all the landmarks starting from the most superior
     for l in [_ for _ in disc_sorted_labels if _ in map_disc_sorted_labels_landmark2output]:
+
+        # If this is the most superior landmark, we have to adjust the start indexes to start from the most superior label in the image
+        if len(map_disc_sorted_labels_2output) == 0:
+            # Get the index of the current landmark in the sorted disc labels
+            start_l = disc_sorted_labels.index(l)
+
+            # Get the index of the current landmark in the list of all default disc output labels
+            start_o_def = all_default_disc_output_labels.index(map_disc_sorted_labels_landmark2output[l])
+
+            # Adjust the start indexes
+            start_l, start_o_def = max(0, start_l - start_o_def), max(0, start_o_def - start_l)
+
+            # Map the sorted disc labels to the output labels
+            for l, o in zip(disc_sorted_labels[start_l:], all_default_disc_output_labels[start_o:]):
+                map_disc_sorted_labels_2output[l] = o
+
         # Get the index of the current landmark in the sorted disc labels
         start_l = disc_sorted_labels.index(l)
 
         # Get the index of the current landmark in the list of all possible disc output labels
         start_o = all_possible_disc_output_labels.index(map_disc_sorted_labels_landmark2output[l])
-
-        # If this is the most superior landmark, we have to adjust the start indexes to start from the most superior label in the image
-        if len(map_disc_sorted_labels_2output) == 0:
-            start_l, start_o = max(0, start_l - start_o), max(0, start_o - start_l)
 
         # Map the sorted disc labels to the output labels
         # This will ovveride the mapping from the previous landmarks for all labels inferior to the current landmark
@@ -589,6 +610,15 @@ def iterative_label(
         for l, s in zip(vertebrae_landmark_output_labels, region_max_sizes):
             for i in range(s):
                 all_possible_vertebrae_output_labels.append(l + i * vertebrae_output_step)
+
+        # Make a list containing all possible labels for the vertebrae ordered superio-inferior with the default region sizes
+        all_default_vertebrae_output_labels = [
+            vertebrae_landmark_output_labels[0] - 2 * vertebrae_output_step, # C1
+            vertebrae_landmark_output_labels[0] - vertebrae_output_step # C2
+        ]
+        for l, s in zip(vertebrae_landmark_output_labels, region_default_sizes):
+            for i in range(s):
+                all_default_vertebrae_output_labels.append(l + i * vertebrae_output_step)
 
         # Sort the combined disc+vert labels by their z-index
         sorted_labels = vert_sorted_labels + disc_sorted_labels
@@ -616,18 +646,32 @@ def iterative_label(
             # Get te vert label that is just next to the l_disc label inferiorly
             l = next(_l for _l, _is_v in list(zip(sorted_labels, is_vert))[sorted_labels_l_disc_idx:] if _is_v)
 
-            # Get the index of the current landmark in the sorted vertebrae labels
-            start_l = vert_sorted_labels.index(l)
-
             # Get the output disc label for the l_disc
             l_disc_output = map_disc_sorted_labels_2output[l_disc]
 
-            # Get the index of the current vert landmark in the list of all possible vertebrae output labels
-            start_o = all_possible_vertebrae_output_labels.index(disc_output_labels_2vert[l_disc_output])
+            # Get the output vert label for the l_disc
+            l_disc_vert_output = disc_output_labels_2vert[l_disc_output]
 
             # If this is the most superior landmark, we have to adjust the start indexes to start from the most superior label in the image
             if len(map_vert_sorted_labels_2output) == 0:
-                start_l, start_o = max(0, start_l - start_o), max(0, start_o - start_l)
+                # Get the index of the current landmark in the sorted vertebrae labels
+                start_l = vert_sorted_labels.index(l)
+
+                # Get the index of the current vert landmark in the list of all possible vertebrae output labels
+                start_o_def = all_default_vertebrae_output_labels.index(l_disc_vert_output)
+
+                # Adjust the start indexes
+                start_l, start_o_def = max(0, start_l - start_o_def), max(0, start_o_def - start_l)
+
+                # Map the sorted vert labels to the output labels
+                for l, o in zip(vert_sorted_labels[start_l:], all_default_vertebrae_output_labels[start_o:]):
+                    map_vert_sorted_labels_2output[l] = o
+
+            # Get the index of the current landmark in the sorted vertebrae labels
+            start_l = vert_sorted_labels.index(l)
+
+            # Get the index of the current vert landmark in the list of all possible vertebrae output labels
+            start_o = all_possible_vertebrae_output_labels.index(l_disc_vert_output)
 
             # Map the sorted vert labels to the output labels
             # This will ovveride the mapping from the previous landmarks for all labels inferior to the current landmark
