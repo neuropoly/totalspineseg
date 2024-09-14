@@ -582,7 +582,7 @@ def iterative_label(
             start_l, start_o_def = max(0, start_l - start_o_def), max(0, start_o_def - start_l)
 
             # Map the sorted disc labels to the output labels
-            for l, o in zip(disc_sorted_labels[start_l:], all_default_disc_output_labels[start_o:]):
+            for l, o in zip(disc_sorted_labels[start_l:], all_default_disc_output_labels[start_o_def:]):
                 map_disc_sorted_labels_2output[l] = o
 
         # Get the index of the current landmark in the sorted disc labels
@@ -664,7 +664,7 @@ def iterative_label(
                 start_l, start_o_def = max(0, start_l - start_o_def), max(0, start_o_def - start_l)
 
                 # Map the sorted vert labels to the output labels
-                for l, o in zip(vert_sorted_labels[start_l:], all_default_vertebrae_output_labels[start_o:]):
+                for l, o in zip(vert_sorted_labels[start_l:], all_default_vertebrae_output_labels[start_o_def:]):
                     map_vert_sorted_labels_2output[l] = o
 
             # Get the index of the current landmark in the sorted vertebrae labels
