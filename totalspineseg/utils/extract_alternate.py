@@ -14,13 +14,13 @@ def main():
     # Parse command line arguments
     parser = argparse.ArgumentParser(
         description=' '.join(f'''
-            Extract vertebrae levels from Spinal Canal and Discs.
+            Extract alternate labels from the segmentation.
         '''.split()),
         epilog=textwrap.dedent('''
             Examples:
-            extract_levels -s labels -o levels --canal-labels 1 2 --disc-labels 60-64 70-81 90-94 100 -r
+            extract_alternate -s labels -o levels --labels 60-100 -r
             For BIDS:
-            extract_levels -s derivatives/labels -o derivatives/labels --seg-suffix "_seg" --output-seg-suffix "_levels" -d "sub-" -u "anat" --canal-labels  1 2 --disc-labels 60-64 70-81 90-94 100 -r
+            extract_alternate -s derivatives/labels -o derivatives/labels --seg-suffix "_seg" --output-seg-suffix "_levels" -d "sub-" -u "anat" --labels 60-100 -r
         '''),
         formatter_class=argparse.RawTextHelpFormatter
     )
@@ -58,12 +58,12 @@ def main():
         help='Suffix for output segmentation, defaults to "".'
     )
     parser.add_argument(
-        '--canal-labels', type=lambda x:list(range(int(x.split('-')[0]), int(x.split('-')[-1]) + 1)), nargs='+', required=True,
-        help='The canal labels.'
+        '--labels', type=lambda x:list(range(int(x.split('-')[0]), int(x.split('-')[-1]) + 1)), nargs='+', required=True,
+        help='The labels to extract alternate elements from.'
     )
     parser.add_argument(
-        '--disc-labels', type=lambda x:list(range(int(x.split('-')[0]), int(x.split('-')[-1]) + 1)), nargs='+', required=True,
-        help='The disc labels starting at C2C3 ordered from superior to inferior.'
+        '--from-second', action="store_true", default=False,
+        help='Start from the second label, defaults to false (start from the first label).'
     )
     parser.add_argument(
         '--override', '-r', action="store_true", default=False,
@@ -89,8 +89,8 @@ def main():
     prefix = args.prefix
     seg_suffix = args.seg_suffix
     output_seg_suffix = args.output_seg_suffix
-    canal_labels = args.canal_labels
-    disc_labels = [_ for __ in args.disc_labels for _ in (__ if isinstance(__, list) else [__])]
+    labels = [_ for __ in args.labels for _ in (__ if isinstance(__, list) else [__])]
+    from_second = args.from_second
     override = args.override
     max_workers = args.max_workers
     quiet = args.quiet
@@ -106,14 +106,14 @@ def main():
             prefix = "{prefix}"
             seg_suffix = "{seg_suffix}"
             output_seg_suffix = "{output_seg_suffix}"
-            canal_labels = {canal_labels}
-            disc_labels = {disc_labels}
+            labels = {labels}
+            from_second = {from_second}
             override = {override}
             max_workers = {max_workers}
             quiet = {quiet}
         '''))
 
-    extract_levels_mp(
+    extract_alternate_mp(
         segs_path=segs_path,
         output_segs_path=output_segs_path,
         subject_dir=subject_dir,
@@ -121,14 +121,14 @@ def main():
         prefix=prefix,
         seg_suffix=seg_suffix,
         output_seg_suffix=output_seg_suffix,
-        canal_labels=canal_labels,
-        disc_labels=disc_labels,
+        labels=labels,
+        from_second=from_second,
         override=override,
         max_workers=max_workers,
         quiet=quiet,
     )
 
-def extract_levels_mp(
+def extract_alternate_mp(
         segs_path,
         output_segs_path,
         subject_dir=None,
@@ -136,8 +136,8 @@ def extract_levels_mp(
         prefix='',
         seg_suffix='',
         output_seg_suffix='',
-        canal_labels=[],
-        disc_labels=[],
+        labels=[],
+        from_second=False,
         override=False,
         max_workers=mp.cpu_count(),
         quiet=False,
@@ -161,9 +161,9 @@ def extract_levels_mp(
 
     process_map(
         partial(
-            _extract_levels,
-            canal_labels=canal_labels,
-            disc_labels=disc_labels,
+            _extract_alternate,
+            labels=labels,
+            from_second=from_second,
             override=override,
         ),
         seg_path_list,
@@ -173,11 +173,11 @@ def extract_levels_mp(
         disable=quiet,
     )
 
-def _extract_levels(
+def _extract_alternate(
         seg_path,
         output_seg_path,
-        canal_labels=[],
-        disc_labels=[],
+        labels=[],
+        from_second=False,
         override=False,
     ):
     '''
@@ -194,10 +194,10 @@ def _extract_levels(
     seg = nib.load(seg_path)
 
     try:
-        output_seg = extract_levels(
+        output_seg = extract_alternate(
             seg,
-            canal_labels=canal_labels,
-            disc_labels=disc_labels
+            labels=labels,
+            from_second=from_second,
         )
     except ValueError as e:
         output_seg_path.is_file() and output_seg_path.unlink()
@@ -217,10 +217,10 @@ def _extract_levels(
     output_seg_path.parent.mkdir(parents=True, exist_ok=True)
     nib.save(output_seg, output_seg_path)
 
-def extract_levels(
+def extract_alternate(
         seg,
-        canal_labels=[],
-        disc_labels=[],
+        labels=[],
+        from_second=False,
     ):
     '''
     Extract vertebrae levels from Spinal Canal and Discs.
@@ -232,10 +232,10 @@ def extract_levels(
     ----------
     seg : nibabel.Nifti1Image
         The input segmentation.
-    canal_labels : list
-        The canal labels.
-    disc_labels : list
-        The disc labels starting at C2C3 ordered from superior to inferior.
+    labels : list of int
+        The labels to extract alternate elements from.
+    from_second : bool
+        Start from the second label, defaults to False.
 
     Returns
     -------
@@ -246,78 +246,9 @@ def extract_levels(
 
     output_seg_data = np.zeros_like(seg_data)
 
-    # Get array of indices for x, y, and z axes
-    indices = np.indices(seg_data.shape)
+    selected_labels = np.array(labels)[np.isin(labels, seg_data)][1 if from_second else 0::2]
 
-    # Create a mask of the canal
-    mask_canal = np.isin(seg_data, canal_labels)
-
-    # If cancl is empty raise an error
-    if not np.any(mask_canal):
-        raise ValueError(f"No canal labels found in the segmentation.")
-
-    # Create a mask the canal centerline by finding the middle voxels in x and y axes for each z index
-    mask_min_x_indices = np.min(indices[0], where=mask_canal, initial=np.iinfo(indices.dtype).max, keepdims=True, axis=(0, 1))
-    mask_max_x_indices = np.max(indices[0], where=mask_canal, initial=np.iinfo(indices.dtype).min, keepdims=True, axis=(0, 1))
-    mask_mid_x = indices[0] == ((mask_min_x_indices + mask_max_x_indices) // 2)
-    mask_min_y_indices = np.min(indices[1], where=mask_canal, initial=np.iinfo(indices.dtype).max, keepdims=True, axis=(0, 1))
-    mask_max_y_indices = np.max(indices[1], where=mask_canal, initial=np.iinfo(indices.dtype).min, keepdims=True, axis=(0, 1))
-    mask_mid_y = indices[1] == ((mask_min_y_indices + mask_max_y_indices) // 2)
-    mask_canal_centerline = mask_canal * mask_mid_x * mask_mid_y
-
-    # Get the indices of the canal centerline
-    mask_canal_centerline_indices = np.array(np.nonzero(mask_canal_centerline))
-
-    # Get the labels of the discs and the output labels
-    out_labels = list(range(3, 3 + len(disc_labels)))
-
-    # Filter the discs that are in the segmentation
-    in_seg = np.isin(disc_labels, seg_data)
-    map_labels = [(d, o) for d, o, i in zip(disc_labels, out_labels, in_seg) if i]
-
-    # If no disc labels found in the segmentation raise an error
-    if len(map_labels) == 0:
-        raise ValueError(f"No disc labels found in the segmentation.")
-
-    # Loop over the discs from C2-C3 to L5-S1 and find the closest voxel in the canal centerline
-    for disc_label, out_label in map_labels:
-        # Create a mask of the disc
-        mask_disc = seg_data == disc_label
-
-        # Find the index of the most posterior voxel in the disc
-        disc_posterior_voxel_index_y = np.min(indices[1], where=mask_disc, initial=np.iinfo(indices.dtype).max)
-        disc_posterior_voxel_index = np.mean(indices, where=[(mask_disc * indices[1]) == disc_posterior_voxel_index_y], axis=(1, 2, 3)).round().astype(indices.dtype)
-
-        # Calculate the distance from disc posterior voxel to each voxel in the canal centerline
-        centerline_distances_from_disc = np.linalg.norm(mask_canal_centerline_indices - disc_posterior_voxel_index[:, None], axis=0)
-
-        # Find the voxel in the canal centerline closest to the disc posterior voxel
-        voxel_in_centerline_closest_to_disc = tuple(mask_canal_centerline_indices[:, np.argmin(centerline_distances_from_disc)])
-
-        # Set the output label
-        output_seg_data[voxel_in_centerline_closest_to_disc] = out_label
-
-    # If C2-C3 is in the segmentation, set 1 and 2 to the superior voxels in the canal centerline and the middle voxels between C2-C3 and the superior voxels
-    if 3 in output_seg_data:
-        # Find the location of the C2-C3 disc
-        c2c3_index = np.unravel_index(np.argmax(output_seg_data == 3), seg_data.shape)
-
-        # Find the location of the superior voxels in the canal centerline
-        canal_superior_index = np.unravel_index(np.argmax(mask_canal_centerline * indices[2]), seg_data.shape)
-
-        if canal_superior_index[2] - c2c3_index[2] >= 8 and output_seg_data.shape[2] - canal_superior_index[2] >= 2:
-            # If C2-C3 at least 8 voxels below the top of the canal and the top of the canal is at least 2 voxels from the top of the image
-            # Set 1 to the superior voxels
-            output_seg_data[canal_superior_index] = 1
-
-            # Set 2 to the middle voxels between C2-C3 and the superior voxels
-            c1c2_z_index = (canal_superior_index[2] + c2c3_index[2]) // 2
-            c1c2_index = np.unravel_index(np.argmax(mask_canal_centerline * (indices[2] == c1c2_z_index)), seg_data.shape)
-            output_seg_data[c1c2_index] = 2
-
-        elif canal_superior_index[2] - c2c3_index[2] >= 4:
-            # If C2-C3 at least 4 voxels below the top of the canal
-            output_seg_data[canal_superior_index] = 2
+    output_seg_data[np.isin(seg_data, selected_labels)] = 1
 
     output_seg = nib.Nifti1Image(output_seg_data, seg.affine, seg.header)
 

@@ -353,8 +353,8 @@ def main():
     fill_canal_mp(
         output_path / 'step1_output',
         output_path / 'step1_output',
-        canal_label=201,
-        cord_label=200,
+        canal_label=2,
+        cord_label=1,
         largest_canal=True,
         largest_cord=True,
         override=True,
@@ -389,7 +389,7 @@ def main():
         output_path / 'step1_output',
         output_path / 'step1_cord',
         label=9,
-        seg_labels=[200],
+        seg_labels=[1],
         dilate=1,
         override=True,
         max_workers=max_workers,
@@ -402,7 +402,7 @@ def main():
         output_path / 'step1_output',
         output_path / 'step1_canal',
         label=7,
-        seg_labels=[200, 201],
+        seg_labels=[1, 2],
         dilate=1,
         override=True,
         max_workers=max_workers,
@@ -419,9 +419,8 @@ def main():
     extract_levels_mp(
         output_path / 'step1_output',
         output_path / 'step1_levels',
-        canal_labels=[200, 201],
-        c2c3_label=224,
-        step=-1,
+        canal_labels=[1, 2],
+        disc_labels=list(range(60, 65)) + list(range(70, 82)) + list(range(90, 95)) + [100],
         override=True,
         max_workers=max_workers,
         quiet=quiet,
@@ -461,16 +460,11 @@ def main():
             quiet=quiet,
         )
 
-        # Load label mappings from JSON file
-        with open(resources_path / 'labels_maps' / 'nnunet_step2_input.json', 'r', encoding='utf-8') as map_file:
-            map_dict = json.load(map_file)
-
         if not quiet: print('\n' 'Mapping the IVDs labels from the step1 model output to the odd IVDs:')
         # This will also delete labels without odd IVDs
-        map_labels_mp(
+        extract_alternate_mp(
             output_path / 'step2_input',
             output_path / 'step2_input',
-            map_dict=map_dict,
             seg_suffix='_0001',
             output_seg_suffix='_0001',
             override=True,
@@ -583,8 +577,8 @@ def main():
         fill_canal_mp(
             output_path / 'step2_output',
             output_path / 'step2_output',
-            canal_label=201,
-            cord_label=200,
+            canal_label=2,
+            cord_label=1,
             largest_canal=True,
             largest_cord=True,
             override=True,
