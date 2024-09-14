@@ -280,7 +280,7 @@ def extract_levels(
     out_labels = list(range(3 + first_disk_idx, 3 + first_disk_idx + len(disc_labels_in_seg)))
 
     # Filter the discs that are in the segmentation
-    map_labels = dict(zip(disc_labels_in_seg, out_labels))
+    map_labels = zip(disc_labels_in_seg, out_labels)
 
     # Loop over the discs from C2-C3 to L5-S1 and find the closest voxel in the canal centerline
     for disc_label, out_label in map_labels:
