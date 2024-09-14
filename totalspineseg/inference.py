@@ -467,6 +467,7 @@ def main():
             output_path / 'step2_input',
             seg_suffix='_0001',
             output_seg_suffix='_0001',
+            labels=list(range(60, 101)),
             override=True,
             max_workers=max_workers,
             quiet=quiet,
