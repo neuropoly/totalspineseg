@@ -412,7 +412,7 @@ def main():
         max_workers=max_workers,
         quiet=quiet,
         label_texts_left={
-            50: 'Vertebrae', 60: 'C2C3', 61: 'C3C4', 62: 'C4C5', 63: 'C5C6', 64: 'C6C7', 70: 'C7T1',
+            60: 'C2C3', 61: 'C3C4', 62: 'C4C5', 63: 'C5C6', 64: 'C6C7', 70: 'C7T1',
             71: 'T1T2', 72: 'T2T3', 73: 'T3T4', 74: 'T4T5', 75: 'T5T6', 76: 'T6T7', 77: 'T7T8',
             78: 'T8T9', 79: 'T9T10', 80: 'T10T11', 81: 'T11T12', 90: 'T12L1',
             91: 'L1L2', 92: 'L2L3', 93: 'L3L4', 94: 'L4L5', 100: 'L5S'
