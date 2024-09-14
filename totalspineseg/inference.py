@@ -242,7 +242,6 @@ def main():
             max_workers=max_workers,
             quiet=quiet,
             label_texts_right={
-                1: 'SC', 2: 'Canal',
                 10: 'C1', 11: 'C2', 12: 'C3', 13: 'C4', 14: 'C5', 15: 'C6', 16: 'C7',
                 20: 'T1', 21: 'T2', 22: 'T3', 23: 'T4', 24: 'T5', 25: 'T6', 26: 'T7',
                 27: 'T8', 28: 'T9', 29: 'T10', 30: 'T11', 31: 'T12',
@@ -412,9 +411,6 @@ def main():
         override=True,
         max_workers=max_workers,
         quiet=quiet,
-        label_texts_right={
-            1: 'SC', 2: 'Canal',
-        },
         label_texts_left={
             50: 'Vertebrae', 60: 'C2C3', 61: 'C3C4', 62: 'C4C5', 63: 'C5C6', 64: 'C6C7', 70: 'C7T1',
             71: 'T1T2', 72: 'T2T3', 73: 'T3T4', 74: 'T4T5', 75: 'T5T6', 76: 'T6T7', 77: 'T7T8',
@@ -656,7 +652,6 @@ def main():
             max_workers=max_workers,
             quiet=quiet,
             label_texts_right={
-                1: 'SC', 2: 'Canal',
                 10: 'C1', 11: 'C2', 12: 'C3', 13: 'C4', 14: 'C5', 15: 'C6', 16: 'C7',
                 20: 'T1', 21: 'T2', 22: 'T3', 23: 'T4', 24: 'T5', 25: 'T6', 26: 'T7',
                 27: 'T8', 28: 'T9', 29: 'T10', 30: 'T11', 31: 'T12',
