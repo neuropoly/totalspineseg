@@ -491,7 +491,7 @@ def iterative_label(
     output_seg_data = np.zeros_like(seg_data)
 
     # Region default sizes for the discs and vertebrae (Cervical, Thoracic, Lumbar, Sacrum)
-    region_default_sizes=[5, 12, 5, 1],
+    region_default_sizes=[5, 12, 5, 1]
 
     # Get sorted connected components superio-inferior (SI) for the disc labels
     disc_mask_labeled, disc_num_labels, disc_sorted_labels, disc_sorted_z_indexes = _get_si_sorted_components(
