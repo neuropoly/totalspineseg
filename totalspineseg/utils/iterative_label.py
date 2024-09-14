@@ -568,15 +568,15 @@ def iterative_label(
     map_disc_sorted_labels_2output = {}
 
     # We loop over all the landmarks starting from the most superior
-    for l in [_ for _ in disc_sorted_labels if _ in map_disc_sorted_labels_landmark2output]:
+    for l_disc in [_ for _ in disc_sorted_labels if _ in map_disc_sorted_labels_landmark2output]:
 
         # If this is the most superior landmark, we have to adjust the start indexes to start from the most superior label in the image
         if len(map_disc_sorted_labels_2output) == 0:
             # Get the index of the current landmark in the sorted disc labels
-            start_l = disc_sorted_labels.index(l)
+            start_l = disc_sorted_labels.index(l_disc)
 
             # Get the index of the current landmark in the list of all default disc output labels
-            start_o_def = all_default_disc_output_labels.index(map_disc_sorted_labels_landmark2output[l])
+            start_o_def = all_default_disc_output_labels.index(map_disc_sorted_labels_landmark2output[l_disc])
 
             # Adjust the start indexes
             start_l, start_o_def = max(0, start_l - start_o_def), max(0, start_o_def - start_l)
@@ -586,10 +586,10 @@ def iterative_label(
                 map_disc_sorted_labels_2output[l] = o
 
         # Get the index of the current landmark in the sorted disc labels
-        start_l = disc_sorted_labels.index(l)
+        start_l = disc_sorted_labels.index(l_disc)
 
         # Get the index of the current landmark in the list of all possible disc output labels
-        start_o = all_possible_disc_output_labels.index(map_disc_sorted_labels_landmark2output[l])
+        start_o = all_possible_disc_output_labels.index(map_disc_sorted_labels_landmark2output[l_disc])
 
         # Map the sorted disc labels to the output labels
         # This will ovveride the mapping from the previous landmarks for all labels inferior to the current landmark
@@ -644,7 +644,7 @@ def iterative_label(
                 continue
 
             # Get te vert label that is just next to the l_disc label inferiorly
-            l = next(_l for _l, _is_v in list(zip(sorted_labels, is_vert))[sorted_labels_l_disc_idx:] if _is_v)
+            l_vert = next(_l for _l, _is_v in list(zip(sorted_labels, is_vert))[sorted_labels_l_disc_idx:] if _is_v)
 
             # Get the output disc label for the l_disc
             l_disc_output = map_disc_sorted_labels_2output[l_disc]
@@ -655,7 +655,7 @@ def iterative_label(
             # If this is the most superior landmark, we have to adjust the start indexes to start from the most superior label in the image
             if len(map_vert_sorted_labels_2output) == 0:
                 # Get the index of the current landmark in the sorted vertebrae labels
-                start_l = vert_sorted_labels.index(l)
+                start_l = vert_sorted_labels.index(l_vert)
 
                 # Get the index of the current vert landmark in the list of all possible vertebrae output labels
                 start_o_def = all_default_vertebrae_output_labels.index(l_disc_vert_output)
@@ -668,7 +668,7 @@ def iterative_label(
                     map_vert_sorted_labels_2output[l] = o
 
             # Get the index of the current landmark in the sorted vertebrae labels
-            start_l = vert_sorted_labels.index(l)
+            start_l = vert_sorted_labels.index(l_vert)
 
             # Get the index of the current vert landmark in the list of all possible vertebrae output labels
             start_o = all_possible_vertebrae_output_labels.index(l_disc_vert_output)
