@@ -638,6 +638,10 @@ def iterative_label(
         # We loop over all the labels starting from the most superior, and we map the vertebrae labels to the output labels
         for idx, curr_l, curr_is_vert in zip(range(len(sorted_labels)), sorted_labels, is_vert):
             if not curr_is_vert: # This is a disc
+                # If the current disc is not in the map, continue
+                if curr_l not in map_disc_sorted_labels_2output:
+                    continue
+
                 # Get the output label for the disc and vertebrae
                 l_disc_output = map_disc_sorted_labels_2output[curr_l]
                 l_vert_output = disc_output_labels_2vert[l_disc_output]
@@ -646,8 +650,11 @@ def iterative_label(
                     # Get the index of the current vertebrae in the default vertebrae output labels list
                     i = all_default_vertebrae_output_labels.index(l_vert_output)
 
+                    # Get the labels of the vertebrae superior to the current disc
+                    prev_vert_ls = [l for l, _is_v in zip(sorted_labels[idx - 1::-1], is_vert[idx - 1::-1]) if _is_v]
+
                     # Map all the vertebrae superior to the current disc to the default vertebrae output labels
-                    for l, o in zip(sorted_labels[idx - 1::-1], all_default_vertebrae_output_labels[i - 1::-1]):
+                    for l, o in zip(prev_vert_ls, all_default_vertebrae_output_labels[i - 1::-1]):
                         map_vert_sorted_labels_2output[l] = o
 
             elif l_vert_output > 0: # This is a vertebrae
