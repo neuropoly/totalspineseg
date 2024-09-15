@@ -634,49 +634,24 @@ def iterative_label(
         # Make a dict mapping the sorted vertebrae labels to the output labels
         map_vert_sorted_labels_2output = {}
 
-        # We loop over all the landmarks starting from the most superior
-        for l_disc in [_ for _ in disc_sorted_labels if _ in map_disc_sorted_labels_landmark2output]:
-            # Get the index of the current landmark in the sorted disc labels
-            sorted_labels_l_disc_idx = list(zip(sorted_labels, is_vert)).index((l_disc, False))
+        l_vert_output = 0
+        # We loop over all the labels starting from the most superior, and we map the vertebrae labels to the output labels
+        for idx, curr_l, curr_is_vert in zip(range(len(sorted_labels)), sorted_labels, is_vert):
+            if not curr_is_vert: # This is a disc
+                # Get the output label for the disc and vertebrae
+                l_disc_output = map_disc_sorted_labels_2output[curr_l]
+                l_vert_output = disc_output_labels_2vert[l_disc_output]
 
-            # Continue if no more vertebrae labels
-            if True not in is_vert[sorted_labels_l_disc_idx:]:
-                continue
+                if idx > 0 and len(map_vert_sorted_labels_2output) == 0: # This is the first disc
+                    # Get the index of the current vertebrae in the default vertebrae output labels list
+                    i = all_default_vertebrae_output_labels.index(l_vert_output)
 
-            # Get te vert label that is just next to the l_disc label inferiorly
-            l_vert = next(_l for _l, _is_v in list(zip(sorted_labels, is_vert))[sorted_labels_l_disc_idx:] if _is_v)
+                    # Map all the vertebrae superior to the current disc to the default vertebrae output labels
+                    for l, o in zip(sorted_labels[idx - 1::-1], all_default_vertebrae_output_labels[i - 1::-1]):
+                        map_vert_sorted_labels_2output[l] = o
 
-            # Get the output disc label for the l_disc
-            l_disc_output = map_disc_sorted_labels_2output[l_disc]
-
-            # Get the output vert label for the l_disc
-            l_disc_vert_output = disc_output_labels_2vert[l_disc_output]
-
-            # If this is the most superior landmark, we have to adjust the start indexes to start from the most superior label in the image
-            if len(map_vert_sorted_labels_2output) == 0:
-                # Get the index of the current landmark in the sorted vertebrae labels
-                start_l = vert_sorted_labels.index(l_vert)
-
-                # Get the index of the current vert landmark in the list of all possible vertebrae output labels
-                start_o_def = all_default_vertebrae_output_labels.index(l_disc_vert_output)
-
-                # Adjust the start indexes
-                start_l, start_o_def = max(0, start_l - start_o_def), max(0, start_o_def - start_l)
-
-                # Map the sorted vert labels to the output labels
-                for l, o in zip(vert_sorted_labels[start_l:], all_default_vertebrae_output_labels[start_o_def:]):
-                    map_vert_sorted_labels_2output[l] = o
-
-            # Get the index of the current landmark in the sorted vertebrae labels
-            start_l = vert_sorted_labels.index(l_vert)
-
-            # Get the index of the current vert landmark in the list of all possible vertebrae output labels
-            start_o = all_possible_vertebrae_output_labels.index(l_disc_vert_output)
-
-            # Map the sorted vert labels to the output labels
-            # This will ovveride the mapping from the previous landmarks for all labels inferior to the current landmark
-            for l, o in zip(vert_sorted_labels[start_l:], all_possible_vertebrae_output_labels[start_o:]):
-                map_vert_sorted_labels_2output[l] = o
+            elif l_vert_output > 0: # This is a vertebrae
+                map_vert_sorted_labels_2output[curr_l] = l_vert_output
 
         # Label the vertebrae with the output labels superio-inferior
         for l, o in map_vert_sorted_labels_2output.items():
