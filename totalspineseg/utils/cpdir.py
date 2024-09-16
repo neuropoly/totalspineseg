@@ -48,6 +48,10 @@ def main():
         '''.split())
     )
     parser.add_argument(
+        '--tries', '-n', type=int, default=10,
+        help='Number of times to try copying the file in case of failure (default is 10).'
+    )
+    parser.add_argument(
         '--override', '-r', action="store_true", default=False,
         help='Override existing output files, defaults to false (Do not override).'
     )
@@ -69,6 +73,7 @@ def main():
     pattern = args.pattern
     flat = args.flat
     replace = dict(args.replace)
+    num_tries = args.tries
     override = args.override
     max_workers = args.max_workers
     quiet = args.quiet
@@ -82,6 +87,7 @@ def main():
             pattern = {pattern}
             flat = {flat}
             replace = {replace}
+            tries = {num_tries}
             override = {override}
             max_workers = {max_workers}
             quiet = {quiet}
@@ -93,6 +99,7 @@ def main():
         pattern=pattern,
         flat=flat,
         replace=replace,
+        num_tries=num_tries,
         override=override,
         max_workers=max_workers,
         quiet=quiet,
@@ -104,6 +111,7 @@ def cpdir_mp(
         pattern=['**/*'],
         flat=False,
         replace={},
+        num_tries=1,
         override=False,
         max_workers=mp.cpu_count(),
         quiet=False,
@@ -129,6 +137,7 @@ def cpdir_mp(
     process_map(
         partial(
             _cpdir,
+            num_tries=num_tries,
             override=override,
         ),
         src_path_list,
@@ -141,6 +150,7 @@ def cpdir_mp(
 def _cpdir(
         src_path,
         dst_path,
+        num_tries=1,
         override=False,
     ):
     '''
@@ -150,9 +160,32 @@ def _cpdir(
     if not override and dst_path.exists():
         return
 
-    # Make sure dst directory exists and copy
+    # Make sure dst directory exists
     dst_path.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(src_path, dst_path)
+
+    # Try copying up to num_tries times
+    for attempt in range(num_tries):
+        try:
+            # Copy the file
+            shutil.copy2(src_path, dst_path)
+            # Check if file sizes are equal
+            if src_path.stat().st_size == dst_path.stat().st_size:
+                # Successful copy
+                break
+            else:
+                # File sizes do not match
+                if attempt == num_tries - 1:
+                    print(f"Warning: File sizes do not match after copying {src_path} to {dst_path}")
+                else:
+                    # Delete the destination file before retrying
+                    dst_path.unlink(missing_ok=True)
+        except OSError as e:
+            # Catch OSError
+            if attempt == num_tries -1:
+                print(f"Error copying {src_path} to {dst_path}: {e}")
+            else:
+                # Delete the destination file before retrying
+                dst_path.unlink(missing_ok=True)
 
 if __name__ == '__main__':
     main()
