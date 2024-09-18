@@ -47,7 +47,7 @@ Additional public datasets were used during this project to generate sacrum segm
 - [SynthRAD2023](https://synthrad2023.grand-challenge.org/) (Internal access: `git@data.neuro.polymtl.ca:datasets/synthrad-challenge-2023.git`)
 - [MRSpineSeg](https://paperswithcode.com/dataset/mrspineseg-challenge) (Internal access: `git@data.neuro.polymtl.ca:datasets/mrspineseg-challenge-2021.git`)
 
-For more information about how these 3 additional datasets were used to generate sacrum segmentations on the 3 main datasets, please see [this issue](https://github.com/neuropoly/totalspineseg/issues/18).
+When not available, sacrum segmentations were generated using the [totalsegmentator](https://github.com/wasserth/TotalSegmentator) model. For more information, please see [this issue](https://github.com/neuropoly/totalspineseg/issues/18).
 
 ## Dependencies
 
