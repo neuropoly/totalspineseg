@@ -67,6 +67,10 @@ def main():
         help='The label for C2-C3 disc.'
     )
     parser.add_argument(
+        '--c2-label', type=int, default=None,
+        help='The label for C2 vertebra.'
+    )
+    parser.add_argument(
         '--step', type=int, default=1,
         help='The step to take between discs labels in the input, defaults to 1.'
     )
@@ -96,6 +100,7 @@ def main():
     output_seg_suffix = args.output_seg_suffix
     canal_labels = args.canal_labels
     c2c3_label = args.c2c3_label
+    c2_label = args.c2_label
     step = args.step
     override = args.override
     max_workers = args.max_workers
@@ -114,6 +119,7 @@ def main():
             output_seg_suffix = "{output_seg_suffix}"
             canal_labels = {canal_labels}
             c2c3_label = {c2c3_label}
+            c2_label = {c2_label}
             step = {step}
             override = {override}
             max_workers = {max_workers}
@@ -130,6 +136,7 @@ def main():
         output_seg_suffix=output_seg_suffix,
         canal_labels=canal_labels,
         c2c3_label=c2c3_label,
+        c2_label=c2_label,
         step=step,
         override=override,
         max_workers=max_workers,
@@ -146,6 +153,7 @@ def extract_levels_mp(
         output_seg_suffix='',
         canal_labels=[],
         c2c3_label=3,
+        c2_label=None,
         step=1,
         override=False,
         max_workers=mp.cpu_count(),
@@ -174,6 +182,7 @@ def extract_levels_mp(
             canal_labels=canal_labels,
             step=step,
             c2c3_label=c2c3_label,
+            c2_label=c2_label,
             override=override,
         ),
         seg_path_list,
@@ -188,6 +197,7 @@ def _extract_levels(
         output_seg_path,
         canal_labels=[],
         c2c3_label=3,
+        c2_label=None,
         step=1,
         override=False,
     ):
@@ -213,6 +223,7 @@ def _extract_levels(
             seg,
             canal_labels=canal_labels,
             c2c3_label=c2c3_label,
+            c2_label=c2_label,
             step=step,
         )
     except ValueError as e:
@@ -231,6 +242,7 @@ def extract_levels(
         seg,
         canal_labels=[],
         c2c3_label=3,
+        c2_label=None,
         step=1,
     ):
     '''
@@ -312,29 +324,23 @@ def extract_levels(
         output_seg_data[voxel_in_centerline_closest_to_disc] = out_label
 
     # If C2-C3 is in the segmentation, set 1 and 2 to the superior voxels in the canal centerline and the middle voxels between C2-C3 and the superior voxels
-    if 3 in output_seg_data:
+    if 3 in np.array(map_labels)[:,1] and c2_label is not None and c2_label in seg_data:
         # Find the location of the C2-C3 disc
         c2c3_index = np.unravel_index(np.argmax(output_seg_data == 3), seg_data.shape)
 
-        # Find the location of the superior voxels in the canal centerline
-        canal_superior_index = np.unravel_index(np.argmax(mask_canal_centerline * indices[2]), seg_data.shape)
+        # Find the location of the superior voxels of the C2 vertebra
+        seg_c2 = np.array(np.where(seg_data==c2_label))
+        max_c2_index = np.argmax(np.transpose(seg_c2)[:,2])
+        c2_top_coords = np.transpose(seg_c2)[max_c2_index]
 
-        if canal_superior_index[2] - c2c3_index[2] >= 8 and output_seg_data.shape[2] - canal_superior_index[2] >= 2:
-            # If C2-C3 at least 8 voxels below the top of the canal and the top of the canal is at least 2 voxels from the top of the image
-            # Set 1 to the superior voxels
-            output_seg_data[canal_superior_index] = 1
+        if output_seg_data.shape[2] - c2_top_coords[2] >= 2:
+            # If at least 2 voxels exist from the top of the image
+            # Set 1 to the top of the vertebra C2
+            output_seg_data[tuple(c2_top_coords)] = 1
 
-            # Set 2 to the middle voxels between C2-C3 and the superior voxels
-            c1c2_z_index = (canal_superior_index[2] + c2c3_index[2]) // 2
-            c1c2_index = np.unravel_index(np.argmax(mask_canal_centerline * (indices[2] == c1c2_z_index)), seg_data.shape)
-            output_seg_data[c1c2_index] = 2
-
-        elif canal_superior_index[2] - c2c3_index[2] >= 4:
-            # If C2-C3 at least 4 voxels below the top of the canal
-            output_seg_data[canal_superior_index] = 2
-
-    output_seg = nib.Nifti1Image(output_seg_data, seg.affine, seg.header)
-
+            # Set 2 to the middle voxels between C2-C3 and the top of the vertebra C2
+            c1c2_index = [(c2_top_coords[i] + c2c3_index[i]) // 2 for i in range(3)]
+            output_seg_data[tuple(c1c2_index)] = 2
     return output_seg
 
 if __name__ == '__main__':
