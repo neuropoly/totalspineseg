@@ -288,7 +288,7 @@ def extract_levels(
     mask_min_y_indices = np.min(indices[1], where=mask_canal, initial=np.iinfo(indices.dtype).max, keepdims=True, axis=(0, 1))
     mask_max_y_indices = np.max(indices[1], where=mask_canal, initial=np.iinfo(indices.dtype).min, keepdims=True, axis=(0, 1))
     mask_mid_y = indices[1] == ((mask_min_y_indices + mask_max_y_indices) // 2)
-    mask_canal_centerline = mask_canal * mask_mid_x * mask_mid_y
+    mask_canal_centerline = mask_mid_x * mask_mid_y
 
     # Get the indices of the canal centerline
     mask_canal_centerline_indices = np.array(np.nonzero(mask_canal_centerline))
