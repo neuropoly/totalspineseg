@@ -519,5 +519,19 @@ def main():
             max_workers=max_workers,
             quiet=quiet,
         )
+
+        if not quiet: print('\n' 'Extracting the levels of the vertebrae and IVDs:')
+        extract_levels_mp(
+            output_path / 'output',
+            output_path / 'output_levels',
+            canal_labels=[200, 201],
+            c2c3_label=224,
+            c2_label=40,
+            step=-1,
+            override=True,
+            max_workers=max_workers,
+            quiet=quiet,
+    )
+
 if __name__ == '__main__':
     main()
