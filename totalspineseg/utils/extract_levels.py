@@ -277,7 +277,7 @@ def extract_levels(
     # Create a mask of the canal
     mask_canal = np.isin(seg_data, canal_labels)
 
-    # If cancl is empty raise an error
+    # If canal is empty raise an error
     if not np.any(mask_canal):
         raise ValueError(f"No canal labels found in the segmentation.")
 
