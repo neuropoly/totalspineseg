@@ -1,11 +1,11 @@
 import sys, argparse, textwrap
 from pathlib import Path
 import numpy as np
-import nibabel as nib
 import multiprocessing as mp
 from functools import partial
 from tqdm.contrib.concurrent import process_map
 import warnings
+from totalspineseg.utils.image import Image, zeros_like
 
 warnings.filterwarnings("ignore")
 
@@ -66,6 +66,10 @@ def main():
         help='The label for C2-C3 disc.'
     )
     parser.add_argument(
+        '--c2-label', type=int, default=None,
+        help='The label for C2 vertebra.'
+    )
+    parser.add_argument(
         '--step', type=int, default=1,
         help='The step to take between discs labels in the input, defaults to 1.'
     )
@@ -95,6 +99,7 @@ def main():
     output_seg_suffix = args.output_seg_suffix
     canal_labels = args.canal_labels
     c2c3_label = args.c2c3_label
+    c2_label = args.c2_label
     step = args.step
     override = args.override
     max_workers = args.max_workers
@@ -113,6 +118,7 @@ def main():
             output_seg_suffix = "{output_seg_suffix}"
             canal_labels = {canal_labels}
             c2c3_label = {c2c3_label}
+            c2_label = {c2_label}
             step = {step}
             override = {override}
             max_workers = {max_workers}
@@ -129,6 +135,7 @@ def main():
         output_seg_suffix=output_seg_suffix,
         canal_labels=canal_labels,
         c2c3_label=c2c3_label,
+        c2_label=c2_label,
         step=step,
         override=override,
         max_workers=max_workers,
@@ -145,6 +152,7 @@ def extract_levels_mp(
         output_seg_suffix='',
         canal_labels=[],
         c2c3_label=3,
+        c2_label=None,
         step=1,
         override=False,
         max_workers=mp.cpu_count(),
@@ -173,6 +181,7 @@ def extract_levels_mp(
             canal_labels=canal_labels,
             step=step,
             c2c3_label=c2c3_label,
+            c2_label=c2_label,
             override=override,
         ),
         seg_path_list,
@@ -187,6 +196,7 @@ def _extract_levels(
         output_seg_path,
         canal_labels=[],
         c2c3_label=3,
+        c2_label=None,
         step=1,
         override=False,
     ):
@@ -201,37 +211,37 @@ def _extract_levels(
         return
 
     # Load segmentation
-    seg = nib.load(seg_path)
+    seg = Image(str(seg_path))
+
+    # Set orientation to LPI
+    orig_orientation = seg.orientation
+    seg.change_orientation('LPI')
 
     try:
         output_seg = extract_levels(
             seg,
             canal_labels=canal_labels,
             c2c3_label=c2c3_label,
+            c2_label=c2_label,
             step=step,
         )
     except ValueError as e:
         output_seg_path.is_file() and output_seg_path.unlink()
         print(f'Error: {seg_path}, {e}')
         return
-
-    # Ensure correct segmentation dtype, affine and header
-    output_seg = nib.Nifti1Image(
-        np.asanyarray(output_seg.dataobj).round().astype(np.uint8),
-        output_seg.affine, output_seg.header
-    )
-    output_seg.set_data_dtype(np.uint8)
-    output_seg.set_qform(output_seg.affine)
-    output_seg.set_sform(output_seg.affine)
+    
+    # Change orientation back to original orientation
+    output_seg.change_orientation(orig_orientation)
 
     # Make sure output directory exists and save the segmentation
     output_seg_path.parent.mkdir(parents=True, exist_ok=True)
-    nib.save(output_seg, output_seg_path)
+    output_seg.save(str(output_seg_path), verbose=0, dtype=np.uint8)
 
 def extract_levels(
         seg,
         canal_labels=[],
         c2c3_label=3,
+        c2_label=None,
         step=1,
     ):
     '''
@@ -242,7 +252,7 @@ def extract_levels(
 
     Parameters
     ----------
-    seg : nibabel.Nifti1Image
+    seg : Image class
         The input segmentation.
     canal_labels : list
         The canal labels.
@@ -253,12 +263,12 @@ def extract_levels(
 
     Returns
     -------
-    nibabel.Nifti1Image
+    Image class
         The output segmentation with the vertebrae levels.
     '''
-    seg_data = np.asanyarray(seg.dataobj).round().astype(np.uint8)
+    seg_data = np.asanyarray(seg.data).round().astype(np.uint8)
 
-    output_seg_data = np.zeros_like(seg_data)
+    output_seg = zeros_like(seg)
 
     # Get array of indices for x, y, and z axes
     indices = np.indices(seg_data.shape)
@@ -266,7 +276,7 @@ def extract_levels(
     # Create a mask of the canal
     mask_canal = np.isin(seg_data, canal_labels)
 
-    # If cancl is empty raise an error
+    # If canal is empty raise an error
     if not np.any(mask_canal):
         raise ValueError(f"No canal labels found in the segmentation.")
 
@@ -277,7 +287,7 @@ def extract_levels(
     mask_min_y_indices = np.min(indices[1], where=mask_canal, initial=np.iinfo(indices.dtype).max, keepdims=True, axis=(0, 1))
     mask_max_y_indices = np.max(indices[1], where=mask_canal, initial=np.iinfo(indices.dtype).min, keepdims=True, axis=(0, 1))
     mask_mid_y = indices[1] == ((mask_min_y_indices + mask_max_y_indices) // 2)
-    mask_canal_centerline = mask_canal * mask_mid_x * mask_mid_y
+    mask_canal_centerline = mask_mid_x * mask_mid_y
 
     # Get the indices of the canal centerline
     mask_canal_centerline_indices = np.array(np.nonzero(mask_canal_centerline))
@@ -294,49 +304,67 @@ def extract_levels(
     if len(map_labels) == 0:
         raise ValueError(f"No disc labels found in the segmentation.")
 
-    # Loop over the discs from C2-C3 to L5-S1 and find the closest voxel in the canal centerline
-    for disc_label, out_label in map_labels:
-        # Create a mask of the disc
-        mask_disc = seg_data == disc_label
-
-        # Find the index of the most posterior voxel in the disc
-        disc_posterior_voxel_index_y = np.min(indices[1], where=mask_disc, initial=np.iinfo(indices.dtype).max)
-        disc_posterior_voxel_index = np.mean(indices, where=[(mask_disc * indices[1]) == disc_posterior_voxel_index_y], axis=(1, 2, 3)).round().astype(indices.dtype)
-
-        # Calculate the distance from disc posterior voxel to each voxel in the canal centerline
-        centerline_distances_from_disc = np.linalg.norm(mask_canal_centerline_indices - disc_posterior_voxel_index[:, None], axis=0)
-
-        # Find the voxel in the canal centerline closest to the disc posterior voxel
-        voxel_in_centerline_closest_to_disc = tuple(mask_canal_centerline_indices[:, np.argmin(centerline_distances_from_disc)])
-
-        # Set the output label
-        output_seg_data[voxel_in_centerline_closest_to_disc] = out_label
+    # Extract posterior tip of the visible discs
+    discs_list, output_seg_data = extract_post_tip_discs(seg_data, np.transpose(mask_canal_centerline_indices), map_labels)
 
     # If C2-C3 is in the segmentation, set 1 and 2 to the superior voxels in the canal centerline and the middle voxels between C2-C3 and the superior voxels
-    if 3 in output_seg_data:
+    if 3 in np.array(map_labels)[:,1] and c2_label is not None and c2_label in seg_data:
         # Find the location of the C2-C3 disc
         c2c3_index = np.unravel_index(np.argmax(output_seg_data == 3), seg_data.shape)
 
-        # Find the location of the superior voxels in the canal centerline
-        canal_superior_index = np.unravel_index(np.argmax(mask_canal_centerline * indices[2]), seg_data.shape)
+        # Find the location of the superior voxels of the C2 vertebra
+        seg_c2 = np.array(np.where(seg_data==c2_label))
+        max_c2_index = np.argmax(np.transpose(seg_c2)[:,2])
+        c2_top_coords = np.transpose(seg_c2)[max_c2_index]
 
-        if canal_superior_index[2] - c2c3_index[2] >= 8 and output_seg_data.shape[2] - canal_superior_index[2] >= 2:
-            # If C2-C3 at least 8 voxels below the top of the canal and the top of the canal is at least 2 voxels from the top of the image
-            # Set 1 to the superior voxels
-            output_seg_data[canal_superior_index] = 1
+        if output_seg_data.shape[2] - c2_top_coords[2] >= 2:
+            # If at least 2 voxels exist from the top of the image
+            # Set 1 to the top of the vertebra C2
+            output_seg_data[tuple(c2_top_coords)] = 1
 
-            # Set 2 to the middle voxels between C2-C3 and the superior voxels
-            c1c2_z_index = (canal_superior_index[2] + c2c3_index[2]) // 2
-            c1c2_index = np.unravel_index(np.argmax(mask_canal_centerline * (indices[2] == c1c2_z_index)), seg_data.shape)
-            output_seg_data[c1c2_index] = 2
-
-        elif canal_superior_index[2] - c2c3_index[2] >= 4:
-            # If C2-C3 at least 4 voxels below the top of the canal
-            output_seg_data[canal_superior_index] = 2
-
-    output_seg = nib.Nifti1Image(output_seg_data, seg.affine, seg.header)
-
+            # Set 2 to the middle voxels between C2-C3 and the top of the vertebra C2
+            c1c2_index = [(c2_top_coords[i] + c2c3_index[i]) // 2 for i in range(3)]
+            output_seg_data[tuple(c1c2_index)] = 2
+    
+    output_seg.data=output_seg_data
     return output_seg
+
+def extract_post_tip_discs(seg, centerline, map_labels):
+    """
+    Find closest point from segmentation to centerline 
+
+    The function expect LPI
+    """
+    discs_list = []
+    out = np.zeros_like(seg)
+    for seg_label, out_label in map_labels:
+        # Loop on all the pixels of the segmentation
+        min_dist = np.inf
+        nonzero = np.where((seg==seg_label))
+        perc_10 = np.quantile(nonzero[1], 0.1)
+        for u, v, w in zip(nonzero[0], nonzero[1], nonzero[2]):
+            if v <= perc_10: # Consider only the 10% of points that are closer to the posterior side of the disc
+                proj_point, dist = project_point_on_line(np.array([u, v, w]), centerline)
+                if dist < min_dist:
+                    min_dist = dist
+                    min_point_disc = np.array([u, v, w, out_label])
+        out[min_point_disc[0],min_point_disc[1],min_point_disc[2]]=min_point_disc[3]
+        discs_list.append(min_point_disc)
+    return np.array(discs_list), out
+
+def project_point_on_line(point, line):
+    """
+    Project the input point on the referenced line by finding the minimal distance
+
+    :param point: coordinates of a point and its value: point = numpy.array([x y z])
+    :param line: list of points coordinates which composes the line
+    :returns: closest coordinate to the referenced point on the line:
+    projected_point = numpy.array([X Y Z])
+    Copied from https://github.com/spinalcordtoolbox/spinalcordtoolbox
+    """
+    # Calculate distances between the referenced point and the line then keep the closest point
+    dist = np.sum((line - point) ** 2, axis=1)
+    return line[np.argmin(dist)], np.min(dist)
 
 if __name__ == '__main__':
     main()
