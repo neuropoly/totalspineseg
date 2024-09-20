@@ -509,5 +509,15 @@ def main():
             quiet=quiet,
         )
 
+        if not quiet: print('\n' 'Resampling outputs to the original space:')
+        transform_seg2image_mp(
+            input_path,
+            output_path / 'step2_output',
+            output_path / 'output',
+            image_suffix='',
+            override=True,
+            max_workers=max_workers,
+            quiet=quiet,
+        )
 if __name__ == '__main__':
     main()
