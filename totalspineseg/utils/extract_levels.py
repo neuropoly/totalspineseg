@@ -6,6 +6,7 @@ import multiprocessing as mp
 from functools import partial
 from tqdm.contrib.concurrent import process_map
 import warnings
+from totalspineseg.utils.image import Image, zeros_like
 
 warnings.filterwarnings("ignore")
 
@@ -201,7 +202,11 @@ def _extract_levels(
         return
 
     # Load segmentation
-    seg = nib.load(seg_path)
+    seg = Image(str(seg_path))
+
+    # Set orientation to LPI
+    orig_orientation = seg.orientation
+    seg.change_orientation('LPI')
 
     try:
         output_seg = extract_levels(
@@ -214,19 +219,13 @@ def _extract_levels(
         output_seg_path.is_file() and output_seg_path.unlink()
         print(f'Error: {seg_path}, {e}')
         return
-
-    # Ensure correct segmentation dtype, affine and header
-    output_seg = nib.Nifti1Image(
-        np.asanyarray(output_seg.dataobj).round().astype(np.uint8),
-        output_seg.affine, output_seg.header
-    )
-    output_seg.set_data_dtype(np.uint8)
-    output_seg.set_qform(output_seg.affine)
-    output_seg.set_sform(output_seg.affine)
+    
+    # Change orientation back to original orientation
+    output_seg.change_orientation(orig_orientation)
 
     # Make sure output directory exists and save the segmentation
     output_seg_path.parent.mkdir(parents=True, exist_ok=True)
-    nib.save(output_seg, output_seg_path)
+    output_seg.save(str(output_seg_path), verbose=0, dtype=np.uint8)
 
 def extract_levels(
         seg,
@@ -242,7 +241,7 @@ def extract_levels(
 
     Parameters
     ----------
-    seg : nibabel.Nifti1Image
+    seg : Image class
         The input segmentation.
     canal_labels : list
         The canal labels.
@@ -253,12 +252,12 @@ def extract_levels(
 
     Returns
     -------
-    nibabel.Nifti1Image
+    Image class
         The output segmentation with the vertebrae levels.
     '''
-    seg_data = np.asanyarray(seg.dataobj).round().astype(np.uint8)
+    seg_data = np.asanyarray(seg.data).round().astype(np.uint8)
 
-    output_seg_data = np.zeros_like(seg_data)
+    output_seg = zeros_like(seg)
 
     # Get array of indices for x, y, and z axes
     indices = np.indices(seg_data.shape)
