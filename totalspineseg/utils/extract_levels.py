@@ -1,7 +1,6 @@
 import sys, argparse, textwrap
 from pathlib import Path
 import numpy as np
-import nibabel as nib
 import multiprocessing as mp
 from functools import partial
 from tqdm.contrib.concurrent import process_map
@@ -305,23 +304,8 @@ def extract_levels(
     if len(map_labels) == 0:
         raise ValueError(f"No disc labels found in the segmentation.")
 
-    # Loop over the discs from C2-C3 to L5-S1 and find the closest voxel in the canal centerline
-    for disc_label, out_label in map_labels:
-        # Create a mask of the disc
-        mask_disc = seg_data == disc_label
-
-        # Find the index of the most posterior voxel in the disc
-        disc_posterior_voxel_index_y = np.min(indices[1], where=mask_disc, initial=np.iinfo(indices.dtype).max)
-        disc_posterior_voxel_index = np.mean(indices, where=[(mask_disc * indices[1]) == disc_posterior_voxel_index_y], axis=(1, 2, 3)).round().astype(indices.dtype)
-
-        # Calculate the distance from disc posterior voxel to each voxel in the canal centerline
-        centerline_distances_from_disc = np.linalg.norm(mask_canal_centerline_indices - disc_posterior_voxel_index[:, None], axis=0)
-
-        # Find the voxel in the canal centerline closest to the disc posterior voxel
-        voxel_in_centerline_closest_to_disc = tuple(mask_canal_centerline_indices[:, np.argmin(centerline_distances_from_disc)])
-
-        # Set the output label
-        output_seg_data[voxel_in_centerline_closest_to_disc] = out_label
+    # Extract posterior tip of the visible discs
+    discs_list, output_seg_data = extract_post_tip_discs(seg_data, np.transpose(mask_canal_centerline_indices), map_labels)
 
     # If C2-C3 is in the segmentation, set 1 and 2 to the superior voxels in the canal centerline and the middle voxels between C2-C3 and the superior voxels
     if 3 in np.array(map_labels)[:,1] and c2_label is not None and c2_label in seg_data:
@@ -341,7 +325,46 @@ def extract_levels(
             # Set 2 to the middle voxels between C2-C3 and the top of the vertebra C2
             c1c2_index = [(c2_top_coords[i] + c2c3_index[i]) // 2 for i in range(3)]
             output_seg_data[tuple(c1c2_index)] = 2
+    
+    output_seg.data=output_seg_data
     return output_seg
+
+def extract_post_tip_discs(seg, centerline, map_labels):
+    """
+    Find closest point from segmentation to centerline 
+
+    The function expect LPI
+    """
+    discs_list = []
+    out = np.zeros_like(seg)
+    for seg_label, out_label in map_labels:
+        # Loop on all the pixels of the segmentation
+        min_dist = np.inf
+        nonzero = np.where((seg==seg_label))
+        perc_10 = np.quantile(nonzero[1], 0.1)
+        for u, v, w in zip(nonzero[0], nonzero[1], nonzero[2]):
+            if v <= perc_10: # Consider only the 10% of points that are closer to the posterior side of the disc
+                proj_point, dist = project_point_on_line(np.array([u, v, w]), centerline)
+                if dist < min_dist:
+                    min_dist = dist
+                    min_point_disc = np.array([u, v, w, out_label])
+        out[min_point_disc[0],min_point_disc[1],min_point_disc[2]]=min_point_disc[3]
+        discs_list.append(min_point_disc)
+    return np.array(discs_list), out
+
+def project_point_on_line(point, line):
+    """
+    Project the input point on the referenced line by finding the minimal distance
+
+    :param point: coordinates of a point and its value: point = numpy.array([x y z])
+    :param line: list of points coordinates which composes the line
+    :returns: closest coordinate to the referenced point on the line:
+    projected_point = numpy.array([X Y Z])
+    Copied from https://github.com/spinalcordtoolbox/spinalcordtoolbox
+    """
+    # Calculate distances between the referenced point and the line then keep the closest point
+    dist = np.sum((line - point) ** 2, axis=1)
+    return line[np.argmin(dist)], np.min(dist)
 
 if __name__ == '__main__':
     main()
