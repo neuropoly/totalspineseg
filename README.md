@@ -38,10 +38,17 @@ For comparison, we also trained a single model (`Dataset103`) that outputs indiv
 
 ## Datasets
 
-Our model is trained on those datasets:
+The totalspineseg model was trained on these 3 main datasets:
 - Private whole-spine dataset (Internal access: `git@data.neuro.polymtl.ca:datasets/whole-spine.git`).
 - [SPIDER](https://doi.org/10.5281/zenodo.10159290) project dataset (Internal access: `git@data.neuro.polymtl.ca:datasets/spider-challenge-2023.git`)
 - [Spine Generic Project](https://github.com/spine-generic), including single and multi subject datasets (Public access: `git@github.com:spine-generic/data-single-subject.git` and `git@github.com:spine-generic/data-multi-subject.git`).
+
+Additional public datasets were used during this project to generate sacrum segmentations:
+- [GoldAtlas](https://zenodo.org/records/583096) (Internal access: `git@data.neuro.polymtl.ca:datasets/goldatlas.git`)
+- [SynthRAD2023](https://synthrad2023.grand-challenge.org/) (Internal access: `git@data.neuro.polymtl.ca:datasets/synthrad-challenge-2023.git`)
+- [MRSpineSeg](https://paperswithcode.com/dataset/mrspineseg-challenge) (Internal access: `git@data.neuro.polymtl.ca:datasets/mrspineseg-challenge-2021.git`)
+
+When not available, sacrum segmentations were generated using the [totalsegmentator](https://github.com/wasserth/TotalSegmentator) model. For more information, please see [this issue](https://github.com/neuropoly/totalspineseg/issues/18).
 
 ## Dependencies
 
