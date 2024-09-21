@@ -66,6 +66,10 @@ def main():
         help='The disc labels starting at C2C3 ordered from superior to inferior.'
     )
     parser.add_argument(
+        '--c1-label', type=int, default=0,
+        help='The label for C1 vertebra in the segmentation, if provided it will be used to determine if C1 is in the segmentation.'
+    )
+    parser.add_argument(
         '--override', '-r', action="store_true", default=False,
         help='Override existing output files, defaults to false (Do not override).'
     )
@@ -91,6 +95,7 @@ def main():
     output_seg_suffix = args.output_seg_suffix
     canal_labels = args.canal_labels
     disc_labels = [_ for __ in args.disc_labels for _ in (__ if isinstance(__, list) else [__])]
+    c1_label = args.c1_label
     override = args.override
     max_workers = args.max_workers
     quiet = args.quiet
@@ -108,6 +113,7 @@ def main():
             output_seg_suffix = "{output_seg_suffix}"
             canal_labels = {canal_labels}
             disc_labels = {disc_labels}
+            c1_label = {c1_label}
             override = {override}
             max_workers = {max_workers}
             quiet = {quiet}
@@ -123,6 +129,7 @@ def main():
         output_seg_suffix=output_seg_suffix,
         canal_labels=canal_labels,
         disc_labels=disc_labels,
+        c1_label=c1_label,
         override=override,
         max_workers=max_workers,
         quiet=quiet,
@@ -138,6 +145,7 @@ def extract_levels_mp(
         output_seg_suffix='',
         canal_labels=[],
         disc_labels=[],
+        c1_label=0,
         override=False,
         max_workers=mp.cpu_count(),
         quiet=False,
@@ -164,6 +172,7 @@ def extract_levels_mp(
             _extract_levels,
             canal_labels=canal_labels,
             disc_labels=disc_labels,
+            c1_label=c1_label,
             override=override,
         ),
         seg_path_list,
@@ -178,6 +187,7 @@ def _extract_levels(
         output_seg_path,
         canal_labels=[],
         disc_labels=[],
+        c1_label=0,
         override=False,
     ):
     '''
@@ -197,7 +207,8 @@ def _extract_levels(
         output_seg = extract_levels(
             seg,
             canal_labels=canal_labels,
-            disc_labels=disc_labels
+            disc_labels=disc_labels,
+            c1_label=c1_label,
         )
     except ValueError as e:
         output_seg_path.is_file() and output_seg_path.unlink()
@@ -221,6 +232,7 @@ def extract_levels(
         seg,
         canal_labels=[],
         disc_labels=[],
+        c1_label=0,
     ):
     '''
     Extract vertebrae levels from Spinal Canal and Discs.
@@ -236,6 +248,8 @@ def extract_levels(
         The canal labels.
     disc_labels : list
         The disc labels starting at C2C3 ordered from superior to inferior.
+    c1_label : int
+        The label for C1 vertebra in the segmentation, if provided it will be used to determine if C1 is in the segmentation.
 
     Returns
     -------
@@ -308,8 +322,8 @@ def extract_levels(
         # Find the location of the superior voxels in the canal centerline
         canal_superior_index = np.unravel_index(np.argmax(mask_canal_centerline * indices[2]), seg_data.shape)
 
-        if canal_superior_index[2] - c2c3_index[2] >= 8 and output_seg_data.shape[2] - canal_superior_index[2] >= 2:
-            # If C2-C3 at least 8 voxels below the top of the canal and the top of the canal is at least 2 voxels from the top of the image
+        if (c1_label > 0 and c1_label in seg_data) or (c1_label == 0 and canal_superior_index[2] - c2c3_index[2] >= 8 and output_seg_data.shape[2] - canal_superior_index[2] >= 2):
+            # If C1 is in the segmentation or C2-C3 at least 8 voxels below the top of the canal and the top of the canal is at least 2 voxels from the top of the image
             # Set 1 to the superior voxels
             output_seg_data[canal_superior_index] = 1
 
