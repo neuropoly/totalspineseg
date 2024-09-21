@@ -40,8 +40,8 @@ def main():
         help=' '.join(f'''
             Folder containing localizers segmentations or a single .nii.gz localizer segmentation to use for detecting first vertebrae and disc if C1 and C2-C3 disc or the Sacrum and L5-S disc not found in the image, Optional.
             This is the output of the model applied on localizer images. It can be the output of step 2, or step 1 if you only want to run step 1 (step1 flag).
-            The algorithm will transform the localizer to the segmentation space and use it to detect the matching vertebrae and discs.
-            Mathcing will based on the magority of the voxels of the first vertebrae or disc in the localizer, that intersect with image.
+            The algorithm will use the localizers' segmentations to detect the matching vertebrae and discs. The localizer and the image must be aligned.
+            Matching will based on the majority of the voxels of the first vertebra or disc in the localizer, that intersect with image.
             The file names should be in match with the image file names, or you can use the --suffix and --loc-suffix to match the files.
         '''.split())
     )
@@ -125,9 +125,6 @@ def main():
     nnUNet_exports.mkdir(parents=True, exist_ok=True)
 
     # Set the nnUNet variables
-    nnUNetTrainer = 'nnUNetTrainer_16000epochs'
-    nnUNetPlans = 'nnUNetPlans'
-    configuration = '3d_fullres_small'
     step1_dataset = 'Dataset101_TotalSpineSeg_step1'
     step2_dataset = 'Dataset102_TotalSpineSeg_step2'
     fold = 0
@@ -233,6 +230,27 @@ def main():
             max_workers=max_workers,
             quiet=quiet,
         )
+        preview_jpg_mp(
+            output_path / 'input',
+            output_path / 'preview',
+            segs_path=output_path / 'localizers',
+            output_suffix='_loc_tags',
+            override=True,
+            max_workers=max_workers,
+            quiet=quiet,
+            label_texts_right={
+                11: 'C1', 12: 'C2', 13: 'C3', 14: 'C4', 15: 'C5', 16: 'C6', 17: 'C7',
+                21: 'T1', 22: 'T2', 23: 'T3', 24: 'T4', 25: 'T5', 26: 'T6', 27: 'T7',
+                28: 'T8', 29: 'T9', 30: 'T10', 31: 'T11', 32: 'T12',
+                41: 'L1', 42: 'L2', 43: 'L3', 44: 'L4', 45: 'L5',
+            },
+            label_texts_left={
+                50: 'Sacrum', 63: 'C2C3', 64: 'C3C4', 65: 'C4C5', 66: 'C5C6', 67: 'C6C7',
+                71: 'C7T1', 72: 'T1T2', 73: 'T2T3', 74: 'T3T4', 75: 'T4T5', 76: 'T5T6', 77: 'T6T7',
+                78: 'T7T8', 79: 'T8T9', 80: 'T9T10', 81: 'T10T11', 82: 'T11T12',
+                91: 'T12L1', 92: 'L1L2', 93: 'L2L3', 94: 'L3L4', 95: 'L4L5', 100: 'L5S'
+            },
+        )
 
     if not quiet: print('\n' 'Converting 4D images to 3D:')
     average4d_mp(
@@ -275,6 +293,8 @@ def main():
         quiet=quiet,
     )
 
+    # Get the nnUNet parameters from the results folder
+    nnUNetTrainer, nnUNetPlans, configuration = next((nnUNet_results / step1_dataset).glob('*/fold_*')).parent.name.split('__')
     # Check if the final checkpoint exists, if not use the latest checkpoint
     checkpoint = 'checkpoint_final.pth' if (nnUNet_results / step1_dataset / f'{nnUNetTrainer}__{nnUNetPlans}__{configuration}' / f'fold_{fold}' / 'checkpoint_final.pth').is_file() else 'checkpoint_latest.pth'
 
@@ -323,10 +343,16 @@ def main():
         iterative_label_mp(
             output_path / 'step1_output',
             output_path / 'step1_output',
+            selected_disc_landmarks=[2, 5, 3, 4],
             disc_labels=[1, 2, 3, 4, 5],
-            init_disc={2:224, 5:202, 3:219, 4:207},
-            output_disc_step=-1,
-            map_input_dict={6:92, 7:201, 8:201, 9:200},
+            disc_landmark_labels=[2, 3, 4, 5],
+            disc_landmark_output_labels=[63, 71, 91, 100],
+            canal_labels=[7, 8],
+            canal_output_label=2,
+            cord_labels=[9],
+            cord_output_label=1,
+            sacrum_labels=[6],
+            sacrum_output_label=50,
             override=True,
             max_workers=max_workers,
             quiet=quiet,
@@ -336,11 +362,17 @@ def main():
             output_path / 'step1_output',
             output_path / 'step1_output',
             locs_path=output_path / 'localizers',
+            selected_disc_landmarks=[2, 5],
             disc_labels=[1, 2, 3, 4, 5],
-            init_disc={2:224, 5:202},
-            output_disc_step=-1,
-            loc_disc_labels=list(range(202, 225)),
-            map_input_dict={6:92, 7:201, 8:201, 9:200},
+            disc_landmark_labels=[2, 3, 4, 5],
+            disc_landmark_output_labels=[63, 71, 91, 100],
+            loc_disc_labels=list(range(63, 101)),
+            canal_labels=[7, 8],
+            canal_output_label=2,
+            cord_labels=[9],
+            cord_output_label=1,
+            sacrum_labels=[6],
+            sacrum_output_label=50,
             override=True,
             max_workers=max_workers,
             quiet=quiet,
@@ -351,8 +383,8 @@ def main():
     fill_canal_mp(
         output_path / 'step1_output',
         output_path / 'step1_output',
-        canal_label=201,
-        cord_label=200,
+        canal_label=2,
+        cord_label=1,
         largest_canal=True,
         largest_cord=True,
         override=True,
@@ -380,6 +412,21 @@ def main():
         max_workers=max_workers,
         quiet=quiet,
     )
+    preview_jpg_mp(
+        output_path / 'input',
+        output_path / 'preview',
+        segs_path=output_path / 'step1_output',
+        output_suffix='_step1_output_tags',
+        override=True,
+        max_workers=max_workers,
+        quiet=quiet,
+        label_texts_left={
+            63: 'C2C3', 64: 'C3C4', 65: 'C4C5', 66: 'C5C6', 67: 'C6C7',
+            71: 'C7T1', 72: 'T1T2', 73: 'T2T3', 74: 'T3T4', 75: 'T4T5', 76: 'T5T6', 77: 'T6T7',
+            78: 'T7T8', 79: 'T8T9', 80: 'T9T10', 81: 'T10T11', 82: 'T11T12',
+            91: 'T12L1', 92: 'L1L2', 93: 'L2L3', 94: 'L3L4', 95: 'L4L5', 100: 'L5S'
+        },
+    )
 
     if not quiet: print('\n' 'Extracting spinal cord soft segmentation from step 1 model output:')
     extract_soft_mp(
@@ -387,7 +434,7 @@ def main():
         output_path / 'step1_output',
         output_path / 'step1_cord',
         label=9,
-        seg_labels=[200],
+        seg_labels=[1],
         dilate=1,
         override=True,
         max_workers=max_workers,
@@ -400,7 +447,7 @@ def main():
         output_path / 'step1_output',
         output_path / 'step1_canal',
         label=7,
-        seg_labels=[200, 201],
+        seg_labels=[1, 2],
         dilate=1,
         override=True,
         max_workers=max_workers,
@@ -417,9 +464,8 @@ def main():
     extract_levels_mp(
         output_path / 'step1_output',
         output_path / 'step1_levels',
-        canal_labels=[200, 201],
-        c2c3_label=224,
-        step=-1,
+        canal_labels=[1, 2],
+        disc_labels=list(range(63, 68)) + list(range(71, 83)) + list(range(91, 96)) + [100],
         override=True,
         max_workers=max_workers,
         quiet=quiet,
@@ -459,18 +505,14 @@ def main():
             quiet=quiet,
         )
 
-        # Load label mappings from JSON file
-        with open(resources_path / 'labels_maps' / 'nnunet_step2_input.json', 'r', encoding='utf-8') as map_file:
-            map_dict = json.load(map_file)
-
         if not quiet: print('\n' 'Mapping the IVDs labels from the step1 model output to the odd IVDs:')
         # This will also delete labels without odd IVDs
-        map_labels_mp(
+        extract_alternate_mp(
             output_path / 'step2_input',
             output_path / 'step2_input',
-            map_dict=map_dict,
             seg_suffix='_0001',
             output_seg_suffix='_0001',
+            labels=list(range(63, 101)),
             override=True,
             max_workers=max_workers,
             quiet=quiet,
@@ -493,6 +535,8 @@ def main():
             if not f.with_name(f.name.replace('_0000.nii.gz', '_0001.nii.gz')).exists():
                 f.unlink()
 
+        # Get the nnUNet parameters from the results folder
+        nnUNetTrainer, nnUNetPlans, configuration = next((nnUNet_results / step2_dataset).glob('*/fold_*')).parent.name.split('__')
         # Check if the final checkpoint exists, if not use the latest checkpoint
         checkpoint = 'checkpoint_final.pth' if (nnUNet_results / step2_dataset / f'{nnUNetTrainer}__{nnUNetPlans}__{configuration}' / f'fold_{fold}' / 'checkpoint_final.pth').is_file() else 'checkpoint_latest.pth'
 
@@ -543,16 +587,19 @@ def main():
             iterative_label_mp(
                 output_path / 'step2_output',
                 output_path / 'step2_output',
+                selected_disc_landmarks=[4, 7, 5, 6],
                 disc_labels=[1, 2, 3, 4, 5, 6, 7],
+                disc_landmark_labels=[4, 5, 6, 7],
+                disc_landmark_output_labels=[63, 71, 91, 100],
                 vertebrae_labels=[9, 10, 11, 12, 13, 14],
+                vertebrae_landmark_output_labels=[13, 21, 41, 50],
                 vertebrae_extra_labels=[8],
-                init_disc={4:224, 7:202, 5:219, 6:207},
-                output_disc_step=-1,
-                output_vertebrae_step=-1,
-                output_c2c3=224,
-                output_c2=40,
-                map_output_dict={17:92},
-                map_input_dict={14:92, 15:201, 16:201, 17:200},
+                canal_labels=[15, 16],
+                canal_output_label=2,
+                cord_labels=[17],
+                cord_output_label=1,
+                sacrum_labels=[14],
+                sacrum_output_label=50,
                 override=True,
                 max_workers=max_workers,
                 quiet=quiet,
@@ -562,17 +609,20 @@ def main():
                 output_path / 'step2_output',
                 output_path / 'step2_output',
                 locs_path=output_path / 'localizers',
+                selected_disc_landmarks=[4, 7],
                 disc_labels=[1, 2, 3, 4, 5, 6, 7],
+                disc_landmark_labels=[4, 5, 6, 7],
+                disc_landmark_output_labels=[63, 71, 91, 100],
                 vertebrae_labels=[9, 10, 11, 12, 13, 14],
+                vertebrae_landmark_output_labels=[13, 21, 41, 50],
                 vertebrae_extra_labels=[8],
-                init_disc={4:224, 7:202},
-                loc_disc_labels=list(range(202, 225)),
-                output_disc_step=-1,
-                output_vertebrae_step=-1,
-                output_c2c3=224,
-                output_c2=40,
-                map_output_dict={17:92},
-                map_input_dict={14:92, 15:201, 16:201, 17:200},
+                loc_disc_labels=list(range(63, 101)),
+                canal_labels=[15, 16],
+                canal_output_label=2,
+                cord_labels=[17],
+                cord_output_label=1,
+                sacrum_labels=[14],
+                sacrum_output_label=50,
                 override=True,
                 max_workers=max_workers,
                 quiet=quiet,
@@ -583,8 +633,8 @@ def main():
         fill_canal_mp(
             output_path / 'step2_output',
             output_path / 'step2_output',
-            canal_label=201,
-            cord_label=200,
+            canal_label=2,
+            cord_label=1,
             largest_canal=True,
             largest_cord=True,
             override=True,
@@ -611,6 +661,27 @@ def main():
             override=True,
             max_workers=max_workers,
             quiet=quiet,
+        )
+        preview_jpg_mp(
+            output_path / 'input',
+            output_path / 'preview',
+            segs_path=output_path / 'step2_output',
+            output_suffix='_step2_output_tags',
+            override=True,
+            max_workers=max_workers,
+            quiet=quiet,
+            label_texts_right={
+                11: 'C1', 12: 'C2', 13: 'C3', 14: 'C4', 15: 'C5', 16: 'C6', 17: 'C7',
+                21: 'T1', 22: 'T2', 23: 'T3', 24: 'T4', 25: 'T5', 26: 'T6', 27: 'T7',
+                28: 'T8', 29: 'T9', 30: 'T10', 31: 'T11', 32: 'T12',
+                41: 'L1', 42: 'L2', 43: 'L3', 44: 'L4', 45: 'L5',
+            },
+            label_texts_left={
+                50: 'Sacrum', 63: 'C2C3', 64: 'C3C4', 65: 'C4C5', 66: 'C5C6', 67: 'C6C7',
+                71: 'C7T1', 72: 'T1T2', 73: 'T2T3', 74: 'T3T4', 75: 'T4T5', 76: 'T5T6', 77: 'T6T7',
+                78: 'T7T8', 79: 'T8T9', 80: 'T9T10', 81: 'T10T11', 82: 'T11T12',
+                91: 'T12L1', 92: 'L1L2', 93: 'L2L3', 94: 'L3L4', 95: 'L4L5', 100: 'L5S'
+            },
         )
 
 if __name__ == '__main__':

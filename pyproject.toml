@@ -79,6 +79,7 @@ totalspineseg_average4d = "totalspineseg.utils.average4d:main"
 totalspineseg_crop_image2seg = "totalspineseg.utils.crop_image2seg:main"
 totalspineseg_extract_soft = "totalspineseg.utils.extract_soft:main"
 totalspineseg_extract_levels = "totalspineseg.utils.extract_levels:main"
+totalspineseg_extract_alternate = "totalspineseg.utils.extract_alternate:main"
 totalspineseg_add_nnunet_trainer = "totalspineseg.utils.add_nnunet_trainer:main"
 
 [build-system]
