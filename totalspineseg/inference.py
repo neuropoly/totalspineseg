@@ -40,8 +40,8 @@ def main():
         help=' '.join(f'''
             Folder containing localizers segmentations or a single .nii.gz localizer segmentation to use for detecting first vertebrae and disc if C1 and C2-C3 disc or the Sacrum and L5-S disc not found in the image, Optional.
             This is the output of the model applied on localizer images. It can be the output of step 2, or step 1 if you only want to run step 1 (step1 flag).
-            The algorithm will transform the localizer to the segmentation space and use it to detect the matching vertebrae and discs.
-            Mathcing will based on the magority of the voxels of the first vertebrae or disc in the localizer, that intersect with image.
+            The algorithm will use the localizers' segmentations to detect the matching vertebrae and discs. The localizer and the image must be aligned.
+            Matching will based on the majority of the voxels of the first vertebra or disc in the localizer, that intersect with image.
             The file names should be in match with the image file names, or you can use the --suffix and --loc-suffix to match the files.
         '''.split())
     )
