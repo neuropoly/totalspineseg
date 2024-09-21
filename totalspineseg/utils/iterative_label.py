@@ -1120,25 +1120,20 @@ def _fill(mask):
     np.ndarray
         Binary mask with holes filled
     '''
+    # Get array of indices for x, y, and z axes
+    indices = np.indices(mask.shape)
 
-    # Create an array of x indices with the same shape as the mask
-    x_indices = np.broadcast_to(np.arange(mask.shape[0])[..., np.newaxis, np.newaxis], mask.shape)
-    # Create an array of y indices with the same shape as the mask
-    y_indices = np.broadcast_to(np.arange(mask.shape[1])[..., np.newaxis], mask.shape)
-    # Create an array of z indices with the same shape as the mask
-    z_indices = np.broadcast_to(np.arange(mask.shape[2]), mask.shape)
-
-    mask_min_x = np.min(np.where(mask, x_indices, np.inf), axis=0)[np.newaxis, ...]
-    mask_max_x = np.max(np.where(mask, x_indices, -np.inf), axis=0)[np.newaxis, ...]
-    mask_min_y = np.min(np.where(mask, y_indices, np.inf), axis=1)[:, np.newaxis, :]
-    mask_max_y = np.max(np.where(mask, y_indices, -np.inf), axis=1)[:, np.newaxis, :]
-    mask_min_z = np.min(np.where(mask, z_indices, np.inf), axis=2)[:, :, np.newaxis]
-    mask_max_z = np.max(np.where(mask, z_indices, -np.inf), axis=2)[:, :, np.newaxis]
+    mask_min_x = np.min(np.where(mask, indices[0], np.inf), axis=0)[np.newaxis, ...]
+    mask_max_x = np.max(np.where(mask, indices[0], -np.inf), axis=0)[np.newaxis, ...]
+    mask_min_y = np.min(np.where(mask, indices[1], np.inf), axis=1)[:, np.newaxis, :]
+    mask_max_y = np.max(np.where(mask, indices[1], -np.inf), axis=1)[:, np.newaxis, :]
+    mask_min_z = np.min(np.where(mask, indices[2], np.inf), axis=2)[:, :, np.newaxis]
+    mask_max_z = np.max(np.where(mask, indices[2], -np.inf), axis=2)[:, :, np.newaxis]
 
     return \
-        ((mask_min_x <= x_indices) & (x_indices <= mask_max_x)) | \
-        ((mask_min_y <= y_indices) & (y_indices <= mask_max_y)) | \
-        ((mask_min_z <= z_indices) & (z_indices <= mask_max_z))
+        ((mask_min_x <= indices[0]) & (indices[0] <= mask_max_x)) | \
+        ((mask_min_y <= indices[1]) & (indices[1] <= mask_max_y)) | \
+        ((mask_min_z <= indices[2]) & (indices[2] <= mask_max_z))
 
 if __name__ == '__main__':
     main()
