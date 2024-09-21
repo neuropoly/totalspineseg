@@ -239,16 +239,16 @@ def main():
             max_workers=max_workers,
             quiet=quiet,
             label_texts_right={
-                10: 'C1', 11: 'C2', 12: 'C3', 13: 'C4', 14: 'C5', 15: 'C6', 16: 'C7',
-                20: 'T1', 21: 'T2', 22: 'T3', 23: 'T4', 24: 'T5', 25: 'T6', 26: 'T7',
-                27: 'T8', 28: 'T9', 29: 'T10', 30: 'T11', 31: 'T12',
-                40: 'L1', 41: 'L2', 42: 'L3', 43: 'L4', 44: 'L5'
+                11: 'C1', 12: 'C2', 13: 'C3', 14: 'C4', 15: 'C5', 16: 'C6', 17: 'C7',
+                21: 'T1', 22: 'T2', 23: 'T3', 24: 'T4', 25: 'T5', 26: 'T6', 27: 'T7',
+                28: 'T8', 29: 'T9', 30: 'T10', 31: 'T11', 32: 'T12',
+                41: 'L1', 42: 'L2', 43: 'L3', 44: 'L4', 45: 'L5',
             },
             label_texts_left={
-                50: 'Sacrum', 60: 'C2C3', 61: 'C3C4', 62: 'C4C5', 63: 'C5C6', 64: 'C6C7', 70: 'C7T1',
-                71: 'T1T2', 72: 'T2T3', 73: 'T3T4', 74: 'T4T5', 75: 'T5T6', 76: 'T6T7', 77: 'T7T8',
-                78: 'T8T9', 79: 'T9T10', 80: 'T10T11', 81: 'T11T12', 90: 'T12L1',
-                91: 'L1L2', 92: 'L2L3', 93: 'L3L4', 94: 'L4L5', 100: 'L5S'
+                50: 'Sacrum', 63: 'C2C3', 64: 'C3C4', 65: 'C4C5', 66: 'C5C6', 67: 'C6C7',
+                71: 'C7T1', 72: 'T1T2', 73: 'T2T3', 74: 'T3T4', 75: 'T4T5', 76: 'T5T6', 77: 'T6T7',
+                78: 'T7T8', 79: 'T8T9', 80: 'T9T10', 81: 'T10T11', 82: 'T11T12',
+                91: 'T12L1', 92: 'L1L2', 93: 'L2L3', 94: 'L3L4', 95: 'L4L5', 100: 'L5S'
             },
         )
 
@@ -346,7 +346,7 @@ def main():
             selected_disc_landmarks=[2, 5, 3, 4],
             disc_labels=[1, 2, 3, 4, 5],
             disc_landmark_labels=[2, 3, 4, 5],
-            disc_landmark_output_labels=[60, 70, 90, 100],
+            disc_landmark_output_labels=[63, 71, 91, 100],
             canal_labels=[7, 8],
             canal_output_label=2,
             cord_labels=[9],
@@ -365,8 +365,8 @@ def main():
             selected_disc_landmarks=[2, 5],
             disc_labels=[1, 2, 3, 4, 5],
             disc_landmark_labels=[2, 3, 4, 5],
-            disc_landmark_output_labels=[60, 70, 90, 100],
-            loc_disc_labels=list(range(60, 101)),
+            disc_landmark_output_labels=[63, 71, 91, 100],
+            loc_disc_labels=list(range(63, 101)),
             canal_labels=[7, 8],
             canal_output_label=2,
             cord_labels=[9],
@@ -421,10 +421,10 @@ def main():
         max_workers=max_workers,
         quiet=quiet,
         label_texts_left={
-            60: 'C2C3', 61: 'C3C4', 62: 'C4C5', 63: 'C5C6', 64: 'C6C7', 70: 'C7T1',
-            71: 'T1T2', 72: 'T2T3', 73: 'T3T4', 74: 'T4T5', 75: 'T5T6', 76: 'T6T7', 77: 'T7T8',
-            78: 'T8T9', 79: 'T9T10', 80: 'T10T11', 81: 'T11T12', 90: 'T12L1',
-            91: 'L1L2', 92: 'L2L3', 93: 'L3L4', 94: 'L4L5', 100: 'L5S'
+            63: 'C2C3', 64: 'C3C4', 65: 'C4C5', 66: 'C5C6', 67: 'C6C7',
+            71: 'C7T1', 72: 'T1T2', 73: 'T2T3', 74: 'T3T4', 75: 'T4T5', 76: 'T5T6', 77: 'T6T7',
+            78: 'T7T8', 79: 'T8T9', 80: 'T9T10', 81: 'T10T11', 82: 'T11T12',
+            91: 'T12L1', 92: 'L1L2', 93: 'L2L3', 94: 'L3L4', 95: 'L4L5', 100: 'L5S'
         },
     )
 
@@ -465,7 +465,7 @@ def main():
         output_path / 'step1_output',
         output_path / 'step1_levels',
         canal_labels=[1, 2],
-        disc_labels=list(range(60, 65)) + list(range(70, 82)) + list(range(90, 95)) + [100],
+        disc_labels=list(range(63, 68)) + list(range(71, 83)) + list(range(91, 96)) + [100],
         override=True,
         max_workers=max_workers,
         quiet=quiet,
@@ -512,7 +512,7 @@ def main():
             output_path / 'step2_input',
             seg_suffix='_0001',
             output_seg_suffix='_0001',
-            labels=list(range(60, 101)),
+            labels=list(range(63, 101)),
             override=True,
             max_workers=max_workers,
             quiet=quiet,
@@ -590,9 +590,9 @@ def main():
                 selected_disc_landmarks=[4, 7, 5, 6],
                 disc_labels=[1, 2, 3, 4, 5, 6, 7],
                 disc_landmark_labels=[4, 5, 6, 7],
-                disc_landmark_output_labels=[60, 70, 90, 100],
+                disc_landmark_output_labels=[63, 71, 91, 100],
                 vertebrae_labels=[9, 10, 11, 12, 13, 14],
-                vertebrae_landmark_output_labels=[12, 20, 40, 50],
+                vertebrae_landmark_output_labels=[13, 21, 41, 50],
                 vertebrae_extra_labels=[8],
                 canal_labels=[15, 16],
                 canal_output_label=2,
@@ -612,11 +612,11 @@ def main():
                 selected_disc_landmarks=[4, 7],
                 disc_labels=[1, 2, 3, 4, 5, 6, 7],
                 disc_landmark_labels=[4, 5, 6, 7],
-                disc_landmark_output_labels=[60, 70, 90, 100],
+                disc_landmark_output_labels=[63, 71, 91, 100],
                 vertebrae_labels=[9, 10, 11, 12, 13, 14],
-                vertebrae_landmark_output_labels=[12, 20, 40, 50],
+                vertebrae_landmark_output_labels=[13, 21, 41, 50],
                 vertebrae_extra_labels=[8],
-                loc_disc_labels=list(range(60, 101)),
+                loc_disc_labels=list(range(63, 101)),
                 canal_labels=[15, 16],
                 canal_output_label=2,
                 cord_labels=[17],
@@ -671,16 +671,16 @@ def main():
             max_workers=max_workers,
             quiet=quiet,
             label_texts_right={
-                10: 'C1', 11: 'C2', 12: 'C3', 13: 'C4', 14: 'C5', 15: 'C6', 16: 'C7',
-                20: 'T1', 21: 'T2', 22: 'T3', 23: 'T4', 24: 'T5', 25: 'T6', 26: 'T7',
-                27: 'T8', 28: 'T9', 29: 'T10', 30: 'T11', 31: 'T12',
-                40: 'L1', 41: 'L2', 42: 'L3', 43: 'L4', 44: 'L5'
+                11: 'C1', 12: 'C2', 13: 'C3', 14: 'C4', 15: 'C5', 16: 'C6', 17: 'C7',
+                21: 'T1', 22: 'T2', 23: 'T3', 24: 'T4', 25: 'T5', 26: 'T6', 27: 'T7',
+                28: 'T8', 29: 'T9', 30: 'T10', 31: 'T11', 32: 'T12',
+                41: 'L1', 42: 'L2', 43: 'L3', 44: 'L4', 45: 'L5',
             },
             label_texts_left={
-                50: 'Sacrum', 60: 'C2C3', 61: 'C3C4', 62: 'C4C5', 63: 'C5C6', 64: 'C6C7', 70: 'C7T1',
-                71: 'T1T2', 72: 'T2T3', 73: 'T3T4', 74: 'T4T5', 75: 'T5T6', 76: 'T6T7', 77: 'T7T8',
-                78: 'T8T9', 79: 'T9T10', 80: 'T10T11', 81: 'T11T12', 90: 'T12L1',
-                91: 'L1L2', 92: 'L2L3', 93: 'L3L4', 94: 'L4L5', 100: 'L5S'
+                50: 'Sacrum', 63: 'C2C3', 64: 'C3C4', 65: 'C4C5', 66: 'C5C6', 67: 'C6C7',
+                71: 'C7T1', 72: 'T1T2', 73: 'T2T3', 74: 'T3T4', 75: 'T4T5', 76: 'T5T6', 77: 'T6T7',
+                78: 'T7T8', 79: 'T8T9', 80: 'T9T10', 81: 'T10T11', 82: 'T11T12',
+                91: 'T12L1', 92: 'L1L2', 93: 'L2L3', 94: 'L3L4', 95: 'L4L5', 100: 'L5S'
             },
         )
 
