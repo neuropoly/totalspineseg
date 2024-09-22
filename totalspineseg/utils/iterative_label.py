@@ -143,6 +143,14 @@ def main():
         help='Output label for the sacrum, defaults to 0 (Do not output).'
     )
     parser.add_argument(
+        '--map-input', type=str, nargs='+', default=[],
+        help=' '.join(f'''
+            A dict mapping labels from input into the output segmentation.
+            The format should be input_label:output_label without any spaces.
+            For example, 7:11 to map the input C1 label to 11 in output segmentation.
+        '''.split())
+    )
+    parser.add_argument(
         '--dilation-size', type=int, default=1,
         help='Number of voxels to dilate before finding connected voxels to label, defaults to 1 (No dilation).'
     )
@@ -193,6 +201,7 @@ def main():
     cord_output_label = args.cord_output_label
     sacrum_labels = [_ for __ in args.sacrum_labels for _ in (__ if isinstance(__, list) else [__])]
     sacrum_output_label = args.sacrum_output_label
+    map_input_list = args.map_input
     dilation_size = args.dilation_size
     default_superior_disc = args.default_superior_disc
     override = args.override
@@ -229,12 +238,19 @@ def main():
             cord_output_label = {cord_output_label}
             sacrum_labels = {sacrum_labels}
             sacrum_output_label = {sacrum_output_label}
+            map_input = {map_input_list}
             dilation_size = {dilation_size}
             default_superior_disc = {default_superior_disc}
             override = {override}
             max_workers = {max_workers}
             quiet = {quiet}
         '''))
+
+    # Load maps into a dict
+    try:
+        map_input_dict = {int(l_in): int(l_out) for l_in, l_out in map(lambda x:x.split(':'), map_input_list)}
+    except:
+        raise ValueError("Input param map_input is not in the right structure. Make sure it is in the right format, e.g., 1:2 3:5")
 
     iterative_label_mp(
         segs_path=segs_path,
@@ -263,6 +279,7 @@ def main():
         cord_output_label=cord_output_label,
         sacrum_labels=sacrum_labels,
         sacrum_output_label=sacrum_output_label,
+        map_input_dict=map_input_dict,
         dilation_size=dilation_size,
         default_superior_disc=default_superior_disc,
         override=override,
@@ -297,6 +314,7 @@ def iterative_label_mp(
         cord_output_label=0,
         sacrum_labels=[],
         sacrum_output_label=0,
+        map_input_dict={},
         dilation_size=1,
         default_superior_disc=0,
         override=False,
@@ -342,6 +360,7 @@ def iterative_label_mp(
             cord_output_label=cord_output_label,
             sacrum_labels=sacrum_labels,
             sacrum_output_label=sacrum_output_label,
+            map_input_dict=map_input_dict,
             dilation_size=dilation_size,
             default_superior_disc=default_superior_disc,
             override=override,
@@ -375,6 +394,7 @@ def _iterative_label(
         cord_output_label=0,
         sacrum_labels=[],
         sacrum_output_label=0,
+        map_input_dict={},
         dilation_size=1,
         default_superior_disc=0,
         override=False,
@@ -415,6 +435,7 @@ def _iterative_label(
             cord_output_label=cord_output_label,
             sacrum_labels=sacrum_labels,
             sacrum_output_label=sacrum_output_label,
+            map_input_dict=map_input_dict,
             dilation_size=dilation_size,
             disc_default_superior_output=default_superior_disc,
         )
@@ -456,6 +477,7 @@ def iterative_label(
         cord_output_label=0,
         sacrum_labels=[],
         sacrum_output_label=0,
+        map_input_dict={},
         dilation_size=1,
         disc_default_superior_output=0,
     ):
@@ -513,6 +535,8 @@ def iterative_label(
         Sacrum labels in the segmentation
     sacrum_output_label : int
         Output label for the sacrum
+    map_input_dict : dict
+        A dict mapping labels from input into the output segmentation
     dilation_size : int
         Number of voxels to dilate before finding connected voxels to label
     default_superior_disc : int
@@ -728,6 +752,11 @@ def iterative_label(
     # Map Sacrum to the output label
     if sacrum_labels is not None and len(sacrum_labels) > 0 and sacrum_output_label > 0:
         output_seg_data[np.isin(seg_data, sacrum_labels)] = sacrum_output_label
+
+    # Use the map to map input labels to the final output
+    # This is useful to map the input C1 to the output.
+    for orig, new in map_input_dict.items():
+        output_seg_data[seg_data == int(orig)] = int(new)
 
     output_seg = nib.Nifti1Image(output_seg_data, seg.affine, seg.header)
 
