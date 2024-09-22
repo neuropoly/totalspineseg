@@ -6,6 +6,7 @@ from pathlib import Path
 import nibabel as nib
 import numpy as np
 import torchio as tio
+import scipy.ndimage as ndi
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -68,6 +69,10 @@ def main():
         help='Image suffix for output, defaults to "".'
     )
     parser.add_argument(
+        '--interpolation', '-x', type=str, default='nearest', choices=['nearest', 'linear', 'label'],
+        help='Interpolation method, can be "nearest", "linear" or "label" (for singel voxel labels), defaults to "nearest".'
+    )
+    parser.add_argument(
         '--override', '-r', action="store_true", default=False,
         help='Override existing output files, defaults to false (Do not override).'
     )
@@ -93,6 +98,7 @@ def main():
     image_suffix = args.image_suffix
     seg_suffix = args.seg_suffix
     output_seg_suffix = args.output_seg_suffix
+    interpolation = args.interpolation
     override = args.override
     max_workers = args.max_workers
     quiet = args.quiet
@@ -110,6 +116,7 @@ def main():
             image_suffix = "{image_suffix}"
             seg_suffix = "{seg_suffix}"
             output_seg_suffix = "{output_seg_suffix}"
+            interpolation = "{interpolation}"
             override = {override}
             max_workers = {max_workers}
             quiet = {quiet}
@@ -125,6 +132,7 @@ def main():
         image_suffix=image_suffix,
         seg_suffix=seg_suffix,
         output_seg_suffix=output_seg_suffix,
+        interpolation=interpolation,
         override=override,
         max_workers=max_workers,
         quiet=quiet,
@@ -140,6 +148,7 @@ def transform_seg2image_mp(
         image_suffix='_0000',
         seg_suffix='',
         output_seg_suffix='',
+        interpolation='nearest',
         override=False,
         max_workers=mp.cpu_count(),
         quiet=False,
@@ -166,6 +175,7 @@ def transform_seg2image_mp(
     process_map(
         partial(
             _transform_seg2image,
+            interpolation=interpolation,
             override=override,
         ),
         image_path_list,
@@ -180,6 +190,7 @@ def _transform_seg2image(
         image_path,
         seg_path,
         output_seg_path,
+        interpolation='nearest',
         override=False,
     ):
     '''
@@ -202,7 +213,11 @@ def _transform_seg2image(
     image = nib.load(image_path)
     seg = nib.load(seg_path)
 
-    output_seg = transform_seg2image(image, seg)
+    output_seg = transform_seg2image(
+        image,
+        seg,
+        interpolation=interpolation,
+    )
 
     # Ensure correct segmentation dtype, affine and header
     output_seg = nib.Nifti1Image(
@@ -220,6 +235,7 @@ def _transform_seg2image(
 def transform_seg2image(
         image,
         seg,
+        interpolation='nearest',
     ):
     '''
     Transform the segmentation to the image space to have the same origin, spacing, direction and shape as the image.
@@ -230,6 +246,8 @@ def transform_seg2image(
         Image.
     seg : nibabel.Nifti1Image
         Segmentation.
+    interpolation : str, optional
+        Interpolation method, can be 'nearest', 'linear' or 'label' (for singel voxel labels), defaults to 'nearest'.
 
     Returns
     -------
@@ -237,15 +255,52 @@ def transform_seg2image(
         Output segmentation.
     '''
     image_data = np.asanyarray(image.dataobj).astype(np.float64)
+    image_affine = image.affine.copy()
     seg_data = np.asanyarray(seg.dataobj).round().astype(np.uint8)
+    seg_affine = seg.affine.copy()
+
+    # Padding size - the factor by which the image voxel size is larger than the segmentation voxel size
+    pad = np.ceil(np.max(np.array(image.header.get_zooms()) / np.array(seg.header.get_zooms()))).astype(np.uint8)
+
+    if interpolation == 'label':
+        # Pad the image and segmentation to avoid labels at the edge bing displaced on center of mass calculation
+        image_data = np.pad(image_data, pad)
+        image_affine[:3, 3] -= (image_affine[:3, :3] @ ([pad] * 3))
+        seg_data = np.pad(seg_data, pad)
+        seg_affine[:3, 3] -= (seg_affine[:3, :3] @ ([pad] * 3))
+
+        # Dilate the segmentation to avoid interpolation artifacts
+        seg_data = ndi.grey_dilation(seg_data, footprint=ndi.iterate_structure(ndi.generate_binary_structure(3, 3), pad))
 
     # Make TorchIO images
-    tio_img=tio.ScalarImage(tensor=image_data[None, ...], affine=image.affine)
-    tio_seg=tio.LabelMap(tensor=seg_data[None, ...], affine=seg.affine)
+    tio_img=tio.ScalarImage(tensor=image_data[None, ...], affine=image_affine)
+
+    # Define the segmentation as a ScalarImage or LabelMap based on the interpolation method
+    if interpolation == 'linear':
+        tio_seg=tio.ScalarImage(tensor=seg_data[None, ...], affine=seg_affine)
+    else:
+        tio_seg=tio.LabelMap(tensor=seg_data[None, ...], affine=seg_affine)
 
     # Resample the segmentation to the image space
     tio_output_seg = tio.Resample(tio_img)(tio_seg)
     output_seg_data = tio_output_seg.data.numpy()[0, ...].astype(np.uint8)
+
+    if interpolation == 'label':
+        # Initialize the output segmentation to zeros
+        com_output_seg_data = np.zeros_like(output_seg_data)
+
+        # Get the labels in the segmentation
+        labels = [_ for _ in np.unique(seg_data) if _ != 0]
+
+        # Get the center of mass of each label
+        com = ndi.center_of_mass(output_seg_data != 0, output_seg_data, labels)
+
+        # Set the labels at the center of mass
+        for label, idx in zip(labels, com):
+            com_output_seg_data[tuple(np.round(idx).astype(int))] = label
+
+        # Remove the padding
+        output_seg_data = com_output_seg_data[pad:-pad, pad:-pad, pad:-pad]
 
     output_seg = nib.Nifti1Image(output_seg_data, image.affine, seg.header)
 
