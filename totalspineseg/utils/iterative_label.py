@@ -1089,6 +1089,8 @@ def _get_landmark_output_labels(
     # Init dict to store the output labels for the landmarks
     map_landmark_outputs = {}
 
+    mask_seg_data_landmarks = np.isin(seg_data, landmark_labels)
+
     # First we try to look for the landmarks in the segmentation
     for l in selected_landmarks:
         ############################################################################################################
@@ -1099,7 +1101,7 @@ def _get_landmark_output_labels(
         if l in map_landmark_labels and l in seg_data:
             mask_labeled_l = np.argmax(np.bincount(mask_labeled[seg_data == l].flat))
             # We map only if the landmark cover the majority of the voxels in the mask_labeled label
-            if np.argmax(np.bincount(seg_data[mask_labeled == mask_labeled_l].flat)) == l:
+            if np.argmax(np.bincount(seg_data[mask_seg_data_landmarks & (mask_labeled == mask_labeled_l)].flat)) == l:
                 map_landmark_outputs[mask_labeled_l] = map_landmark_labels[l]
 
     # If no init label found, set it from the localizer
