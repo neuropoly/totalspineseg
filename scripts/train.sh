@@ -64,7 +64,7 @@ export nnUNet_exports="$TOTALSPINESEG_DATA"/nnUNet/exports
 
 nnUNetTrainer=${3:-nnUNetTrainer_DASegOrd0_NoMirroring}
 nnUNetPlanner=${4:-nnUNetPlannerResEncL}
-nnUNetPlans=${5:-nnUNetResEncUNetLPlans_small}
+nnUNetPlans=${5:-nnUNetResEncUNetLPlans}
 configuration=3d_fullres
 data_identifier=nnUNetPlans_3d_fullres
 
@@ -86,9 +86,6 @@ echo "FOLD=${FOLD}"
 echo ""
 
 for d in ${DATASETS[@]}; do
-    # If d=103, remove _small from nnUNetPlans suffix as it is not used for this dataset
-    if [ $d -eq 103 ]; then nnUNetPlans=${nnUNetPlans%_small}; fi
-
     # Get the dataset name
     d_name=$(basename "$(ls -d "$nnUNet_raw"/Dataset${d}_*)")
 
@@ -104,11 +101,6 @@ for d in ${DATASETS[@]}; do
     if [ ! -f "$nnUNet_preprocessed"/$d_name/${nnUNetPlans}.json ]; then
         echo "Planning dataset $d_name"
         nnUNetv2_plan_experiment -d $d -pl $nnUNetPlanner -overwrite_plans_name $nnUNetPlans
-        # If plans end with _small, change the patch size to [128, 96, 96]
-        if [[ $nnUNetPlans == *_small ]]; then
-            jq ".configurations[\"${configuration}\"].patch_size = [128, 96, 96]" "$nnUNet_preprocessed"/$d_name/${nnUNetPlans}.json > "$nnUNet_preprocessed"/$d_name/${nnUNetPlans}.json.tmp
-            mv "$nnUNet_preprocessed"/$d_name/${nnUNetPlans}.json.tmp "$nnUNet_preprocessed"/$d_name/${nnUNetPlans}.json
-        fi
     fi
 
     # If already preprocess do not preprocess again
