@@ -769,12 +769,15 @@ def _get_canal_centerline_indices(
     '''
     Get the indices of the canal centerline.
     '''
+    # If no canal labels is found in the segmentation, raise an error
+    if not np.any(np.isin(canal_labels, seg_data)):
+        raise ValueError(f"No canal found in the segmentation (canal labels: {canal_labels})")
+
     # Get array of indices for x, y, and z axes
     indices = np.indices(seg_data.shape)
 
     # Create a mask of the canal
     mask_canal = np.isin(seg_data, canal_labels)
-
 
     # Create a mask the canal centerline by finding the middle voxels in x and y axes for each z index
     mask_min_x_indices = np.min(indices[0], where=mask_canal, initial=np.iinfo(indices.dtype).max, keepdims=True, axis=(0, 1))
