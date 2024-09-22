@@ -25,9 +25,9 @@ def main():
         '''.split()),
         epilog=textwrap.dedent('''
             Examples:
-            augment -i images -s labels -o images -g labels --labels2image --seg-classes 202-224 18-41,92 200 201
+            augment -i images -s labels -o images -g labels --labels2image --seg-classes 1 2 11-50 63-100
             For BIDS:
-            augment -i . -s derivatives/labels -o . -g derivatives/labels --image-suffix "" --output-image-suffix "" --seg-suffix "_seg" --output-seg-suffix "_seg" -d "sub-" -u "anat" --labels2image --seg-classes 202-224 18-41,92 200 201
+            augment -i . -s derivatives/labels -o . -g derivatives/labels --image-suffix "" --output-image-suffix "" --seg-suffix "_seg" --output-seg-suffix "_seg" -d "sub-" -u "anat" --labels2image --seg-classes 1 2 11-50 63-100
         '''),
         formatter_class=argparse.RawTextHelpFormatter
     )
@@ -89,7 +89,7 @@ def main():
     )
     parser.add_argument(
         '--seg-classes', type=parse_class, nargs='+', default=None,
-        help='Define classes of labels for per class augmentation. Example: 202-224 18-41,92 200 201 for IVDs, vertebrae, Spinal Cord and Canal (Default to use each label as a separate class ).'
+        help='Define classes of labels for per class augmentation. Example: 1 2 11-50 63-100 for Spinal Cord, Canal, vertebrae and IVDs (Default to use each label as a separate class ).'
     )
     parser.add_argument(
         '--override', '-r', action="store_true", default=False,

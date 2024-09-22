@@ -115,9 +115,9 @@ Please ensure that your system meets these requirements before proceeding with t
 
 1. Temporary step (until all labels are pushed into the repositories) - Download labels into `$TOTALSPINESEG_DATA/bids`:
    ```bash
-   curl -L -O https://github.com/neuropoly/totalspineseg/releases/download/labels/labels_iso_bids_0524.zip
-   unzip -qo labels_iso_bids_0524.zip -d "$TOTALSPINESEG_DATA"
-   rm labels_iso_bids_0524.zip
+   curl -L -O https://github.com/neuropoly/totalspineseg/releases/download/labels/labels_iso_bids_0924.zip
+   unzip -qo labels_iso_bids_0924.zip -d "$TOTALSPINESEG_DATA"
+   rm labels_iso_bids_0924.zip
    ```
 
 1. Prepare datasets in nnUNetv2 structure into `$TOTALSPINESEG_DATA/nnUnet`:

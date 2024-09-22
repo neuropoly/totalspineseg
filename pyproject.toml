@@ -1,6 +1,6 @@
 [project]
 name = "totalspineseg"
-version = "20240826"
+version = "20240921"
 requires-python = ">=3.9"
 description = "TotalSpineSeg is a tool for automatic instance segmentation and labeling of all vertebrae, intervertebral discs (IVDs), spinal cord, and spinal canal in MRI images."
 readme = "README.md"
@@ -60,8 +60,8 @@ dependencies = [
 [project.urls]
 homepage = "https://github.com/neuropoly/totalspineseg"
 repository = "https://github.com/neuropoly/totalspineseg"
-Dataset101_TotalSpineSeg_step1 = "https://github.com/neuropoly/totalspineseg/releases/download/r20240826/Dataset101_TotalSpineSeg_step1.zip"
-Dataset102_TotalSpineSeg_step2 = "https://github.com/neuropoly/totalspineseg/releases/download/r20240826/Dataset102_TotalSpineSeg_step2.zip"
+Dataset101_TotalSpineSeg_step1 = "https://github.com/neuropoly/totalspineseg/releases/download/r20240921/Dataset101_TotalSpineSeg_step1.zip"
+Dataset102_TotalSpineSeg_step2 = "https://github.com/neuropoly/totalspineseg/releases/download/r20240921/Dataset102_TotalSpineSeg_step2.zip"
 
 [project.scripts]
 totalspineseg = "totalspineseg.inference:main"
@@ -80,7 +80,6 @@ totalspineseg_crop_image2seg = "totalspineseg.utils.crop_image2seg:main"
 totalspineseg_extract_soft = "totalspineseg.utils.extract_soft:main"
 totalspineseg_extract_levels = "totalspineseg.utils.extract_levels:main"
 totalspineseg_extract_alternate = "totalspineseg.utils.extract_alternate:main"
-totalspineseg_add_nnunet_trainer = "totalspineseg.utils.add_nnunet_trainer:main"
 
 [build-system]
 requires = ["pip>=23", "setuptools>=67"]
