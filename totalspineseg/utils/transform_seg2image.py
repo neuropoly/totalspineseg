@@ -259,18 +259,21 @@ def transform_seg2image(
     seg_data = np.asanyarray(seg.dataobj).round().astype(np.uint8)
     seg_affine = seg.affine.copy()
 
-    # Padding size - the factor by which the image voxel size is larger than the segmentation voxel size
-    pad = np.ceil(np.max(np.array(image.header.get_zooms()) / np.array(seg.header.get_zooms()))).astype(np.uint8)
+    # Dilations size - the maximum of factor by which the image zooms are larger than the segmentation zooms
+    dilation_size = np.ceil(np.max(np.array(image.header.get_zooms()) / np.array(seg.header.get_zooms()))).astype(np.uint8)
+
+    # Padding size - maximum possible number of voxels the dilation can occupy in the image space
+    padding_size = dilation_size * np.ceil(np.max(np.array(seg.header.get_zooms()) / np.array(image.header.get_zooms()))).astype(np.uint8)
 
     if interpolation == 'label':
         # Pad the image and segmentation to avoid labels at the edge bing displaced on center of mass calculation
-        image_data = np.pad(image_data, pad)
-        image_affine[:3, 3] -= (image_affine[:3, :3] @ ([pad] * 3))
-        seg_data = np.pad(seg_data, pad)
-        seg_affine[:3, 3] -= (seg_affine[:3, :3] @ ([pad] * 3))
+        image_data = np.pad(image_data, padding_size)
+        image_affine[:3, 3] -= (image_affine[:3, :3] @ ([padding_size] * 3))
+        seg_data = np.pad(seg_data, padding_size)
+        seg_affine[:3, 3] -= (seg_affine[:3, :3] @ ([padding_size] * 3))
 
         # Dilate the segmentation to avoid interpolation artifacts
-        seg_data = ndi.grey_dilation(seg_data, footprint=ndi.iterate_structure(ndi.generate_binary_structure(3, 3), pad))
+        seg_data = ndi.grey_dilation(seg_data, footprint=ndi.iterate_structure(ndi.generate_binary_structure(3, 3), dilation_size))
 
     # Make TorchIO images
     tio_img=tio.ScalarImage(tensor=image_data[None, ...], affine=image_affine)
@@ -300,7 +303,7 @@ def transform_seg2image(
             com_output_seg_data[tuple(np.round(idx).astype(int))] = label
 
         # Remove the padding
-        output_seg_data = com_output_seg_data[pad:-pad, pad:-pad, pad:-pad]
+        output_seg_data = com_output_seg_data[padding_size:-padding_size, padding_size:-padding_size, padding_size:-padding_size]
 
     output_seg = nib.Nifti1Image(output_seg_data, image.affine, seg.header)
 
