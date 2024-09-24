@@ -26,15 +26,15 @@ Please also cite nnUNet since our work is heavily based on it:
 
 TotalSpineSeg uses a hybrid approach that integrates nnU-Net with an iterative algorithm for instance segmentation and labeling of vertebrae, intervertebral discs (IVDs), spinal cord, and spinal canal. The process involves two main steps:
 
-**Step 1**: An nnUnet model (`Dataset101`) was trained to identify 8 classes in total (Figure 1A). This includes 4 main classes: spinal cord, spinal canal, IVDs, and vertebrae. Additionally, it identifies 4 specific IVDs: C2-C3, C7-T1, T12-L1, and L5-S, which represent key anatomical landmarks along the spine. The output segmentation was then processed using an iterative algorithm. This algorithm extracts odd IVDs segmentation based on the C2-C3, C7-T1, T12-L1, and L5-S IVD labels produced by the model (Figure 1B).
+**Step 1**: An nnU-Net model (`Dataset101`) was trained to identify nine classes in total. This includes four main classes: spinal cord, spinal canal, IVDs, and vertebrae. Additionally, it identifies four specific IVDs: C2-C3, C7-T1, T12-L1, and L5-S, which represent key anatomical landmarks along the spine, as well as the C1 vertebra to determine whether the MRI images include C1 (Figure 1B). The output segmentation was processed using an iterative algorithm to extract individual IVDs (Figure 1C), from which the odd IVDs segmentation was extracted (Figure 1D).
 
-**Step 2:** A second nnUNet model (`Dataset102`) was trained to identify 14 classes in total (Figure 1C). This includes 6 main classes: spinal cord, spinal canal, odd IVDs, even IVDs, odd vertebrae, and even vertebrae. Additionally, it identifies 4 specific IVDs: C2-C3, C7-T1, T12-L1, and L5-S, and 4 specific vertebrae: C2, T1, T12, and Sacrum. This model uses two input channels: the MRI image and the odd IVDs extracted from the first step. The output segmentation was then processed using an algorithm that assigns an individual label value to each vertebra and IVD in the final segmentation mask (Figure 1D).
+**Step 2:** A second nnU-Net model (`Dataset102`) was trained to identify ten classes in total. This includes five main classes: spinal cord, spinal canal, IVDs, odd vertebrae, and even vertebrae. Additionally, it identifies four specific IVDs: C2-C3, C7-T1, T12-L1, and L5-S, which represent key anatomical landmarks along the spine, as well as the sacrum (Figure 1E). This model uses two input channels: the MRI image (Figure 1A) and the odd IVDs extracted from the first step (Figure 1D). The output segmentation was processed using an algorithm that assigns individual labels to each vertebra and IVD in the final segmentation (Figure 1F).
 
 For comparison, we also trained a single model (`Dataset103`) that outputs individual label values for each vertebra and IVD in a single step.
 
-![Figure 1](https://github.com/neuropoly/totalspineseg/assets/36595323/84fae79f-442b-48c3-bcdb-ce4ea857ac59)
+![Figure 1](https://github.com/user-attachments/assets/7b82d6b8-d584-47ef-8504-fe06962bb82e)
 
-**Figure 1**: Illustration of the hybrid method for automatic segmentation of the spine and spinal cord structures. T1w image (A) is used to train model 1, which outputs 8 classes (B). These output labels are processed to extract odd IVDs (C). The T1w and odd IVDs are used as two input channels to train model 2, which outputs 14 classes (D). These output labels are processed to extract individual IVDs and vertebrae (E).
+**Figure 1**: Illustration of the hybrid method for automatic segmentation of spinal structures. (A) MRI image used to train the Step 1 model. (B) The Step 1 model outputs nine classes. (C) Individual IVDs extracted from the output labels. (D) Odd IVDs extracted from the individual IVDs. (E) MRI image and odd IVDs used as inputs to train the Step 2 model, which outputs ten classes. (F) Final segmentation with individual labels for each vertebra and IVD.
 
 ## Datasets
 
@@ -42,6 +42,8 @@ The totalspineseg model was trained on these 3 main datasets:
 - Private whole-spine dataset (Internal access: `git@data.neuro.polymtl.ca:datasets/whole-spine.git`).
 - [SPIDER](https://doi.org/10.5281/zenodo.10159290) project dataset (Internal access: `git@data.neuro.polymtl.ca:datasets/spider-challenge-2023.git`)
 - [Spine Generic Project](https://github.com/spine-generic), including single and multi subject datasets (Public access: `git@github.com:spine-generic/data-single-subject.git` and `git@github.com:spine-generic/data-multi-subject.git`).
+
+We used manual labels from the SPIDER dataset. For other datasets, we generated initial labels by registering MRIs to the PAM50 template using [Spinal Cord Toolbox (SCT)](https://spinalcordtoolbox.com/). We trained an initial segmentation model with these labels, applied it to the datasets, and manually corrected the outputs using [3D Slicer](https://www.slicer.org/).
 
 Additional public datasets were used during this project to generate sacrum segmentations:
 - [GoldAtlas](https://zenodo.org/records/583096) (Internal access: `git@data.neuro.polymtl.ca:datasets/goldatlas.git`)
