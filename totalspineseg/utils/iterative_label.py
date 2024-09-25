@@ -115,6 +115,10 @@ def main():
         help='The maximum number of discs/vertebrae for each region (Cervical from C3, Thoracic, Lumbar, Sacrum), defaults to [5, 12, 6, 1].'
     )
     parser.add_argument(
+        '--region-default-sizes', type=int, nargs=4, default=[5, 12, 5, 1],
+        help='The default number of discs/vertebrae for each region (Cervical from C3, Thoracic, Lumbar, Sacrum), defaults to [5, 12, 5, 1].'
+    )
+    parser.add_argument(
         '--loc-disc-labels', type=lambda x:list(range(int(x.split('-')[0]), int(x.split('-')[-1]) + 1)), nargs='+', default=[],
         help='The disc labels in the localizer used for detecting first disc.'
     )
@@ -194,6 +198,7 @@ def main():
     vertebrae_output_step = args.vertebrae_output_step
     vertebrae_extra_labels = [l for raw in args.vertebrae_extra_labels for l in (raw if isinstance(raw, list) else [raw])]
     region_max_sizes = args.region_max_sizes
+    region_default_sizes = args.region_default_sizes
     loc_disc_labels = [l for raw in args.loc_disc_labels for l in (raw if isinstance(raw, list) else [raw])]
     canal_labels = [l for raw in args.canal_labels for l in (raw if isinstance(raw, list) else [raw])]
     canal_output_label = args.canal_output_label
@@ -231,6 +236,7 @@ def main():
             vertebrae_output_step = {vertebrae_output_step}
             vertebrae_extra_labels = {vertebrae_extra_labels}
             region_max_sizes = {region_max_sizes}
+            region_default_sizes = {region_default_sizes}
             loc_disc_labels = {loc_disc_labels}
             canal_labels = {canal_labels}
             canal_output_label = {canal_output_label}
@@ -272,6 +278,7 @@ def main():
         vertebrae_output_step=vertebrae_output_step,
         vertebrae_extra_labels=vertebrae_extra_labels,
         region_max_sizes=region_max_sizes,
+        region_default_sizes=region_default_sizes,
         loc_disc_labels=loc_disc_labels,
         canal_labels=canal_labels,
         canal_output_label=canal_output_label,
@@ -307,6 +314,7 @@ def iterative_label_mp(
         vertebrae_output_step=1,
         vertebrae_extra_labels=[],
         region_max_sizes=[5, 12, 6, 1],
+        region_default_sizes=[5, 12, 5, 1],
         loc_disc_labels=[],
         canal_labels=[],
         canal_output_label=0,
@@ -353,6 +361,7 @@ def iterative_label_mp(
             vertebrae_output_step=vertebrae_output_step,
             vertebrae_extra_labels=vertebrae_extra_labels,
             region_max_sizes=region_max_sizes,
+            region_default_sizes=region_default_sizes,
             loc_disc_labels=loc_disc_labels,
             canal_labels=canal_labels,
             canal_output_label=canal_output_label,
@@ -387,6 +396,7 @@ def _iterative_label(
         vertebrae_output_step=1,
         vertebrae_extra_labels=[],
         region_max_sizes=[5, 12, 6, 1],
+        region_default_sizes=[5, 12, 5, 1],
         loc_disc_labels=[],
         canal_labels=[],
         canal_output_label=0,
@@ -428,6 +438,7 @@ def _iterative_label(
             vertebrae_output_step=vertebrae_output_step,
             vertebrae_extra_labels=vertebrae_extra_labels,
             region_max_sizes=region_max_sizes,
+            region_default_sizes=region_default_sizes,
             loc_disc_labels=loc_disc_labels,
             canal_labels=canal_labels,
             canal_output_label=canal_output_label,
@@ -470,6 +481,7 @@ def iterative_label(
         vertebrae_output_step=1,
         vertebrae_extra_labels=[],
         region_max_sizes=[5, 12, 6, 1],
+        region_default_sizes=[5, 12, 5, 1],
         loc_disc_labels=[],
         canal_labels=[],
         canal_output_label=0,
@@ -521,6 +533,8 @@ def iterative_label(
         Extra vertebrae labels to add to add to adjacent vertebrae labels
     region_max_sizes : list
         The maximum number of discs/vertebrae for each region (Cervical from C3, Thoracic, Lumbar, Sacrum).
+    region_default_sizes : list
+        The default number of discs/vertebrae for each region (Cervical from C3, Thoracic, Lumbar, Sacrum).
     loc_disc_labels : list
         Localizer labels to use for detecting first disc
     canal_labels : list
@@ -547,9 +561,6 @@ def iterative_label(
     nibabel.nifti1.Nifti1Image
         Segmentation image with labeled vertebrae, IVDs, Spinal Cord and canal
     '''
-    # Region default sizes for the discs and vertebrae (Cervical, Thoracic, Lumbar, Sacrum)
-    region_default_sizes=[5, 12, 5, 1]
-
     seg_data = np.asanyarray(seg.dataobj).round().astype(np.uint8)
 
     output_seg_data = np.zeros_like(seg_data)
