@@ -293,7 +293,7 @@ def transform_seg2image(
         com_output_seg_data = np.zeros_like(output_seg_data)
 
         # Get the labels in the segmentation
-        labels = [_ for _ in np.unique(seg_data) if _ != 0]
+        labels = [_ for _ in np.unique(output_seg_data) if _ != 0]
 
         # Get the center of mass of each label
         com = ndi.center_of_mass(output_seg_data != 0, output_seg_data, labels)
@@ -304,6 +304,18 @@ def transform_seg2image(
 
         # Remove the padding
         output_seg_data = com_output_seg_data[pad_width:-pad_width, pad_width:-pad_width, pad_width:-pad_width]
+
+        # Get the indices of the labels that are out of the padding
+        labels_out = com_output_seg_data.copy()
+        labels_out[pad_width:-pad_width, pad_width:-pad_width, pad_width:-pad_width] = 0
+        labels_out_indices = np.array(np.nonzero(labels_out)).T
+
+        # Get the closest indices in the padding
+        labels_out_indices_in = np.maximum(np.minimum(labels_out_indices, [np.array(labels_out.shape) - pad_width - 1]), [[pad_width] * 3])
+
+        # Set the labels at the closest indices in the padding
+        for i in range(len(labels_out_indices)):
+            output_seg_data[tuple(labels_out_indices_in[i])] = output_seg_data[tuple(labels_out_indices[i])]
 
     output_seg = nib.Nifti1Image(output_seg_data, image.affine, seg.header)
 
