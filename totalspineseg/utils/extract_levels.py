@@ -94,7 +94,7 @@ def main():
     seg_suffix = args.seg_suffix
     output_seg_suffix = args.output_seg_suffix
     canal_labels = args.canal_labels
-    disc_labels = [_ for __ in args.disc_labels for _ in (__ if isinstance(__, list) else [__])]
+    disc_labels = [l for raw in args.disc_labels for l in (raw if isinstance(raw, list) else [raw])]
     c1_label = args.c1_label
     override = args.override
     max_workers = args.max_workers

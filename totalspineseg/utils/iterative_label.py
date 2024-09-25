@@ -42,8 +42,8 @@ def main():
         '--locs-dir', '-l', type=Path, default=None,
         help=' '.join(f'''
             Folder containing localizers' segmentations to help the labeling if landmarks not found, Optional.
-            The algorithm will transform the localizer to the segmentation space and use it to detect the matching vertebrae and disc if the init label not found.
-            Mathcing will based on the magority of the voxels of the first vertebrae or disc in the localizer, that intersect with the input segmentation.
+            The algorithm will use the localizers' segmentations to detect the matching vertebrae and discs. The localizer and the image must be aligned.
+            Matching will based on the majority of the voxels of the first vertebra or disc in the localizer, that intersect with the input segmentation.
         '''.split())
     )
     parser.add_argument(
@@ -185,21 +185,21 @@ def main():
     output_seg_suffix = args.output_seg_suffix
     loc_suffix = args.loc_suffix
     selected_disc_landmarks = args.selected_disc_landmarks
-    disc_labels = [_ for __ in args.disc_labels for _ in (__ if isinstance(__, list) else [__])]
+    disc_labels = [l for raw in args.disc_labels for l in (raw if isinstance(raw, list) else [raw])]
     disc_landmark_labels = args.disc_landmark_labels
     disc_landmark_output_labels = args.disc_landmark_output_labels
     disc_output_step = args.disc_output_step
-    vertebrae_labels = [_ for __ in args.vertebrae_labels for _ in (__ if isinstance(__, list) else [__])]
+    vertebrae_labels = [l for raw in args.vertebrae_labels for l in (raw if isinstance(raw, list) else [raw])]
     vertebrae_landmark_output_labels = args.vertebrae_landmark_output_labels
     vertebrae_output_step = args.vertebrae_output_step
-    vertebrae_extra_labels = [_ for __ in args.vertebrae_extra_labels for _ in (__ if isinstance(__, list) else [__])]
+    vertebrae_extra_labels = [l for raw in args.vertebrae_extra_labels for l in (raw if isinstance(raw, list) else [raw])]
     region_max_sizes = args.region_max_sizes
-    loc_disc_labels = [_ for __ in args.loc_disc_labels for _ in (__ if isinstance(__, list) else [__])]
-    canal_labels = [_ for __ in args.canal_labels for _ in (__ if isinstance(__, list) else [__])]
+    loc_disc_labels = [l for raw in args.loc_disc_labels for l in (raw if isinstance(raw, list) else [raw])]
+    canal_labels = [l for raw in args.canal_labels for l in (raw if isinstance(raw, list) else [raw])]
     canal_output_label = args.canal_output_label
-    cord_labels = [_ for __ in args.cord_labels for _ in (__ if isinstance(__, list) else [__])]
+    cord_labels = [l for raw in args.cord_labels for l in (raw if isinstance(raw, list) else [raw])]
     cord_output_label = args.cord_output_label
-    sacrum_labels = [_ for __ in args.sacrum_labels for _ in (__ if isinstance(__, list) else [__])]
+    sacrum_labels = [l for raw in args.sacrum_labels for l in (raw if isinstance(raw, list) else [raw])]
     sacrum_output_label = args.sacrum_output_label
     map_input_list = args.map_input
     dilation_size = args.dilation_size
@@ -410,7 +410,7 @@ def _iterative_label(
     if not override and output_seg_path.exists():
         return
 
-    # Load segmentation and localizer images
+    # Load segmentation and localizer
     seg = nib.load(seg_path)
     loc = loc_path and (loc_path.is_file() or None) and nib.load(loc_path)
 

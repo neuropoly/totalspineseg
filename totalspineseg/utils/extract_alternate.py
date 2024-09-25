@@ -89,8 +89,8 @@ def main():
     prefix = args.prefix
     seg_suffix = args.seg_suffix
     output_seg_suffix = args.output_seg_suffix
-    labels = [_ for __ in args.labels for _ in (__ if isinstance(__, list) else [__])]
-    prioratize_labels = [_ for __ in args.prioratize_labels for _ in (__ if isinstance(__, list) else [__])]
+    labels = [l for raw in args.labels for l in (raw if isinstance(raw, list) else [raw])]
+    prioratize_labels = [l for raw in args.prioratize_labels for l in (raw if isinstance(raw, list) else [raw])]
     override = args.override
     max_workers = args.max_workers
     quiet = args.quiet
