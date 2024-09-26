@@ -1106,21 +1106,8 @@ def _get_landmark_output_labels(
 
     mask_seg_data_landmarks = np.isin(seg_data, landmark_labels)
 
-    # First we try to look for the landmarks in the segmentation
-    for l in selected_landmarks:
-        ############################################################################################################
-        # TODO Remove this reake when we trust all the landmarks to get all landmarks instead of the first 2
-        if len(map_landmark_outputs) > 0 and selected_landmarks.index(l) > 1:
-            break
-        ############################################################################################################
-        if l in map_landmark_labels and l in seg_data:
-            mask_labeled_l = np.argmax(np.bincount(mask_labeled[seg_data == l].flat))
-            # We map only if the landmark cover the majority of the voxels in the mask_labeled label
-            if np.argmax(np.bincount(seg_data[mask_seg_data_landmarks & (mask_labeled == mask_labeled_l)].flat)) == l:
-                map_landmark_outputs[mask_labeled_l] = map_landmark_labels[l]
-
-    # If no init label found, set it from the localizer
-    if len(map_landmark_outputs) == 0 and loc_data is not None:
+    # First we try to set initial output labels from the localizer
+    if loc_data is not None:
         # Make mask for the intersection of the localizer labels and the labels in the segmentation
         mask = np.isin(loc_data, loc_labels) * np.isin(mask_labeled, sorted_labels)
         mask_labeled_masked = mask * mask_labeled
@@ -1139,6 +1126,20 @@ def _get_landmark_output_labels(
             if first_sorted_labels_in_loc > 0:
                 # Get the output label for first_sorted_labels_in_loc, the label from the localizer that has the most voxels in it
                 map_landmark_outputs[first_sorted_labels_in_loc] = np.argmax(np.bincount(loc_data_masked[mask_labeled_masked == first_sorted_labels_in_loc].flat))
+
+    # If no output label found from the localizer, try to set the output labels from landmarks in the segmentation
+    if len(map_landmark_outputs) == 0:
+        for l in selected_landmarks:
+            ############################################################################################################
+            # TODO Remove this reake when we trust all the landmarks to get all landmarks instead of the first 2
+            if len(map_landmark_outputs) > 0 and selected_landmarks.index(l) > 1:
+                break
+            ############################################################################################################
+            if l in map_landmark_labels and l in seg_data:
+                mask_labeled_l = np.argmax(np.bincount(mask_labeled[seg_data == l].flat))
+                # We map only if the landmark cover the majority of the voxels in the mask_labeled label
+                if np.argmax(np.bincount(seg_data[mask_seg_data_landmarks & (mask_labeled == mask_labeled_l)].flat)) == l:
+                    map_landmark_outputs[mask_labeled_l] = map_landmark_labels[l]
 
     # If no init label found, set the default superior label
     if len(map_landmark_outputs) == 0 and default_superior_output > 0:
