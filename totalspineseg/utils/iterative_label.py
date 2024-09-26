@@ -76,7 +76,7 @@ def main():
     )
     parser.add_argument(
         '--selected-disc-landmarks', type=int, nargs='+', default=[],
-        help='The selected disc labels to use as a landmark from the disc_landmark_labels.'
+        help='Discs labels to use as landmarks from the --disc-landmark-labels.'
     )
     parser.add_argument(
         '--disc-labels', type=lambda x:list(range(int(x.split('-')[0]), int(x.split('-')[-1]) + 1)), nargs='+', default=[],
@@ -108,7 +108,7 @@ def main():
     )
     parser.add_argument(
         '--vertebrae-extra-labels', type=lambda x:list(range(int(x.split('-')[0]), int(x.split('-')[-1]) + 1)), nargs='+', default=[],
-        help='Extra vertebrae labels to add to add to adjacent vertebrae labels.'
+        help='Extra vertebrae labels to add to adjacent vertebrae labels.'
     )
     parser.add_argument(
         '--region-max-sizes', type=int, nargs=4, default=[5, 12, 6, 1],
@@ -505,8 +505,7 @@ def iterative_label(
     6. Label the discs with the output labels
     7. Find the matching vertebrae labels to the discs landmarks
     8. Label the vertebrae with the output labels
-    9. Map labels from the iteative algorithm output, to the final output (e.g., map the vertebrae label from the iteative algorithm output to the special sacrum label)
-    10. Map input labels to the final output (e.g., map the input sacrum, canal and spinal cord labels to the output labels)
+    9. Map input labels to the final output (e.g., map the input sacrum, canal and spinal cord labels to the output labels)
 
     Parameters
     ----------
@@ -515,7 +514,7 @@ def iterative_label(
     loc : nibabel.nifti1.Nifti1Image
         Localizer image to use for detecting first vertebrae and disc (optional)
     selected_disc_landmarks : list
-        List of disc labels to use as a landmark from the disc_landmark_labels
+        Discs labels to use as landmarks from the disc_landmark_labels
     disc_labels : list
         The disc labels in the segmentation
     disc_landmark_labels : list
@@ -531,7 +530,7 @@ def iterative_label(
     vertebrae_output_step : int
         The step to take between vertebrae labels in the output
     vertebrae_extra_labels : list
-        Extra vertebrae labels to add to add to adjacent vertebrae labels
+        Extra vertebrae labels to add to adjacent vertebrae labels
     region_max_sizes : list
         The maximum number of discs/vertebrae for each region (Cervical from C3, Thoracic, Lumbar, Sacrum).
     region_default_sizes : list
@@ -945,7 +944,7 @@ def _merge_vertebrae_with_same_label(
     ):
     '''
     Combine sequential vertebrae labels if they have the same value in the original segmentation.
-    This is useful when part part of the vertebrae is not connected to the main part but have the same odd/even value.
+    This is useful when parts of the vertebrae are not touching in the segmentation but have the same odd/even value.
     '''
     if num_labels == 0 or len(labels) <= 1:
         return mask_labeled, num_labels, sorted_labels, sorted_z_indices
@@ -1048,7 +1047,8 @@ def _merge_extra_labels_with_adjacent_vertebrae(
     ):
     '''
     Combine extra labels with adjacent vertebrae labels.
-    This is useful for combining remaining of general vertebrae labels that introduce for region based training but not used in the final segmentation.
+    This is useful to combine segmentations of vertebrae introduced during region-based training, where the model sometimes outputs a general vertebrae label instead of the specific odd or even vertebrae.
+    The process adjusts these remnants by merging them with the closest odd or even vertebrae to ensure correct segmentation.
     '''
     if num_labels == 0 or len(extra_labels) == 0:
         return mask_labeled, num_labels, sorted_labels, sorted_z_indices
