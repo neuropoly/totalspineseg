@@ -158,6 +158,7 @@ def main():
         '--dilation-size', type=int, default=1,
         help='Number of voxels to dilate before finding connected voxels to label, defaults to 1 (No dilation).'
     )
+    # This argument is not used in the current implementation in inference script
     parser.add_argument(
         '--default-superior-disc', type=int, default=0,
         help='Default superior disc label if no init label found, defaults to 0 (Raise error if init label not found).'
