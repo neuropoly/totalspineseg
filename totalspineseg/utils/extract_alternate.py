@@ -15,6 +15,11 @@ def main():
     parser = argparse.ArgumentParser(
         description=' '.join(f'''
             Extract alternate labels from the segmentation.
+            This script extracts binary masks that include every other intervertebral disc (IVD).
+            It loops through the segmentation labels from superior to inferior, selecting alternating discs.
+            To choose the first IVD to include, it uses the first disc in the image that matches the labels provided in the --prioratize-labels argument, if supplied.
+            If --prioratize-labels is not provided, it starts from the first disc in the image.
+            For inference purposes, this prioritization is not needed, as the goal is simply to include every other disc in the mask, without concern for which disc is selected first.
         '''.split()),
         epilog=textwrap.dedent('''
             Examples:
@@ -223,10 +228,11 @@ def extract_alternate(
         prioratize_labels=[],
     ):
     '''
-    Extract vertebrae levels from Spinal Canal and Discs.
-
-    The function extracts the vertebrae levels from the input segmentation by finding the closest voxel in the canal centerline to the middle of each disc.
-    The superior voxels in the canal centerline are set to 1 and the middle voxels between C2-C3 and the superior voxels are set to 2.
+    This function extract binary masks that include every other intervertebral disc (IVD).
+    It loops through the segmentation labels from superior to inferior, selecting alternating discs.
+    To choose the first IVD to include, it uses the first disc in the image that matches the labels provided in the prioratize_labels argument, if supplied.
+    If prioratize_labels is not provided, it starts from the first disc in the image.
+    For inference purposes, this prioritization is not needed, as the goal is simply to include every other disc in the mask, without concern for which disc is selected first.
 
     Parameters
     ----------
