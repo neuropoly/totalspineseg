@@ -58,8 +58,8 @@ def main():
         help='Image suffix for output, defaults to "_0000".'
     )
     parser.add_argument(
-        '--override', '-r', action="store_true", default=False,
-        help='Override existing output files, defaults to false (Do not override).'
+        '--overwrite', '-r', action="store_true", default=False,
+        help='Overwrite existing output files, defaults to false (Do not overwrite).'
     )
     parser.add_argument(
         '--max-workers', '-w', type=int, default=mp.cpu_count(),
@@ -81,7 +81,7 @@ def main():
     prefix = args.prefix
     image_suffix = args.image_suffix
     output_image_suffix = args.output_image_suffix
-    override = args.override
+    overwrite = args.overwrite
     max_workers = args.max_workers
     quiet = args.quiet
 
@@ -96,7 +96,7 @@ def main():
             prefix = "{prefix}"
             image_suffix = "{image_suffix}"
             output_image_suffix = "{output_image_suffix}"
-            override = {override}
+            overwrite = {overwrite}
             max_workers = {max_workers}
             quiet = {quiet}
         '''))
@@ -109,7 +109,7 @@ def main():
         prefix=prefix,
         image_suffix=image_suffix,
         output_image_suffix=output_image_suffix,
-        override=override,
+        overwrite=overwrite,
         max_workers=max_workers,
         quiet=quiet,
     )
@@ -122,7 +122,7 @@ def reorient_canonical_mp(
         prefix='',
         image_suffix='_0000',
         output_image_suffix='_0000',
-        override=False,
+        overwrite=False,
         max_workers=mp.cpu_count(),
         quiet=False,
     ):
@@ -146,7 +146,7 @@ def reorient_canonical_mp(
     process_map(
         partial(
             _reorient_canonical,
-            override=override,
+            overwrite=overwrite,
         ),
         image_path_list,
         output_image_path_list,
@@ -158,7 +158,7 @@ def reorient_canonical_mp(
 def _reorient_canonical(
         image_path,
         output_image_path,
-        override=False,
+        overwrite=False,
     ):
     '''
     Reorient the image to the closest canonical orientation.
@@ -167,7 +167,7 @@ def _reorient_canonical(
     output_image_path = Path(output_image_path)
 
     # If the output image already exists and we are not overriding it, return
-    if not override and output_image_path.exists():
+    if not overwrite and output_image_path.exists():
         return
 
     image = nib.load(image_path)

@@ -64,8 +64,8 @@ def main():
         help='The target voxel size in mm. Can accept 1 or 3 parameters for x, y, z. Default is 1mm.'
     )
     parser.add_argument(
-        '--override', '-r', action="store_true", default=False,
-        help='Override existing output files, defaults to false (Do not override).'
+        '--overwrite', '-r', action="store_true", default=False,
+        help='Overwrite existing output files, defaults to false (Do not overwrite).'
     )
     parser.add_argument(
         '--max-workers', '-w', type=int, default=mp.cpu_count(),
@@ -88,7 +88,7 @@ def main():
     image_suffix = args.image_suffix
     output_image_suffix = args.output_image_suffix
     mm = tuple(args.mm if len (args.mm) == 3 else [args.mm[0]] * 3)
-    override = args.override
+    overwrite = args.overwrite
     max_workers = args.max_workers
     quiet = args.quiet
 
@@ -104,7 +104,7 @@ def main():
             image_suffix = "{image_suffix}"
             output_image_suffix = "{output_image_suffix}"
             mm = {mm}
-            override = {override}
+            overwrite = {overwrite}
             max_workers = {max_workers}
             quiet = {quiet}
         '''))
@@ -118,7 +118,7 @@ def main():
         image_suffix=image_suffix,
         output_image_suffix=output_image_suffix,
         mm=mm,
-        override=override,
+        overwrite=overwrite,
         max_workers=max_workers,
         quiet=quiet,
     )
@@ -132,7 +132,7 @@ def resample_mp(
         image_suffix='_0000',
         output_image_suffix='_0000',
         mm=(1.0, 1.0, 1.0),
-        override=False,
+        overwrite=False,
         max_workers=mp.cpu_count(),
         quiet=False,
     ):
@@ -157,7 +157,7 @@ def resample_mp(
         partial(
             _resample,
             mm=mm,
-            override=override,
+            overwrite=overwrite,
         ),
         image_path_list,
         output_image_path_list,
@@ -170,7 +170,7 @@ def _resample(
         image_path,
         output_image_path,
         mm=(1.0, 1.0, 1.0),
-        override=False,
+        overwrite=False,
     ):
     '''
     Wrapper function to handle IO.
@@ -179,7 +179,7 @@ def _resample(
     output_image_path = Path(output_image_path)
 
     # If the output image already exists and we are not overriding it, return
-    if not override and output_image_path.exists():
+    if not overwrite and output_image_path.exists():
         return
 
     image = nib.load(image_path)

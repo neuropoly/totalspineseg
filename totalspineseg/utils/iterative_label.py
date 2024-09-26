@@ -163,8 +163,8 @@ def main():
         help='Default superior disc label if no init label found, defaults to 0 (Raise error if init label not found).'
     )
     parser.add_argument(
-        '--override', '-r', action="store_true", default=False,
-        help='Override existing output files, defaults to false (Do not override).'
+        '--overwrite', '-r', action="store_true", default=False,
+        help='Overwrite existing output files, defaults to false (Do not overwrite).'
     )
     parser.add_argument(
         '--max-workers', '-w', type=int, default=mp.cpu_count(),
@@ -209,7 +209,7 @@ def main():
     map_input_list = args.map_input
     dilation_size = args.dilation_size
     default_superior_disc = args.default_superior_disc
-    override = args.override
+    overwrite = args.overwrite
     max_workers = args.max_workers
     quiet = args.quiet
 
@@ -247,7 +247,7 @@ def main():
             map_input = {map_input_list}
             dilation_size = {dilation_size}
             default_superior_disc = {default_superior_disc}
-            override = {override}
+            overwrite = {overwrite}
             max_workers = {max_workers}
             quiet = {quiet}
         '''))
@@ -289,7 +289,7 @@ def main():
         map_input_dict=map_input_dict,
         dilation_size=dilation_size,
         default_superior_disc=default_superior_disc,
-        override=override,
+        overwrite=overwrite,
         max_workers=max_workers,
         quiet=quiet,
     )
@@ -325,7 +325,7 @@ def iterative_label_mp(
         map_input_dict={},
         dilation_size=1,
         default_superior_disc=0,
-        override=False,
+        overwrite=False,
         max_workers=mp.cpu_count(),
         quiet=False,
     ):
@@ -372,7 +372,7 @@ def iterative_label_mp(
             map_input_dict=map_input_dict,
             dilation_size=dilation_size,
             default_superior_disc=default_superior_disc,
-            override=override,
+            overwrite=overwrite,
         ),
         seg_path_list,
         output_seg_path_list,
@@ -407,7 +407,7 @@ def _iterative_label(
         map_input_dict={},
         dilation_size=1,
         default_superior_disc=0,
-        override=False,
+        overwrite=False,
     ):
     '''
     Wrapper function to handle IO.
@@ -417,7 +417,7 @@ def _iterative_label(
     loc_path = loc_path and Path(loc_path)
 
     # If the output image already exists and we are not overriding it, return
-    if not override and output_seg_path.exists():
+    if not overwrite and output_seg_path.exists():
         return
 
     # Load segmentation and localizer

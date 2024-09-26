@@ -52,8 +52,8 @@ def main():
         help='Number of times to try copying the file in case of failure (default is 10).'
     )
     parser.add_argument(
-        '--override', '-r', action="store_true", default=False,
-        help='Override existing output files, defaults to false (Do not override).'
+        '--overwrite', '-r', action="store_true", default=False,
+        help='Overwrite existing output files, defaults to false (Do not overwrite).'
     )
     parser.add_argument(
         '--max-workers', '-w', type=int, default=mp.cpu_count(),
@@ -74,7 +74,7 @@ def main():
     flat = args.flat
     replace = dict(args.replace)
     num_tries = args.tries
-    override = args.override
+    overwrite = args.overwrite
     max_workers = args.max_workers
     quiet = args.quiet
 
@@ -88,7 +88,7 @@ def main():
             flat = {flat}
             replace = {replace}
             tries = {num_tries}
-            override = {override}
+            overwrite = {overwrite}
             max_workers = {max_workers}
             quiet = {quiet}
         '''))
@@ -100,7 +100,7 @@ def main():
         flat=flat,
         replace=replace,
         num_tries=num_tries,
-        override=override,
+        overwrite=overwrite,
         max_workers=max_workers,
         quiet=quiet,
     )
@@ -112,7 +112,7 @@ def cpdir_mp(
         flat=False,
         replace={},
         num_tries=1,
-        override=False,
+        overwrite=False,
         max_workers=mp.cpu_count(),
         quiet=False,
     ):
@@ -138,7 +138,7 @@ def cpdir_mp(
         partial(
             _cpdir,
             num_tries=num_tries,
-            override=override,
+            overwrite=overwrite,
         ),
         src_path_list,
         dst_path_list,
@@ -151,13 +151,13 @@ def _cpdir(
         src_path,
         dst_path,
         num_tries=1,
-        override=False,
+        overwrite=False,
     ):
     '''
     Copy file from src to dst.
     '''
     # If the output already exists and we are not overriding it, return
-    if not override and dst_path.exists():
+    if not overwrite and dst_path.exists():
         return
 
     # Make sure dst directory exists

@@ -73,8 +73,8 @@ def main():
         help='Interpolation method, can be "nearest", "linear" or "label" (for singel voxel labels), defaults to "nearest".'
     )
     parser.add_argument(
-        '--override', '-r', action="store_true", default=False,
-        help='Override existing output files, defaults to false (Do not override).'
+        '--overwrite', '-r', action="store_true", default=False,
+        help='Overwrite existing output files, defaults to false (Do not overwrite).'
     )
     parser.add_argument(
         '--max-workers', '-w', type=int, default=mp.cpu_count(),
@@ -99,7 +99,7 @@ def main():
     seg_suffix = args.seg_suffix
     output_seg_suffix = args.output_seg_suffix
     interpolation = args.interpolation
-    override = args.override
+    overwrite = args.overwrite
     max_workers = args.max_workers
     quiet = args.quiet
 
@@ -117,7 +117,7 @@ def main():
             seg_suffix = "{seg_suffix}"
             output_seg_suffix = "{output_seg_suffix}"
             interpolation = "{interpolation}"
-            override = {override}
+            overwrite = {overwrite}
             max_workers = {max_workers}
             quiet = {quiet}
         '''))
@@ -133,7 +133,7 @@ def main():
         seg_suffix=seg_suffix,
         output_seg_suffix=output_seg_suffix,
         interpolation=interpolation,
-        override=override,
+        overwrite=overwrite,
         max_workers=max_workers,
         quiet=quiet,
     )
@@ -149,7 +149,7 @@ def transform_seg2image_mp(
         seg_suffix='',
         output_seg_suffix='',
         interpolation='nearest',
-        override=False,
+        overwrite=False,
         max_workers=mp.cpu_count(),
         quiet=False,
     ):
@@ -176,7 +176,7 @@ def transform_seg2image_mp(
         partial(
             _transform_seg2image,
             interpolation=interpolation,
-            override=override,
+            overwrite=overwrite,
         ),
         image_path_list,
         seg_path_list,
@@ -191,7 +191,7 @@ def _transform_seg2image(
         seg_path,
         output_seg_path,
         interpolation='nearest',
-        override=False,
+        overwrite=False,
     ):
     '''
     Wrapper function to handle IO.
@@ -201,7 +201,7 @@ def _transform_seg2image(
     output_seg_path = Path(output_seg_path)
 
     # If the output image already exists and we are not overriding it, return
-    if not override and output_seg_path.exists():
+    if not overwrite and output_seg_path.exists():
         return
 
     # Check if the segmentation file exists

@@ -72,8 +72,8 @@ def main():
         help='Margin to add to the cropped region, defaults to 0.'
     )
     parser.add_argument(
-        '--override', '-r', action="store_true", default=False,
-        help='If provided, override existing output files, defaults to false (Do not override).'
+        '--overwrite', '-r', action="store_true", default=False,
+        help='If provided, overwrite existing output files, defaults to false (Do not overwrite).'
     )
     parser.add_argument(
         '--max-workers', '-w', type=int, default=mp.cpu_count(),
@@ -98,7 +98,7 @@ def main():
     seg_suffix = args.seg_suffix
     output_image_suffix = args.output_image_suffix
     margin = args.margin
-    override = args.override
+    overwrite = args.overwrite
     max_workers = args.max_workers
     quiet = args.quiet
 
@@ -116,7 +116,7 @@ def main():
             seg_suffix = "{seg_suffix}"
             output_image_suffix = "{output_image_suffix}"
             margin = {margin}
-            override = {override}
+            overwrite = {overwrite}
             max_workers = {max_workers}
             quiet = {quiet}
         '''))
@@ -132,7 +132,7 @@ def main():
         seg_suffix=seg_suffix,
         output_image_suffix=output_image_suffix,
         margin=margin,
-        override=override,
+        overwrite=overwrite,
         max_workers=max_workers,
         quiet=quiet,
     )
@@ -148,7 +148,7 @@ def crop_image2seg_mp(
         seg_suffix='',
         output_image_suffix='_0000',
         margin=0,
-        override=False,
+        overwrite=False,
         max_workers=mp.cpu_count(),
         quiet=False,
     ):
@@ -175,7 +175,7 @@ def crop_image2seg_mp(
         partial(
             _crop_image2seg,
             margin=margin,
-            override=override,
+            overwrite=overwrite,
         ),
         image_path_list,
         seg_path_list,
@@ -190,7 +190,7 @@ def _crop_image2seg(
         seg_path,
         output_image_path,
         margin=0,
-        override=False,
+        overwrite=False,
     ):
     '''
     Wrapper function to handle IO.
@@ -200,7 +200,7 @@ def _crop_image2seg(
     output_image_path = Path(output_image_path)
 
     # If the output image already exists and we are not overriding it, return
-    if not override and output_image_path.exists():
+    if not overwrite and output_image_path.exists():
         return
 
     # Check if the segmentation file exists

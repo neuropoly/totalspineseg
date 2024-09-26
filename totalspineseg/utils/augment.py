@@ -92,8 +92,8 @@ def main():
         help='Define classes of labels for per class augmentation. Example: 1 2 11-50 63-100 for Spinal Cord, Canal, vertebrae and IVDs (Default to use each label as a separate class ).'
     )
     parser.add_argument(
-        '--override', '-r', action="store_true", default=False,
-        help='If provided, override existing output files, defaults to false (Do not override).'
+        '--overwrite', '-r', action="store_true", default=False,
+        help='If provided, overwrite existing output files, defaults to false (Do not overwrite).'
     )
     parser.add_argument(
         '--max-workers', '-w', type=int, default=mp.cpu_count(),
@@ -122,7 +122,7 @@ def main():
     augmentations_per_image = args.augmentations_per_image
     labels2image = args.labels2image
     seg_classes = args.seg_classes
-    override = args.override
+    overwrite = args.overwrite
     max_workers = args.max_workers
     quiet = args.quiet
 
@@ -144,7 +144,7 @@ def main():
             augmentations_per_image = {augmentations_per_image}
             labels2image = {labels2image}
             seg_classes = {seg_classes}
-            override = {override}
+            overwrite = {overwrite}
             max_workers = {max_workers}
             quiet = {quiet}
         '''))
@@ -164,7 +164,7 @@ def main():
         augmentations_per_image=augmentations_per_image,
         labels2image=labels2image,
         seg_classes=seg_classes,
-        override=override,
+        overwrite=overwrite,
         max_workers=max_workers,
         quiet=quiet,
     )
@@ -184,7 +184,7 @@ def augment_mp(
         augmentations_per_image=7,
         labels2image=False,
         seg_classes=None,
-        override=False,
+        overwrite=False,
         max_workers=mp.cpu_count(),
         quiet=False,
     ):
@@ -215,7 +215,7 @@ def augment_mp(
             augmentations_per_image=augmentations_per_image,
             labels2image=labels2image,
             seg_classes=seg_classes,
-            override=override,
+            overwrite=overwrite,
         ),
         image_path_list,
         seg_path_list,
@@ -234,7 +234,7 @@ def _augment(
         augmentations_per_image=7,
         labels2image=False,
         seg_classes=None,
-        override=False,
+        overwrite=False,
     ):
     '''
     Wrapper function to handle IO.
@@ -244,7 +244,7 @@ def _augment(
     output_image_path_pattern = Path(output_image_path_pattern)
     output_seg_path_pattern = Path(output_seg_path_pattern)
 
-    if override:
+    if overwrite:
         for f in output_image_path_pattern.parent.glob(output_image_path_pattern.name):
             f.unlink()
         for f in output_seg_path_pattern.parent.glob(output_seg_path_pattern.name):
@@ -276,7 +276,7 @@ def _augment(
         output_seg_path = output_seg_path_pattern.with_name(output_seg_path_pattern.name.replace('*', f'{i}'))
 
         # If the output image already exists and we are not overriding it, continue
-        if not override and (output_image_path.exists() or output_seg_path.exists()):
+        if not overwrite and (output_image_path.exists() or output_seg_path.exists()):
             continue
 
         output_image, output_seg = augment(

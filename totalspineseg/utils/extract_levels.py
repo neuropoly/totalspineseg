@@ -70,8 +70,8 @@ def main():
         help='The label for C1 vertebra in the segmentation, if provided it will be used to determine if C1 is in the segmentation.'
     )
     parser.add_argument(
-        '--override', '-r', action="store_true", default=False,
-        help='Override existing output files, defaults to false (Do not override).'
+        '--overwrite', '-r', action="store_true", default=False,
+        help='Overwrite existing output files, defaults to false (Do not overwrite).'
     )
     parser.add_argument(
         '--max-workers', '-w', type=int, default=mp.cpu_count(),
@@ -96,7 +96,7 @@ def main():
     canal_labels = args.canal_labels
     disc_labels = [l for raw in args.disc_labels for l in (raw if isinstance(raw, list) else [raw])]
     c1_label = args.c1_label
-    override = args.override
+    overwrite = args.overwrite
     max_workers = args.max_workers
     quiet = args.quiet
 
@@ -114,7 +114,7 @@ def main():
             canal_labels = {canal_labels}
             disc_labels = {disc_labels}
             c1_label = {c1_label}
-            override = {override}
+            overwrite = {overwrite}
             max_workers = {max_workers}
             quiet = {quiet}
         '''))
@@ -130,7 +130,7 @@ def main():
         canal_labels=canal_labels,
         disc_labels=disc_labels,
         c1_label=c1_label,
-        override=override,
+        overwrite=overwrite,
         max_workers=max_workers,
         quiet=quiet,
     )
@@ -146,7 +146,7 @@ def extract_levels_mp(
         canal_labels=[],
         disc_labels=[],
         c1_label=0,
-        override=False,
+        overwrite=False,
         max_workers=mp.cpu_count(),
         quiet=False,
     ):
@@ -173,7 +173,7 @@ def extract_levels_mp(
             canal_labels=canal_labels,
             disc_labels=disc_labels,
             c1_label=c1_label,
-            override=override,
+            overwrite=overwrite,
         ),
         seg_path_list,
         output_seg_path_list,
@@ -188,7 +188,7 @@ def _extract_levels(
         canal_labels=[],
         disc_labels=[],
         c1_label=0,
-        override=False,
+        overwrite=False,
     ):
     '''
     Wrapper function to handle IO.
@@ -197,7 +197,7 @@ def _extract_levels(
     output_seg_path = Path(output_seg_path)
 
     # If the output image already exists and we are not overriding it, return
-    if not override and output_seg_path.exists():
+    if not overwrite and output_seg_path.exists():
         return
 
     # Load segmentation
