@@ -206,7 +206,8 @@ def main():
         locs = list(loc_path.glob(f'*{loc_suffix}.nii.gz')) + list(loc_path.glob(f'sub-*/anat/*{loc_suffix}.nii.gz'))
 
         # Copy the localizers to the output folder
-        for image in (output_path / 'input').glob('*_0000.nii.gz'):
+        images = (output_path / 'input').glob('*_0000.nii.gz')
+        for image in tqdm(images, disable=quiet):
             if loc_path.name.endswith('.nii.gz'):
                 # If the localizers are in a single file, copy it to the localizers folder
                 loc = loc_path
@@ -311,6 +312,11 @@ def main():
             '-device', device,
             '--save_probabilities',
     ])
+
+    # Remove unnecessary files from output folder
+    (output_path / 'step1_raw' / 'dataset.json').unlink()
+    (output_path / 'step1_raw' / 'plans.json').unlink()
+    (output_path / 'step1_raw' / 'predict_from_raw_data_args.json').unlink()
 
     if not quiet: print('\n' 'Generating preview images for step 1:')
     preview_jpg_mp(
@@ -554,6 +560,11 @@ def main():
                 '-chk', checkpoint,
                 '-device', device
         ])
+
+        # Remove unnecessary files from output folder
+        (output_path / 'step2_raw' / 'dataset.json').unlink()
+        (output_path / 'step2_raw' / 'plans.json').unlink()
+        (output_path / 'step2_raw' / 'predict_from_raw_data_args.json').unlink()
 
         # Remove the raw files from step 2 to save space
         for f in (output_path / 'step2_input').glob('*_0000.nii.gz'):
