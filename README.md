@@ -1,6 +1,6 @@
 # TotalSpineSeg
 
-TotalSpineSeg is a tool for automatic instance segmentation and labeling of all vertebrae, intervertebral discs (IVDs), spinal cord, and spinal canal in MRI images. It follows the [TotalSegmentator classes](https://github.com/wasserth/TotalSegmentator/tree/v1.5.7#class-details) with additional classes for IVDs, spinal cord, and spinal canal (see [list of classes](#list-of-classes)). The model is based on [nnUNet](https://github.com/MIC-DKFZ/nnUNet) as the backbone for training and inference.
+TotalSpineSeg is a tool for automatic instance segmentation of all vertebrae, intervertebral discs (IVDs), spinal cord, and spinal canal in MRI images. It is robust to various MRI contrasts, acquisition orientations, and resolutions. The model used in TotalSpineSeg is based on [nnUNet](https://github.com/MIC-DKFZ/nnUNet) as the backbone for training and inference.
 
 If you use this model, please cite our work:
 > Warszawer Y, Molinier N, Valošek J, Shirbint E, Benveniste PL, Achiron A, Eshaghi A and Cohen-Adad J. _Fully Automatic Vertebrae and Spinal Cord Segmentation Using a Hybrid Approach Combining nnU-Net and Iterative Algorithm_.	Proceedings of the 32th Annual Meeting of ISMRM. 2024
@@ -229,53 +229,53 @@ For a more detailed view of the output examples, you can check the [PDF version]
 
 | Label | Name |
 |:------|:-----|
-| 18 | vertebrae_L5 |
-| 19 | vertebrae_L4 |
-| 20 | vertebrae_L3 |
-| 21 | vertebrae_L2 |
-| 22 | vertebrae_L1 |
-| 23 | vertebrae_T12 |
-| 24 | vertebrae_T11 |
-| 25 | vertebrae_T10 |
-| 26 | vertebrae_T9 |
-| 27 | vertebrae_T8 |
-| 28 | vertebrae_T7 |
-| 29 | vertebrae_T6 |
-| 30 | vertebrae_T5 |
-| 31 | vertebrae_T4 |
-| 32 | vertebrae_T3 |
-| 33 | vertebrae_T2 |
-| 34 | vertebrae_T1 |
-| 35 | vertebrae_C7 |
-| 36 | vertebrae_C6 |
-| 37 | vertebrae_C5 |
-| 38 | vertebrae_C4 |
-| 39 | vertebrae_C3 |
-| 40 | vertebrae_C2 |
-| 41 | vertebrae_C1 |
-| 92 | sacrum |
-| 200 | spinal_cord |
-| 201 | spinal_canal |
-| 202 | disc_L5_S |
-| 203 | disc_L4_L5 |
-| 204 | disc_L3_L4 |
-| 205 | disc_L2_L3 |
-| 206 | disc_L1_L2 |
-| 207 | disc_T12_L1 |
-| 208 | disc_T11_T12 |
-| 209 | disc_T10_T11 |
-| 210 | disc_T9_T10 |
-| 211 | disc_T8_T9 |
-| 212 | disc_T7_T8 |
-| 213 | disc_T6_T7 |
-| 214 | disc_T5_T6 |
-| 215 | disc_T4_T5 |
-| 216 | disc_T3_T4 |
-| 217 | disc_T2_T3 |
-| 218 | disc_T1_T2 |
-| 219 | disc_C7_T1 |
-| 220 | disc_C6_C7 |
-| 221 | disc_C5_C6 |
-| 222 | disc_C4_C5 |
-| 223 | disc_C3_C4 |
-| 224 | disc_C2_C3 |
+| 1 | spinal_cord |
+| 2 | spinal_canal |
+| 11 | vertebrae_C1 |
+| 12 | vertebrae_C2 |
+| 13 | vertebrae_C3 |
+| 14 | vertebrae_C4 |
+| 15 | vertebrae_C5 |
+| 16 | vertebrae_C6 |
+| 17 | vertebrae_C7 |
+| 21 | vertebrae_T1 |
+| 22 | vertebrae_T2 |
+| 23 | vertebrae_T3 |
+| 24 | vertebrae_T4 |
+| 25 | vertebrae_T5 |
+| 26 | vertebrae_T6 |
+| 27 | vertebrae_T7 |
+| 28 | vertebrae_T8 |
+| 29 | vertebrae_T9 |
+| 30 | vertebrae_T10 |
+| 31 | vertebrae_T11 |
+| 32 | vertebrae_T12 |
+| 41 | vertebrae_L1 |
+| 42 | vertebrae_L2 |
+| 43 | vertebrae_L3 |
+| 44 | vertebrae_L4 |
+| 45 | vertebrae_L5 |
+| 50 | sacrum |
+| 63 | disc_C2_C3 |
+| 64 | disc_C3_C4 |
+| 65 | disc_C4_C5 |
+| 66 | disc_C5_C6 |
+| 67 | disc_C6_C7 |
+| 71 | disc_C7_T1 |
+| 72 | disc_T1_T2 |
+| 73 | disc_T2_T3 |
+| 74 | disc_T3_T4 |
+| 75 | disc_T4_T5 |
+| 76 | disc_T5_T6 |
+| 77 | disc_T6_T7 |
+| 78 | disc_T7_T8 |
+| 79 | disc_T8_T9 |
+| 80 | disc_T9_T10 |
+| 81 | disc_T10_T11 |
+| 82 | disc_T11_T12 |
+| 91 | disc_T12_L1 |
+| 92 | disc_L1_L2 |
+| 93 | disc_L2_L3 |
+| 94 | disc_L3_L4 |
+| 95 | disc_L4_L5 |
+| 100 | disc_L5_S |

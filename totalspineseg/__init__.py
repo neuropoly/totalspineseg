@@ -3,6 +3,7 @@ from .utils.average4d import average4d, average4d_mp
 from .utils.cpdir import cpdir_mp
 from .utils.crop_image2seg import crop_image2seg, crop_image2seg_mp
 from .utils.extract_levels import extract_levels, extract_levels_mp
+from .utils.extract_alternate import extract_alternate, extract_alternate_mp
 from .utils.extract_soft import extract_soft, extract_soft_mp
 from .utils.fill_canal import fill_canal, fill_canal_mp
 from .utils.iterative_label import iterative_label, iterative_label_mp
