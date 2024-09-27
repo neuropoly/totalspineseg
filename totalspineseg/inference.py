@@ -240,13 +240,13 @@ def main():
                 11: 'C1', 12: 'C2', 13: 'C3', 14: 'C4', 15: 'C5', 16: 'C6', 17: 'C7',
                 21: 'T1', 22: 'T2', 23: 'T3', 24: 'T4', 25: 'T5', 26: 'T6', 27: 'T7',
                 28: 'T8', 29: 'T9', 30: 'T10', 31: 'T11', 32: 'T12',
-                41: 'L1', 42: 'L2', 43: 'L3', 44: 'L4', 45: 'L5',
+                41: 'L1', 42: 'L2', 43: 'L3', 44: 'L4', 45: 'L5', 46: 'L6',
             },
             label_texts_left={
                 50: 'Sacrum', 63: 'C2C3', 64: 'C3C4', 65: 'C4C5', 66: 'C5C6', 67: 'C6C7',
                 71: 'C7T1', 72: 'T1T2', 73: 'T2T3', 74: 'T3T4', 75: 'T4T5', 76: 'T5T6', 77: 'T6T7',
                 78: 'T7T8', 79: 'T8T9', 80: 'T9T10', 81: 'T10T11', 82: 'T11T12',
-                91: 'T12L1', 92: 'L1L2', 93: 'L2L3', 94: 'L3L4', 95: 'L4L5', 100: 'L5S'
+                91: 'T12L1', 92: 'L1L2', 93: 'L2L3', 94: 'L3L4', 95: 'L4L5', 96: 'L5L6', 100: 'L5S'
             },
         )
 
@@ -314,9 +314,11 @@ def main():
     ])
 
     # Remove unnecessary files from output folder
-    (output_path / 'step1_raw' / 'dataset.json').unlink()
-    (output_path / 'step1_raw' / 'plans.json').unlink()
-    (output_path / 'step1_raw' / 'predict_from_raw_data_args.json').unlink()
+    (output_path / 'step1_raw' / 'dataset.json').unlink(missing_ok=True)
+    (output_path / 'step1_raw' / 'plans.json').unlink(missing_ok=True)
+    (output_path / 'step1_raw' / 'predict_from_raw_data_args.json').unlink(missing_ok=True)
+    for f in (output_path / 'step1_raw').glob('*.pkl'):
+        f.unlink(missing_ok=True)
 
     if not quiet: print('\n' 'Generating preview images for step 1:')
     preview_jpg_mp(
@@ -328,6 +330,36 @@ def main():
         max_workers=max_workers,
         quiet=quiet,
     )
+
+    if not quiet: print('\n' 'Extracting spinal canal soft segmentation from step 1 model output:')
+    extract_soft_mp(
+        output_path / 'step1_raw',
+        output_path / 'step1_output',
+        output_path / 'step1_canal',
+        label=8,
+        seg_labels=[1, 2],
+        dilate=1,
+        overwrite=True,
+        max_workers=max_workers,
+        quiet=quiet,
+    )
+
+    if not quiet: print('\n' 'Extracting spinal cord soft segmentation from step 1 model output:')
+    extract_soft_mp(
+        output_path / 'step1_raw',
+        output_path / 'step1_output',
+        output_path / 'step1_cord',
+        label=9,
+        seg_labels=[1],
+        dilate=1,
+        overwrite=True,
+        max_workers=max_workers,
+        quiet=quiet,
+    )
+
+    if not quiet: print('\n' 'Removing the raw files from step 1 to save space...')
+    for f in (output_path / 'step1_raw').glob('*.npz'):
+        f.unlink(missing_ok=True)
 
     if not quiet: print('\n' 'Extracting the largest connected component:')
     largest_component_mp(
@@ -429,41 +461,9 @@ def main():
             63: 'C2C3', 64: 'C3C4', 65: 'C4C5', 66: 'C5C6', 67: 'C6C7',
             71: 'C7T1', 72: 'T1T2', 73: 'T2T3', 74: 'T3T4', 75: 'T4T5', 76: 'T5T6', 77: 'T6T7',
             78: 'T7T8', 79: 'T8T9', 80: 'T9T10', 81: 'T10T11', 82: 'T11T12',
-            91: 'T12L1', 92: 'L1L2', 93: 'L2L3', 94: 'L3L4', 95: 'L4L5', 100: 'L5S'
+            91: 'T12L1', 92: 'L1L2', 93: 'L2L3', 94: 'L3L4', 95: 'L4L5', 96: 'L5L6', 100: 'L5S'
         },
     )
-
-    if not quiet: print('\n' 'Extracting spinal cord soft segmentation from step 1 model output:')
-    extract_soft_mp(
-        output_path / 'step1_raw',
-        output_path / 'step1_output',
-        output_path / 'step1_cord',
-        label=9,
-        seg_labels=[1],
-        dilate=1,
-        overwrite=True,
-        max_workers=max_workers,
-        quiet=quiet,
-    )
-
-    if not quiet: print('\n' 'Extracting spinal canal soft segmentation from step 1 model output:')
-    extract_soft_mp(
-        output_path / 'step1_raw',
-        output_path / 'step1_output',
-        output_path / 'step1_canal',
-        label=7,
-        seg_labels=[1, 2],
-        dilate=1,
-        overwrite=True,
-        max_workers=max_workers,
-        quiet=quiet,
-    )
-
-    if not quiet: print('\n' 'Removing the raw files from step 1 to save space...')
-    for f in (output_path / 'step1_raw').glob('*.npz'):
-        f.unlink()
-    for f in (output_path / 'step1_raw').glob('*.pkl'):
-        f.unlink()
 
     if not quiet: print('\n' 'Extracting the levels of the vertebrae and IVDs from the step 1 model output:')
     extract_levels_mp(
@@ -538,7 +538,7 @@ def main():
         # Remove images without the 2'nd channel
         for f in (output_path / 'step2_input').glob('*_0000.nii.gz'):
             if not f.with_name(f.name.replace('_0000.nii.gz', '_0001.nii.gz')).exists():
-                f.unlink()
+                f.unlink(missing_ok=True)
 
         # Get the nnUNet parameters from the results folder
         nnUNetTrainer, nnUNetPlans, configuration = next((nnUNet_results / step2_dataset).glob('*/fold_*')).parent.name.split('__')
@@ -562,13 +562,13 @@ def main():
         ])
 
         # Remove unnecessary files from output folder
-        (output_path / 'step2_raw' / 'dataset.json').unlink()
-        (output_path / 'step2_raw' / 'plans.json').unlink()
-        (output_path / 'step2_raw' / 'predict_from_raw_data_args.json').unlink()
+        (output_path / 'step2_raw' / 'dataset.json').unlink(missing_ok=True)
+        (output_path / 'step2_raw' / 'plans.json').unlink(missing_ok=True)
+        (output_path / 'step2_raw' / 'predict_from_raw_data_args.json').unlink(missing_ok=True)
 
         # Remove the raw files from step 2 to save space
         for f in (output_path / 'step2_input').glob('*_0000.nii.gz'):
-            f.unlink()
+            f.unlink(missing_ok=True)
 
         if not quiet: print('\n' 'Generating preview images for step 2:')
         preview_jpg_mp(
@@ -684,13 +684,13 @@ def main():
                 11: 'C1', 12: 'C2', 13: 'C3', 14: 'C4', 15: 'C5', 16: 'C6', 17: 'C7',
                 21: 'T1', 22: 'T2', 23: 'T3', 24: 'T4', 25: 'T5', 26: 'T6', 27: 'T7',
                 28: 'T8', 29: 'T9', 30: 'T10', 31: 'T11', 32: 'T12',
-                41: 'L1', 42: 'L2', 43: 'L3', 44: 'L4', 45: 'L5',
+                41: 'L1', 42: 'L2', 43: 'L3', 44: 'L4', 45: 'L5', 46: 'L6',
             },
             label_texts_left={
                 50: 'Sacrum', 63: 'C2C3', 64: 'C3C4', 65: 'C4C5', 66: 'C5C6', 67: 'C6C7',
                 71: 'C7T1', 72: 'T1T2', 73: 'T2T3', 74: 'T3T4', 75: 'T4T5', 76: 'T5T6', 77: 'T6T7',
                 78: 'T7T8', 79: 'T8T9', 80: 'T9T10', 81: 'T10T11', 82: 'T11T12',
-                91: 'T12L1', 92: 'L1L2', 93: 'L2L3', 94: 'L3L4', 95: 'L4L5', 100: 'L5S'
+                91: 'T12L1', 92: 'L1L2', 93: 'L2L3', 94: 'L3L4', 95: 'L4L5', 96: 'L5L6', 100: 'L5S'
             },
         )
 
