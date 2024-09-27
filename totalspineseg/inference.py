@@ -206,7 +206,7 @@ def main():
         locs = list(loc_path.glob(f'*{loc_suffix}.nii.gz')) + list(loc_path.glob(f'sub-*/anat/*{loc_suffix}.nii.gz'))
 
         # Copy the localizers to the output folder
-        images = (output_path / 'input').glob('*_0000.nii.gz')
+        images = list((output_path / 'input').glob('*_0000.nii.gz'))
         for image in tqdm(images, disable=quiet):
             if loc_path.name.endswith('.nii.gz'):
                 # If the localizers are in a single file, copy it to the localizers folder
