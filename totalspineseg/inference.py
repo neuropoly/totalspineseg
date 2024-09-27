@@ -331,36 +331,6 @@ def main():
         quiet=quiet,
     )
 
-    if not quiet: print('\n' 'Extracting spinal canal soft segmentation from step 1 model output:')
-    extract_soft_mp(
-        output_path / 'step1_raw',
-        output_path / 'step1_output',
-        output_path / 'step1_canal',
-        label=8,
-        seg_labels=[1, 2],
-        dilate=1,
-        overwrite=True,
-        max_workers=max_workers,
-        quiet=quiet,
-    )
-
-    if not quiet: print('\n' 'Extracting spinal cord soft segmentation from step 1 model output:')
-    extract_soft_mp(
-        output_path / 'step1_raw',
-        output_path / 'step1_output',
-        output_path / 'step1_cord',
-        label=9,
-        seg_labels=[1],
-        dilate=1,
-        overwrite=True,
-        max_workers=max_workers,
-        quiet=quiet,
-    )
-
-    if not quiet: print('\n' 'Removing the raw files from step 1 to save space...')
-    for f in (output_path / 'step1_raw').glob('*.npz'):
-        f.unlink(missing_ok=True)
-
     if not quiet: print('\n' 'Extracting the largest connected component:')
     largest_component_mp(
         output_path / 'step1_raw',
@@ -464,6 +434,36 @@ def main():
             91: 'T12L1', 92: 'L1L2', 93: 'L2L3', 94: 'L3L4', 95: 'L4L5', 96: 'L5L6', 100: 'L5S'
         },
     )
+
+    if not quiet: print('\n' 'Extracting spinal canal soft segmentation from step 1 model output:')
+    extract_soft_mp(
+        output_path / 'step1_raw',
+        output_path / 'step1_output',
+        output_path / 'step1_canal',
+        label=8,
+        seg_labels=[1, 2],
+        dilate=1,
+        overwrite=True,
+        max_workers=max_workers,
+        quiet=quiet,
+    )
+
+    if not quiet: print('\n' 'Extracting spinal cord soft segmentation from step 1 model output:')
+    extract_soft_mp(
+        output_path / 'step1_raw',
+        output_path / 'step1_output',
+        output_path / 'step1_cord',
+        label=9,
+        seg_labels=[1],
+        dilate=1,
+        overwrite=True,
+        max_workers=max_workers,
+        quiet=quiet,
+    )
+
+    if not quiet: print('\n' 'Removing the raw files from step 1 to save space...')
+    for f in (output_path / 'step1_raw').glob('*.npz'):
+        f.unlink(missing_ok=True)
 
     if not quiet: print('\n' 'Extracting the levels of the vertebrae and IVDs from the step 1 model output:')
     extract_levels_mp(
