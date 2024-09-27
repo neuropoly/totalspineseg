@@ -1,4 +1,5 @@
-import os, argparse, warnings, json, subprocess, textwrap, torch, totalspineseg, psutil
+import os, argparse, warnings, json, subprocess, textwrap, torch, totalspineseg, psutil, shutil
+from fnmatch import fnmatch
 from pathlib import Path
 from urllib.request import urlretrieve
 from importlib.metadata import metadata
@@ -12,21 +13,45 @@ def main():
     parser = argparse.ArgumentParser(
         description=textwrap.dedent('''
             This script runs inference using the trained TotalSpineSeg nnUNet model.
+            If not already installed, the script will download the pretrained models from the GitHub releases.
         '''),
         epilog=textwrap.dedent('''
             Examples:
-            inference input_folder output_folder
-            inference input_folder output_folder -step1
+            totalspineseg input.nii.gz output_folder
+            totalspineseg input.nii.gz output_folder --loc output_folder_loc/step2_output/localizer.nii.gz
+            totalspineseg input_folder output_folder
+            totalspineseg input_folder output_folder --step1
+            totalspineseg input_folder output_folder --loc output_folder_loc/step2_output
+            totalspineseg input_folder output_folder --loc output_folder_loc/step2_output --loc-suffix _loc
+            totalspineseg input_folder output_folder --loc output_folder_loc/step2_output --suffix _T1w _T2w --loc-suffix _T2w_loc
         '''),
         formatter_class=argparse.RawTextHelpFormatter
     )
     parser.add_argument(
-        'input_dir', type=Path,
-        help='The input folder containing the .nii.gz images to run the model on.'
+        'input', type=Path,
+        help='The input folder containing the .nii.gz images to run the model on, or a single .nii.gz image.'
     )
     parser.add_argument(
-        'output_dir', type=Path,
+        'output', type=Path,
         help='The output folder where the model outputs will be stored.'
+    )
+    parser.add_argument(
+        '--loc', '-l', type=Path, default=None,
+        help=' '.join(f'''
+            Folder containing localizers segmentations or a single .nii.gz localizer segmentation to use for detecting first vertebrae and disc if C1 and C2-C3 disc or the Sacrum and L5-S disc not found in the image, Optional.
+            This is the output of the model applied on localizer images. It can be the output of step 2, or step 1 if you only want to run step 1 (step1 flag).
+            The algorithm will use the localizers' segmentations to detect the matching vertebrae and discs. The localizer and the image must be aligned.
+            Matching will based on the majority of the voxels of the first vertebra or disc in the localizer, that intersect with image.
+            The file names should be in match with the image file names, or you can use the --suffix and --loc-suffix to match the files.
+        '''.split())
+    )
+    parser.add_argument(
+        '--suffix', '-s', type=str, nargs='+', default=[''],
+        help='Suffix to use for the input images, defaults to "".'
+    )
+    parser.add_argument(
+        '--loc-suffix', '-ls', type=str, default='',
+        help='Suffix to use for the localizers labels, defaults to "".'
     )
     parser.add_argument(
         '--step1', action='store_true',
@@ -64,8 +89,11 @@ def main():
     resources_path = totalspineseg_path / 'totalspineseg' / 'resources'
 
     # Get the command-line argument values
-    input_path = args.input_dir
-    output_path = args.output_dir
+    input_path = args.input
+    output_path = args.output
+    loc_path = args.loc
+    suffix = args.suffix
+    loc_suffix = args.loc_suffix
     step1_only = args.step1
     data_path = args.data_dir
     max_workers = args.max_workers
@@ -115,8 +143,11 @@ def main():
     if not quiet:
         print(textwrap.dedent(f'''
             Running TotalSpineSeg with the following parameters:
-            input_dir = "{input_path}"
-            output_dir = "{output_path}"
+            input = "{input_path}"
+            output = "{output_path}"
+            loc = "{loc_path}"
+            suffix = {suffix}
+            loc_suffix = "{loc_suffix}"
             step1_only = {step1_only}
             data_dir = "{data_path}"
             max_workers = {max_workers}
@@ -154,16 +185,54 @@ def main():
             subprocess.run(['nnUNetv2_install_pretrained_model_from_zip', str(zip_file)])
 
     if not quiet: print('\n' 'Making input dir with _0000 suffix:')
-    cpdir_mp(
-        input_path,
-        output_path / 'input',
-        pattern=['*.nii.gz', 'sub-*/anat/*.nii.gz'],
-        flat=True,
-        replace={'.nii.gz': '_0000.nii.gz'},
-        override=True,
-        max_workers=max_workers,
-        quiet=quiet,
-    )
+    if input_path.name.endswith('.nii.gz'):
+        # If the input is a single file, copy it to the input folder
+        (output_path / 'input').mkdir(parents=True, exist_ok=True)
+        shutil.copy(input_path, output_path / 'input' / input_path.name.replace('.nii.gz', '_0000.nii.gz'))
+    else:
+        # If the input is a folder, copy the files to the input folder
+        cpdir_mp(
+            input_path,
+            output_path / 'input',
+            pattern=sum([[f'*{s}.nii.gz', f'sub-*/anat/*{s}.nii.gz'] for s in suffix], []),
+            flat=True,
+            replace={'.nii.gz': '_0000.nii.gz'},
+            override=True,
+            max_workers=max_workers,
+            quiet=quiet,
+        )
+
+    if loc_path is not None:
+        if not quiet: print('\n' 'Copying localizers to the output folder:')
+
+        # Create the localizers folder
+        (output_path / 'localizers').mkdir(parents=True, exist_ok=True)
+
+        # List all localizers in the localizers folder
+        locs = list(loc_path.glob(f'*{loc_suffix}.nii.gz')) + list(loc_path.glob(f'sub-*/anat/*{loc_suffix}.nii.gz'))
+
+        # Copy the localizers to the output folder
+        for image in (output_path / 'input').glob('*_0000.nii.gz'):
+            if loc_path.name.endswith('.nii.gz'):
+                # If the localizers are in a single file, copy it to the localizers folder
+                loc = loc_path
+            else:
+                # If the localizers are in a folder, find the matching localizer for the image
+                image_suffix = next((_ for _ in suffix if fnmatch(image.name, f'*{_}_0000.nii.gz')), '')
+                loc = next((_ for _ in locs if fnmatch(image.name, _.name.replace(f'{loc_suffix}.nii.gz', f'{image_suffix}_0000.nii.gz'))), None)
+            if loc:
+                shutil.copy(loc, output_path / 'localizers' / image.name.replace('_0000.nii.gz', f'.nii.gz'))
+
+        if not quiet: print('\n' 'Generating preview images for the localizers:')
+        preview_jpg_mp(
+            output_path / 'input',
+            output_path / 'preview',
+            segs_path=output_path / 'localizers',
+            output_suffix='_loc',
+            override=True,
+            max_workers=max_workers,
+            quiet=quiet,
+        )
 
     if not quiet: print('\n' 'Converting 4D images to 3D:')
     average4d_mp(
@@ -250,17 +319,32 @@ def main():
 
     if not quiet: print('\n' 'Using an iterative algorithm to label IVDs with the definite labels:')
     # Labeling is based on the C2-C3, C7-T1 and L5-S1 IVD labels output by step 1 model.
-    iterative_label_mp(
-        output_path / 'step1_output',
-        output_path / 'step1_output',
-        disc_labels=[1, 2, 3, 4, 5],
-        init_disc={2:224, 5:202, 3:219, 4:207},
-        output_disc_step=-1,
-        map_input_dict={6:92, 7:201, 8:201, 9:200},
-        override=True,
-        max_workers=max_workers,
-        quiet=quiet,
-    )
+    if loc_path is None:
+        iterative_label_mp(
+            output_path / 'step1_output',
+            output_path / 'step1_output',
+            disc_labels=[1, 2, 3, 4, 5],
+            init_disc={2:224, 5:202, 3:219, 4:207},
+            output_disc_step=-1,
+            map_input_dict={6:92, 7:201, 8:201, 9:200},
+            override=True,
+            max_workers=max_workers,
+            quiet=quiet,
+        )
+    else:
+        iterative_label_mp(
+            output_path / 'step1_output',
+            output_path / 'step1_output',
+            locs_path=output_path / 'localizers',
+            disc_labels=[1, 2, 3, 4, 5],
+            init_disc={2:224, 5:202},
+            output_disc_step=-1,
+            loc_disc_labels=list(range(202, 225)),
+            map_input_dict={6:92, 7:201, 8:201, 9:200},
+            override=True,
+            max_workers=max_workers,
+            quiet=quiet,
+        )
 
     if not quiet: print('\n' 'Filling spinal cancal label to include all non cord spinal canal:')
     # This will put the spinal canal label in all the voxels between the canal and the cord.
@@ -455,24 +539,47 @@ def main():
         )
 
         if not quiet: print('\n' 'Using an iterative algorithm to label vertebrae and IVDs:')
-        iterative_label_mp(
-            output_path / 'step2_output',
-            output_path / 'step2_output',
-            disc_labels=[1, 2, 3, 4, 5, 6, 7],
-            vertebrea_labels=[9, 10, 11, 12, 13, 14],
-            vertebrea_extra_labels=[8],
-            init_disc={4:224, 7:202, 5:219, 6:207},
-            init_vertebrae={11:40, 14:17, 12:34, 13:23},
-            step_diff_label=True,
-            step_diff_disc=True,
-            output_disc_step=-1,
-            output_vertebrea_step=-1,
-            map_output_dict={17:92},
-            map_input_dict={14:92, 15:201, 16:201, 17:200},
-            override=True,
-            max_workers=max_workers,
-            quiet=quiet,
-        )
+        if loc_path is None:
+            iterative_label_mp(
+                output_path / 'step2_output',
+                output_path / 'step2_output',
+                disc_labels=[1, 2, 3, 4, 5, 6, 7],
+                vertebrae_labels=[9, 10, 11, 12, 13, 14],
+                vertebrae_extra_labels=[8],
+                init_disc={4:224, 7:202, 5:219, 6:207},
+                init_vertebrae={11:40, 14:17, 12:34, 13:23},
+                step_diff_label=True,
+                step_diff_disc=True,
+                output_disc_step=-1,
+                output_vertebrae_step=-1,
+                map_output_dict={17:92},
+                map_input_dict={14:92, 15:201, 16:201, 17:200},
+                override=True,
+                max_workers=max_workers,
+                quiet=quiet,
+            )
+        else:
+            iterative_label_mp(
+                output_path / 'step2_output',
+                output_path / 'step2_output',
+                locs_path=output_path / 'localizers',
+                disc_labels=[1, 2, 3, 4, 5, 6, 7],
+                vertebrae_labels=[9, 10, 11, 12, 13, 14],
+                vertebrae_extra_labels=[8],
+                init_disc={4:224, 7:202},
+                init_vertebrae={11:40, 14:17},
+                loc_disc_labels=list(range(202, 225)),
+                loc_vertebrae_labels=list(range(18, 42)) + [92],
+                step_diff_label=True,
+                step_diff_disc=True,
+                output_disc_step=-1,
+                output_vertebrae_step=-1,
+                map_output_dict={17:92},
+                map_input_dict={14:92, 15:201, 16:201, 17:200},
+                override=True,
+                max_workers=max_workers,
+                quiet=quiet,
+            )
 
         if not quiet: print('\n' 'Filling spinal cancal label to include all non cord spinal canal:')
         # This will put the spinal canal label in all the voxels between the canal and the cord.

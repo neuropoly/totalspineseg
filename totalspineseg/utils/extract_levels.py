@@ -18,9 +18,9 @@ def main():
         '''.split()),
         epilog=textwrap.dedent('''
             Examples:
-            extract_levels -s labels_init -o labels --disc-labels 1 2 3 4 5 6 7 --vertebrea-labels 9 10 11 12 13 14 --vertebrea-extra-labels 8 --init-disc 4:224 7:202 5:219 6:207 --init-vertebrae 11:40 14:17 12:34 13:23 --step-diff-label --step-diff-disc --output-disc-step -1 --output-vertebrea-step -1 --map-output 17:92 --map-input 14:92 16:201 17:200 -r
+            extract_levels -s labels -o levels --canal-labels 200 201 --c2c3-label 224 --step -1 -r
             For BIDS:
-            extract_levels -s derivatives/labels -o derivatives/labels --seg-suffix "_seg" --output-seg-suffix "_seg_seq" -d "sub-" -u "anat" --disc-labels 1 2 3 4 5 6 7 --vertebrea-labels 9 10 11 12 13 14 --vertebrea-extra-labels 8 --init-disc 4:224 7:202 5:219 6:207 --init-vertebrae 11:40 14:17 12:34 13:23 --step-diff-label --step-diff-disc --output-disc-step -1 --output-vertebrea-step -1 --map-output 17:92 --map-input 14:92 16:201 17:200 -r
+            extract_levels -s derivatives/labels -o derivatives/labels --seg-suffix "_seg" --output-seg-suffix "_levels" -d "sub-" -u "anat" --canal-labels 200 201 --c2c3-label 224 --step -1 -r
         '''),
         formatter_class=argparse.RawTextHelpFormatter
     )

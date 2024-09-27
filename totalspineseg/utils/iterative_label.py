@@ -6,6 +6,7 @@ import nibabel as nib
 import multiprocessing as mp
 from functools import partial
 from tqdm.contrib.concurrent import process_map
+import torchio as tio
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -19,9 +20,10 @@ def main():
         '''.split()),
         epilog=textwrap.dedent('''
             Examples:
-            iterative_label -s labels_init -o labels --disc-labels 1 2 3 4 5 6 7 --vertebrea-labels 9 10 11 12 13 14 --vertebrea-extra-labels 8 --init-disc 4:224 7:202 5:219 6:207 --init-vertebrae 11:40 14:17 12:34 13:23 --step-diff-label --step-diff-disc --output-disc-step -1 --output-vertebrea-step -1 --map-output 17:92 --map-input 14:92 16:201 17:200 -r
+            iterative_label -s labels_init -o labels --disc-labels 1-7 --vertebrae-labels 9-14 --vertebrae-extra-labels 8 --init-disc 4:224 7:202 5:219 6:207 --init-vertebrae 11:40 14:17 12:34 13:23 --step-diff-label --step-diff-disc --output-disc-step -1 --output-vertebrae-step -1 --map-output 17:92 --map-input 14:92 16:201 17:200 -r
+            iterative_label -s labels_init -o labels -l localizers --disc-labels 1-7 --vertebrae-labels 9-14 --vertebrae-extra-labels 8 --init-disc 4:224 7:202 --init-vertebrae 11:40 14:17 --step-diff-label --step-diff-disc --output-disc-step -1 --output-vertebrae-step -1 --loc-disc-labels 202-224 --loc-vertebrae-labels 18-41 92 --map-output 17:92 --map-input 14:92 16:201 17:200 -r
             For BIDS:
-            iterative_label -s derivatives/labels -o derivatives/labels --seg-suffix "_seg" --output-seg-suffix "_seg_seq" -d "sub-" -u "anat" --disc-labels 1 2 3 4 5 6 7 --vertebrea-labels 9 10 11 12 13 14 --vertebrea-extra-labels 8 --init-disc 4:224 7:202 5:219 6:207 --init-vertebrae 11:40 14:17 12:34 13:23 --step-diff-label --step-diff-disc --output-disc-step -1 --output-vertebrea-step -1 --map-output 17:92 --map-input 14:92 16:201 17:200 -r
+            iterative_label -s derivatives/labels -o derivatives/labels --seg-suffix "_seg" --output-seg-suffix "_seg_seq" -d "sub-" -u "anat" --disc-labels 1 2 3 4 5 6 7 --vertebrae-labels 9 10 11 12 13 14 --vertebrae-extra-labels 8 --init-disc 4:224 7:202 5:219 6:207 --init-vertebrae 11:40 14:17 12:34 13:23 --step-diff-label --step-diff-disc --output-disc-step -1 --output-vertebrae-step -1 --map-output 17:92 --map-input 14:92 16:201 17:200 -r
         '''),
         formatter_class=argparse.RawTextHelpFormatter
     )
@@ -33,6 +35,14 @@ def main():
     parser.add_argument(
         '--output-segs-dir', '-o', type=Path, required=True,
         help='Folder to save output segmentations.'
+    )
+    parser.add_argument(
+        '--locs-dir', '-l', type=Path, default=None,
+        help=' '.join(f'''
+            Folder containing localizers' segmentations to help the labeling. Optional.
+            The algorithm will transform the localizer to the segmentation space and use it to detect the matching vertebrae and disc if the init label not found.
+            Mathcing will based on the magority of the voxels of the first vertebrae or disc in the localizer, that intersect with the input segmentation.
+        '''.split())
     )
     parser.add_argument(
         '--subject-dir', '-d', type=str, default=None, nargs='?', const='',
@@ -59,7 +69,11 @@ def main():
         help='Suffix for output segmentation, defaults to "".'
     )
     parser.add_argument(
-        '--disc-labels', type=int, nargs='+', default=[],
+        '--loc-suffix', type=str, default='',
+        help='Localizer suffix, defaults to "".'
+    )
+    parser.add_argument(
+        '--disc-labels', type=lambda x:list(range(int(x.split('-')[0]), int(x.split('-')[-1]) + 1)), nargs='+', default=[],
         help='The disc labels.'
     )
     parser.add_argument(
@@ -71,11 +85,15 @@ def main():
         help='The step to take between disc labels in the output, defaults to 1.'
     )
     parser.add_argument(
-        '--vertebrea-labels', type=int, nargs='+', default=[],
+        '--loc-disc-labels', type=lambda x:list(range(int(x.split('-')[0]), int(x.split('-')[-1]) + 1)), nargs='+', default=[],
+        help='The disc labels in the localizer used for detecting first disc.'
+    )
+    parser.add_argument(
+        '--vertebrae-labels', type=lambda x:list(range(int(x.split('-')[0]), int(x.split('-')[-1]) + 1)), nargs='+', default=[],
         help='The vertebrae labels.'
     )
     parser.add_argument(
-        '--vertebrea-extra-labels', type=int, nargs='+', default=[],
+        '--vertebrae-extra-labels', type=lambda x:list(range(int(x.split('-')[0]), int(x.split('-')[-1]) + 1)), nargs='+', default=[],
         help='Extra vertebrae labels to add to add to adjacent vertebrae labels.'
     )
     parser.add_argument(
@@ -83,8 +101,12 @@ def main():
         help='Init labels list for vertebrae ordered by priority (input_label:output_label !!without space!!). for example 10:41 11:34 12:18'
     )
     parser.add_argument(
-        '--output-vertebrea-step', type=int, default=1,
+        '--output-vertebrae-step', type=int, default=1,
         help='The step to take between vertebrae labels in the output, defaults to 1.'
+    )
+    parser.add_argument(
+        '--loc-vertebrae-labels', type=lambda x:list(range(int(x.split('-')[0]), int(x.split('-')[-1]) + 1)), nargs='+', default=[],
+        help='The disc labels in the localizer used for detecting first vertebrae.'
     )
     parser.add_argument(
         '--map-input', type=str, nargs='+', default=[],
@@ -122,6 +144,14 @@ def main():
         '''.split())
     )
     parser.add_argument(
+        '--default-superior-disc', type=int, default=0,
+        help='Default superior disc label if no init label found, defaults to 0 (Raise error if init label not found).'
+    )
+    parser.add_argument(
+        '--default-superior-vertebrae', type=int, default=0,
+        help='Default superior vertebrae label if no init label found, defaults to 0 (Raise error if init label not found).'
+    )
+    parser.add_argument(
         '--override', '-r', action="store_true", default=False,
         help='Override existing output files, defaults to false (Do not override).'
     )
@@ -140,23 +170,29 @@ def main():
     # Get arguments
     segs_path = args.segs_dir
     output_segs_path = args.output_segs_dir
+    locs_path = args.locs_dir
     subject_dir = args.subject_dir
     subject_subdir = args.subject_subdir
     prefix = args.prefix
     seg_suffix = args.seg_suffix
     output_seg_suffix = args.output_seg_suffix
-    disc_labels = args.disc_labels
+    loc_suffix = args.loc_suffix
+    disc_labels = [_ for __ in args.disc_labels for _ in (__ if isinstance(__, list) else [__])]
     init_disc = dict(args.init_disc)
     output_disc_step = args.output_disc_step
-    vertebrea_labels = args.vertebrea_labels
-    vertebrea_extra_labels = args.vertebrea_extra_labels
+    loc_disc_labels = [_ for __ in args.loc_disc_labels for _ in (__ if isinstance(__, list) else [__])]
+    vertebrae_labels = [_ for __ in args.vertebrae_labels for _ in (__ if isinstance(__, list) else [__])]
+    vertebrae_extra_labels = [_ for __ in args.vertebrae_extra_labels for _ in (__ if isinstance(__, list) else [__])]
     init_vertebrae = dict(args.init_vertebrae)
-    output_vertebrea_step = args.output_vertebrea_step
+    output_vertebrae_step = args.output_vertebrae_step
+    loc_vertebrae_labels = [_ for __ in args.loc_vertebrae_labels for _ in (__ if isinstance(__, list) else [__])]
     map_input_list = args.map_input
     map_output_list = args.map_output
     dilation_size = args.dilation_size
     step_diff_label = args.step_diff_label
     step_diff_disc = args.step_diff_disc
+    default_superior_disc = args.default_superior_disc
+    default_superior_vertebrae = args.default_superior_vertebrae
     override = args.override
     max_workers = args.max_workers
     quiet = args.quiet
@@ -167,23 +203,29 @@ def main():
             Running {Path(__file__).stem} with the following params:
             segs_dir = "{segs_path}"
             output_segs_dir = "{output_segs_path}"
+            locs_dir = "{locs_path}"
             subject_dir = "{subject_dir}"
             subject_subdir = "{subject_subdir}"
             prefix = "{prefix}"
             seg_suffix = "{seg_suffix}"
             output_seg_suffix = "{output_seg_suffix}"
+            loc_suffix = "{loc_suffix}"
             disc_labels = {disc_labels}
             init_disc = {init_disc}
             output_disc_step = {output_disc_step}
-            vertebrea_labels = {vertebrea_labels}
-            vertebrea_extra_labels = {vertebrea_extra_labels}
+            loc_disc_labels = {loc_disc_labels}
+            vertebrae_labels = {vertebrae_labels}
+            vertebrae_extra_labels = {vertebrae_extra_labels}
             init_vertebrae = {init_vertebrae}
-            output_vertebrea_step = {output_vertebrea_step}
+            output_vertebrae_step = {output_vertebrae_step}
+            loc_vertebrae_labels = {loc_vertebrae_labels}
             map_input = {map_input_list}
             map_output = {map_output_list}
             dilation_size = {dilation_size}
             step_diff_label = {step_diff_label}
             step_diff_disc = {step_diff_disc}
+            default_superior_disc = {default_superior_disc}
+            default_superior_vertebrae = {default_superior_vertebrae}
             override = {override}
             max_workers = {max_workers}
             quiet = {quiet}
@@ -203,23 +245,29 @@ def main():
     iterative_label_mp(
         segs_path=segs_path,
         output_segs_path=output_segs_path,
+        locs_path=locs_path,
         subject_dir=subject_dir,
         subject_subdir=subject_subdir,
         prefix=prefix,
         seg_suffix=seg_suffix,
         output_seg_suffix=output_seg_suffix,
+        loc_suffix=loc_suffix,
         disc_labels=disc_labels,
         init_disc=init_disc,
         output_disc_step=output_disc_step,
-        vertebrea_labels=vertebrea_labels,
-        vertebrea_extra_labels=vertebrea_extra_labels,
+        loc_disc_labels=loc_disc_labels,
+        vertebrae_labels=vertebrae_labels,
+        vertebrae_extra_labels=vertebrae_extra_labels,
         init_vertebrae=init_vertebrae,
-        output_vertebrea_step=output_vertebrea_step,
+        output_vertebrae_step=output_vertebrae_step,
+        loc_vertebrae_labels=loc_vertebrae_labels,
         map_input_dict=map_input_dict,
         map_output_dict=map_output_dict,
         dilation_size=dilation_size,
         step_diff_label=step_diff_label,
         step_diff_disc=step_diff_disc,
+        default_superior_disc=default_superior_disc,
+        default_superior_vertebrae=default_superior_vertebrae,
         override=override,
         max_workers=max_workers,
         quiet=quiet,
@@ -228,23 +276,29 @@ def main():
 def iterative_label_mp(
         segs_path,
         output_segs_path,
+        locs_path=None,
         subject_dir=None,
         subject_subdir='',
         prefix='',
         seg_suffix='',
         output_seg_suffix='',
+        loc_suffix='',
         disc_labels=[],
         init_disc={},
         output_disc_step=1,
-        vertebrea_labels=[],
-        vertebrea_extra_labels=[],
+        loc_disc_labels=[],
+        vertebrae_labels=[],
+        vertebrae_extra_labels=[],
         init_vertebrae={},
-        output_vertebrea_step=1,
+        output_vertebrae_step=1,
+        loc_vertebrae_labels=[],
         map_input_dict={},
         map_output_dict={},
         dilation_size=1,
         step_diff_label=False,
         step_diff_disc=False,
+        default_superior_disc=0,
+        default_superior_vertebrae=0,
         override=False,
         max_workers=mp.cpu_count(),
         quiet=False,
@@ -254,6 +308,7 @@ def iterative_label_mp(
     '''
     segs_path = Path(segs_path)
     output_segs_path = Path(output_segs_path)
+    locs_path = locs_path and Path(locs_path)
 
     glob_pattern = ""
     if subject_dir is not None:
@@ -265,26 +320,32 @@ def iterative_label_mp(
     # Process the NIfTI image and segmentation files
     seg_path_list = list(segs_path.glob(glob_pattern))
     output_seg_path_list = [output_segs_path / _.relative_to(segs_path).parent / _.name.replace(f'{seg_suffix}.nii.gz', f'{output_seg_suffix}.nii.gz') for _ in seg_path_list]
+    loc_path_list = [locs_path and locs_path / _.relative_to(segs_path).parent / _.name.replace(f'{seg_suffix}.nii.gz', f'{loc_suffix}.nii.gz') for _ in seg_path_list]
 
     process_map(
         partial(
             _iterative_label,
             disc_labels=disc_labels,
             output_disc_step=output_disc_step,
+            loc_disc_labels=loc_disc_labels,
             init_disc=init_disc,
-            vertebrea_labels=vertebrea_labels,
-            vertebrea_extra_labels=vertebrea_extra_labels,
+            vertebrae_labels=vertebrae_labels,
+            vertebrae_extra_labels=vertebrae_extra_labels,
             init_vertebrae=init_vertebrae,
-            output_vertebrea_step=output_vertebrea_step,
+            output_vertebrae_step=output_vertebrae_step,
+            loc_vertebrae_labels=loc_vertebrae_labels,
             map_input_dict=map_input_dict,
             map_output_dict=map_output_dict,
             dilation_size=dilation_size,
             step_diff_label=step_diff_label,
             step_diff_disc=step_diff_disc,
+            default_superior_disc=default_superior_disc,
+            default_superior_vertebrae=default_superior_vertebrae,
             override=override,
         ),
         seg_path_list,
         output_seg_path_list,
+        loc_path_list,
         max_workers=max_workers,
         chunksize=1,
         disable=quiet,
@@ -293,18 +354,23 @@ def iterative_label_mp(
 def _iterative_label(
         seg_path,
         output_seg_path,
+        loc_path=None,
         disc_labels=[],
         init_disc={},
         output_disc_step=1,
-        vertebrea_labels=[],
-        vertebrea_extra_labels=[],
+        loc_disc_labels=[],
+        vertebrae_labels=[],
+        vertebrae_extra_labels=[],
         init_vertebrae={},
-        output_vertebrea_step=1,
+        output_vertebrae_step=1,
+        loc_vertebrae_labels=[],
         map_input_dict={},
         map_output_dict={},
         dilation_size=1,
         step_diff_label=False,
         step_diff_disc=False,
+        default_superior_disc=0,
+        default_superior_vertebrae=0,
         override=False,
     ):
     '''
@@ -312,29 +378,36 @@ def _iterative_label(
     '''
     seg_path = Path(seg_path)
     output_seg_path = Path(output_seg_path)
+    loc_path = loc_path and Path(loc_path)
 
     # If the output image already exists and we are not overriding it, return
     if not override and output_seg_path.exists():
         return
 
-    # Load segmentation
+    # Load segmentation and localizer images
     seg = nib.load(seg_path)
+    loc = loc_path and (loc_path.is_file() or None) and nib.load(loc_path)
 
     try:
         output_seg = iterative_label(
             seg,
+            loc,
             disc_labels=disc_labels,
             init_disc=init_disc,
             output_disc_step=output_disc_step,
-            vertebrea_labels=vertebrea_labels,
-            vertebrea_extra_labels=vertebrea_extra_labels,
+            loc_disc_labels=loc_disc_labels,
+            vertebrae_labels=vertebrae_labels,
+            vertebrae_extra_labels=vertebrae_extra_labels,
             init_vertebrae=init_vertebrae,
-            output_vertebrea_step=output_vertebrea_step,
+            output_vertebrae_step=output_vertebrae_step,
+            loc_vertebrae_labels=loc_vertebrae_labels,
             map_input_dict=map_input_dict,
             map_output_dict=map_output_dict,
             dilation_size=dilation_size,
             step_diff_label=step_diff_label,
             step_diff_disc=step_diff_disc,
+            default_superior_disc=default_superior_disc,
+            default_superior_vertebrae=default_superior_vertebrae,
         )
     except ValueError as e:
         output_seg_path.is_file() and output_seg_path.unlink()
@@ -356,18 +429,23 @@ def _iterative_label(
 
 def iterative_label(
         seg,
+        loc=None,
         disc_labels=[],
         init_disc={},
         output_disc_step=1,
-        vertebrea_labels=[],
-        vertebrea_extra_labels=[],
+        loc_disc_labels=[],
+        vertebrae_labels=[],
+        vertebrae_extra_labels=[],
         init_vertebrae={},
-        output_vertebrea_step=1,
+        output_vertebrae_step=1,
+        loc_vertebrae_labels=[],
         map_input_dict={},
         map_output_dict={},
         dilation_size=1,
         step_diff_label=False,
         step_diff_disc=False,
+        default_superior_disc=0,
+        default_superior_vertebrae=0,
     ):
     '''
     Label Vertebrae, IVDs, Spinal Cord and canal from init segmentation.
@@ -383,20 +461,26 @@ def iterative_label(
     ----------
     seg : nibabel.nifti1.Nifti1Image
         Segmentation image
+    loc : nibabel.nifti1.Nifti1Image
+        Localizer image to use for detecting first vertebrae and disc (optional)
     disc_labels : list
         The disc labels
     init_disc : dict
         Init labels list for disc ordered by priority (input_label:output_label)
     output_disc_step : int
         The step to take between disc labels in the output
-    vertebrea_labels : list
+    loc_disc_labels : list
+        Localizer labels to use for detecting first disc
+    vertebrae_labels : list
         The vertebrae labels
-    vertebrea_extra_labels : list
+    vertebrae_extra_labels : list
         Extra vertebrae labels to add to add to adjacent vertebrae labels
     init_vertebrae : dict
         Init labels list for vertebrae ordered by priority (input_label:output_label)
-    output_vertebrea_step : int
+    output_vertebrae_step : int
         The step to take between vertebrae labels in the output
+    loc_vertebrae_labels : list
+        Localizer labels to use for detecting first vertebrae
     map_input_dict : dict
         A dict mapping labels from input into the output segmentation
     map_output_dict : dict
@@ -407,6 +491,10 @@ def iterative_label(
         Make step only for different labels
     step_diff_disc : bool
         Make step only for different discs
+    default_superior_disc : int
+        Default superior disc label if no init label found
+    default_superior_vertebrae : int
+        Default superior vertebrae label if no init label found
 
     Returns
     -------
@@ -417,15 +505,25 @@ def iterative_label(
 
     output_seg_data = np.zeros_like(seg_data)
 
+    loc_data = loc and np.asanyarray(loc.dataobj).round().astype(np.uint8)
+
+    # If localizer is provided, transform it to the segmentation space
+    if loc_data is not None:
+        loc_data = tio.Resample(
+            tio.ScalarImage(tensor=seg_data[None, ...], affine=seg.affine)
+        )(
+            tio.LabelMap(tensor=loc_data[None, ...], affine=loc.affine)
+        ).data.numpy()[0, ...].astype(np.uint8)
+
     binary_dilation_structure = ndi.iterate_structure(ndi.generate_binary_structure(3, 1), dilation_size)
 
     # Arrays to store the z indexes of the discs sorted superior to inferior
     disc_sorted_z_indexes = []
 
     # We run the same iterative algorithm for discs and vertebrae
-    for labels, extra_labels, step, init, is_vert in (
-        (disc_labels, [], output_disc_step, init_disc, False),
-        (vertebrea_labels, vertebrea_extra_labels, output_vertebrea_step, init_vertebrae, True)):
+    for labels, extra_labels, step, init, default_sup, loc_labels, is_vert in (
+        (disc_labels, [], output_disc_step, init_disc, default_superior_disc, loc_disc_labels, False),
+        (vertebrae_labels, vertebrae_extra_labels, output_vertebrae_step, init_vertebrae, default_superior_vertebrae, loc_vertebrae_labels, True)):
 
         # Skip if no labels are provided
         if len(labels) == 0:
@@ -551,6 +649,28 @@ def iterative_label(
             if k in seg_data:
                 first_label = v - step * sorted_labels.index(mask_labeled[seg_data == k].flat[0])
                 break
+
+        # If no init label found, set it from the localizer
+        if first_label == 0 and loc_data is not None:
+            # Make mask for the intersection of the localizer labels and the labels in the segmentation
+            mask = np.isin(loc_data, loc_labels) * np.isin(mask_labeled, sorted_labels)
+
+            # Get the first label from sorted_labels that is in the localizer specified labels
+            mask_labeled_masked = mask * mask_labeled
+            first_sorted_labels_in_loc = next(np.array(sorted_labels)[np.isin(sorted_labels, mask_labeled_masked)].flat, 0)
+
+            if first_sorted_labels_in_loc > 0:
+                # Get the target label for first_sorted_labels_in_loc - the label from the localizer that has the most voxels in it
+                loc_data_masked = mask * loc_data
+                target = np.argmax(np.bincount(loc_data_masked[mask_labeled_masked == first_sorted_labels_in_loc].flat))
+                # If target in map_output_dict reverse it from the reversed map
+                # TODO Edge case if multiple keys have the same value, not used in the current implementation
+                target = {v: k for k, v in map_output_dict.items()}.get(target, target)
+                first_label = target - step * sorted_labels.index(first_sorted_labels_in_loc)
+
+        # If no init label found, set the default superior label
+        if first_label == 0 and default_sup > 0:
+            first_label = default_sup
 
         # If no init label found, print error
         if first_label == 0:

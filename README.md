@@ -18,7 +18,8 @@ Please also cite nnUNet since our work is heavily based on it:
 - [Installation](#installation)
 - [Training](#training)
 - [Inference](#inference)
-- [Output Examples](#output-examples)
+- [Localizer based labeling](#localizer-based-labeling)
+- [Results](#results)
 - [List of Classes](#list-of-classes)
 
 ## Model Description
@@ -141,16 +142,80 @@ Please ensure that your system meets these requirements before proceeding with t
 
 1. Make sure that the `bash` terminal is opened with the virtual environment (if used) activated (using `source <path to installation directory>/venv/bin/activate`).
 
-1. Run the model on a folder containing the images in .nii.gz format:
+1. Run the model on a folder containing the images in .nii.gz format, or on a single .nii.gz file:
    ```bash
-   totalspineseg INPUT_FOLDER OUTPUT_FOLDER [-step1]
+   totalspineseg INPUT OUTPUT_FOLDER [--step1]
    ```
 
-   This will process all .nii.gz files in the INPUT_FOLDER and save the results in the OUTPUT_FOLDER. If you haven't trained the model, the script will automatically download the pre-trained models from the GitHub release.
+   This will process the images in INPUT or the single image and save the results in OUTPUT_FOLDER. If you haven't trained the model, the script will automatically download the pre-trained models from the GitHub release.
 
-   Additionally, you can use the `-step1` parameter to run only the step 1 model, which outputs a single label for all vertebrae, including the sacrum.
+   Additionally, you can use the `--step1` parameter to run only the step 1 model, which outputs a single label for all vertebrae, including the sacrum.
 
-## Output Examples
+   For more options, you can use the `--help` parameter:
+   ```bash
+   totalspineseg --help
+   ```
+
+**Output Data Structure:**
+
+```
+output_folder/
+├── input/                   # Preprocessed input images
+├── preview/                 # Preview images for all steps
+├── step1_raw/               # Raw outputs from step 1 model
+├── step1_output/            # Results of iterative labeling algorithm for step 1
+├── step1_cord/              # Spinal cord soft segmentations
+├── step1_canal/             # Spinal canal soft segmentations
+├── step1_levels/            # Single voxel in canal centerline at each IVD level
+├── step2_raw/               # Raw outputs from step 2 model
+└── step2_output/            # Results of iterative labeling algorithm for step 2 (final output)
+```
+
+**Important Note:** While TotalSpineSeg provides spinal cord segmentation, it is not intended to replace validated methods for cross-sectional area (CSA) analysis. The spinal cord segmentation from TotalSpineSeg has not been validated for CSA measurements, nor has it been tested on cases involving spinal cord compressions, MS lesions, or other spinal cord abnormalities. For accurate CSA analysis, we strongly recommend using the validated algorithms available in the [Spinal Cord Toolbox](https://spinalcordtoolbox.com/user_section/tutorials/segmentation.html).
+
+Key points:
+- All segmentations in NIfTI (.nii.gz) format
+- Preview images in JPEG format
+- step1_levels: single voxel in canal centerline at each IVD level, numbered from C1 (1 above C1, 2 above C2, etc.)
+- step2_output: final labeled vertebrae, discs, cord, and canal
+
+## Localizer based labeling
+
+TotalSpineSeg supports using localizer images to improve the labeling process, particularly useful for images with different fields of view (FOV) where landmarks like C1 and sacrum may not be visible. It uses localizer information to accurately label vertebrae and discs in the main image.
+
+![Localizer](https://github.com/user-attachments/assets/5acf0208-a322-46f9-bbde-b3c961a87ec4)
+
+Example of directory structure:
+
+```
+.
+├── images/
+│   ├── sub-01_T2w.nii.gz
+│   └── sub-02_T2w.nii.gz
+└── localizers/
+    ├── sub-01_T1w.nii.gz
+    └── sub-02_T1w.nii.gz
+```
+
+In this example, main images are placed in the `images` folder and corresponding localizer images in the `localizers` folder.
+
+To use localizer-based labeling:
+
+```bash
+# Process localizer images
+totalspineseg localizers localizers_output
+
+# Run model on main images using localizer output
+totalspineseg images output --loc localizers_output/step2_output --suffix _T2w --loc-suffix _T1w
+```
+
+- `--loc`: Specifies the path to the localizer output
+- `--suffix`: Suffix for the main images (e.g., "_T2w")
+- `--loc-suffix`: Suffix for the localizer images (e.g., "_T1w")
+
+Note: If the localizer and main image files have the same names, you can omit the `--suffix` and `--loc-suffix` arguments.
+
+## Results
 
 TotalSpineSeg demonstrates robust performance across a wide range of imaging parameters. Here are some examples of the model output:
 
@@ -158,11 +223,7 @@ TotalSpineSeg demonstrates robust performance across a wide range of imaging par
 
 The examples shown above include segmentation results on various contrasts (T1w, T2w, STIR, MTS, T2star, and even CT images), acquisition orientations (sagittal, axial), and resolutions.
 
-For a more detailed view of the output examples, you can check the PDF version:
-
-[Preview PDF](https://github.com/user-attachments/files/16873633/preview.pdf)
-
-The PDF includes step 1 and step 2 results together with the iterative labeling algorithm for each step.
+For a more detailed view of the output examples, you can check the [PDF version](https://github.com/user-attachments/files/16873633/preview.pdf) that includes step 1 and step 2 results together with the iterative labeling algorithm for each step.
 
 ## List of Classes
 
