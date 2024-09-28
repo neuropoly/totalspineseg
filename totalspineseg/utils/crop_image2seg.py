@@ -139,8 +139,7 @@ def crop_image2seg_mp(
     segs_path = Path(segs_path)
     output_images_path = Path(output_images_path)
 
-    glob_pattern = ""
-    glob_pattern += f'{prefix}*{image_suffix}.nii.gz'
+    glob_pattern = f'{prefix}*{image_suffix}.nii.gz'
 
     # Process the NIfTI image and segmentation files
     image_path_list = list(images_path.glob(glob_pattern))

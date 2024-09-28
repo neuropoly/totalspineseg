@@ -136,8 +136,7 @@ def extract_levels_mp(
     segs_path = Path(segs_path)
     output_segs_path = Path(output_segs_path)
 
-    glob_pattern = ""
-    glob_pattern += f'{prefix}*{seg_suffix}.nii.gz'
+    glob_pattern = f'{prefix}*{seg_suffix}.nii.gz'
 
     # Process the NIfTI image and segmentation files
     seg_path_list = list(segs_path.glob(glob_pattern))

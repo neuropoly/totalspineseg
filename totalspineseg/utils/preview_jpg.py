@@ -196,8 +196,7 @@ def preview_jpg_mp(
     output_path = Path(output_path)
     segs_path = segs_path and Path(segs_path)
 
-    glob_pattern = ""
-    glob_pattern += f'{prefix}*{image_suffix}'
+    glob_pattern = f'{prefix}*{image_suffix}'
 
     # Process the NIfTI image and segmentation files
     image_path_list = [_ for __ in [list(images_path.glob(f'{glob_pattern}.{e}')) for e in EXT] for _ in __]

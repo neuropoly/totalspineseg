@@ -164,8 +164,7 @@ def extract_soft_mp(
     segs_path = Path(segs_path)
     output_segs_path = Path(output_segs_path)
 
-    glob_pattern = ""
-    glob_pattern += f'{prefix}*{npz_suffix}.npz'
+    glob_pattern = f'{prefix}*{npz_suffix}.npz'
 
     # Process the NIfTI npz and segmentation files
     npz_path_list = list(npzs_path.glob(glob_pattern))
