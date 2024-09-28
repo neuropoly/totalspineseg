@@ -21,7 +21,7 @@ def main():
             Examples:
             fill_canal -s labels -o labels_fixed
             For BIDS:
-            fill_canal -s derivatives/labels -o derivatives/labels --seg-suffix "_seg" --output-seg-suffix "_seg_fixed" -d "sub-" -u "anat"
+            fill_canal -s derivatives/labels -o derivatives/labels --seg-suffix "_seg" --output-seg-suffix "_seg_fixed" -p "sub-*/anat/"
         '''),
         formatter_class=argparse.RawTextHelpFormatter
     )

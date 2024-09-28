@@ -21,7 +21,7 @@ def main():
             Examples:
             average4d -i images -o images
             For BIDS:
-            average4d -i . -o . --image-suffix "" --output-image-suffix "" -d "sub-" -u "anat"
+            average4d -i . -o . --image-suffix "" --output-image-suffix "" -p "sub-*/anat/"
         '''),
         formatter_class=argparse.RawTextHelpFormatter
     )

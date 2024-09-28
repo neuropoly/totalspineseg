@@ -20,9 +20,8 @@ def main():
             Examples:
             map_labels -s labels -o labels_mapped -m map.json
             map_labels -s labels -o labels_mapped -m 92:1 93:2
-            map_labels -s labels -o labels_mapped  -m map.json -d sub- -s anat
             For BIDS:
-            map_labels -s derivatives/labels -o derivatives/labels -m map.json --seg-suffix "_seg" --output-seg-suffix "_seg_mapped" -d "sub-" -u "anat"
+            map_labels -s derivatives/labels -o derivatives/labels -m map.json --seg-suffix "_seg" --output-seg-suffix "_seg_mapped" -p "sub-*/anat/"
         '''),
         formatter_class=argparse.RawTextHelpFormatter
     )

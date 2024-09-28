@@ -21,7 +21,7 @@ def main():
             Examples:
             largest_component -s labels -o labels_largest
             For BIDS:
-            largest_component -s derivatives/labels -o derivatives/labels --seg-suffix "_seg" --output-seg-suffix "_seg_largest" -d "sub-" -u "anat"
+            largest_component -s derivatives/labels -o derivatives/labels --seg-suffix "_seg" --output-seg-suffix "_seg_largest" -p "sub-*/anat/"
         '''),
         formatter_class=argparse.RawTextHelpFormatter
     )

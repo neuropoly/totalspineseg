@@ -26,7 +26,7 @@ def main():
             Examples:
             preview_jpg -i images -s labels -o preview
             For BIDS:
-            preview_jpg -i . -s derivatives/labels -o derivatives/preview --seg-suffix "_seg" -d "sub-" -u "anat"
+            preview_jpg -i . -s derivatives/labels -o derivatives/preview --seg-suffix "_seg" -p "sub-*/anat/"
         '''),
         formatter_class=argparse.RawTextHelpFormatter
     )

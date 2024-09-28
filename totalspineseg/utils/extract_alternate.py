@@ -25,7 +25,7 @@ def main():
             Examples:
             extract_alternate -s labels -o levels --labels 60-100 -r
             For BIDS:
-            extract_alternate -s derivatives/labels -o derivatives/labels --seg-suffix "_seg" --output-seg-suffix "_levels" -d "sub-" -u "anat" --labels 60-100 -r
+            extract_alternate -s derivatives/labels -o derivatives/labels --seg-suffix "_seg" --output-seg-suffix "_levels" -p "sub-*/anat/" --labels 60-100 -r
         '''),
         formatter_class=argparse.RawTextHelpFormatter
     )

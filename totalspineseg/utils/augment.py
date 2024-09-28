@@ -27,7 +27,7 @@ def main():
             Examples:
             augment -i images -s labels -o images -g labels --labels2image --seg-classes 1 2 11-50 63-100
             For BIDS:
-            augment -i . -s derivatives/labels -o . -g derivatives/labels --image-suffix "" --output-image-suffix "" --seg-suffix "_seg" --output-seg-suffix "_seg" -d "sub-" -u "anat" --labels2image --seg-classes 1 2 11-50 63-100
+            augment -i . -s derivatives/labels -o . -g derivatives/labels --image-suffix "" --output-image-suffix "" --seg-suffix "_seg" --output-seg-suffix "_seg" -p "sub-*/anat/" --labels2image --seg-classes 1 2 11-50 63-100
         '''),
         formatter_class=argparse.RawTextHelpFormatter
     )

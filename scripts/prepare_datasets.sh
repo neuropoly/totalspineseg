@@ -75,8 +75,8 @@ for dsp in "$bids"/*; do
     echo "Working on $dsn"
 
     echo "Adding label-canal_seg and label-SC_seg to label-spine_dseg"
-    totalspineseg_map_labels -m 1:2 -s "$bids"/$dsn/derivatives/labels_iso -o "$bids"/$dsn/derivatives/labels_iso  --update-segs-dir "$bids"/$dsn/derivatives/labels_iso --seg-suffix "_label-canal_seg" --output-seg-suffix "_label-spine_dseg" --update-seg-suffix "_label-spine_dseg" -d "sub-" -u "anat" -r -w $JOBS
-    totalspineseg_map_labels -m 1:1 -s "$bids"/$dsn/derivatives/labels_iso -o "$bids"/$dsn/derivatives/labels_iso  --update-segs-dir "$bids"/$dsn/derivatives/labels_iso --seg-suffix "_label-SC_seg" --output-seg-suffix "_label-spine_dseg" --update-seg-suffix "_label-spine_dseg" -d "sub-" -u "anat" -r -w $JOBS
+    totalspineseg_map_labels -m 1:2 -s "$bids"/$dsn/derivatives/labels_iso -o "$bids"/$dsn/derivatives/labels_iso  --update-segs-dir "$bids"/$dsn/derivatives/labels_iso --seg-suffix "_label-canal_seg" --output-seg-suffix "_label-spine_dseg" --update-seg-suffix "_label-spine_dseg" -p "sub-*/anat/" -r -w $JOBS
+    totalspineseg_map_labels -m 1:1 -s "$bids"/$dsn/derivatives/labels_iso -o "$bids"/$dsn/derivatives/labels_iso  --update-segs-dir "$bids"/$dsn/derivatives/labels_iso --seg-suffix "_label-SC_seg" --output-seg-suffix "_label-spine_dseg" --update-seg-suffix "_label-spine_dseg" -p "sub-*/anat/" -r -w $JOBS
 
     echo "Copy images and labels into the nnUNet dataset folder"
     totalspineseg_cpdir "$bids"/$dsn "$nnUNet_raw"/$SRC_DATASET/imagesTr -p "sub-*/anat/sub-*.nii.gz" -f -t sub-:sub-${dsw} .nii.gz:_0000.nii.gz -r -w $JOBS

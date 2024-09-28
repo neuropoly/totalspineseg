@@ -24,7 +24,7 @@ def main():
             Examples:
             extract_soft -n npzs -s labels -o canal_soft
             For BIDS:
-            extract_soft -n derivatives/labels -s derivatives/labels -o derivatives/labels --npz-suffix "" --seg-suffix "_seg" --output-seg-suffix "_cord" -d "sub-" -u "anat"
+            extract_soft -n derivatives/labels -s derivatives/labels -o derivatives/labels --npz-suffix "" --seg-suffix "_seg" --output-seg-suffix "_cord" -p "sub-*/anat/"
         '''),
         formatter_class=argparse.RawTextHelpFormatter
     )

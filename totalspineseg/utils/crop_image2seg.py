@@ -23,7 +23,7 @@ def main():
             Examples:
             crop_image2seg -i images -s labels -o images -m 50
             For BIDS:
-            crop_image2seg -i . -s derivatives/labels -o . --image-suffix "" --output-image-suffix "" --seg-suffix "_seg" -d "sub-" -u "anat" -m 50
+            crop_image2seg -i . -s derivatives/labels -o . --image-suffix "" --output-image-suffix "" --seg-suffix "_seg" -p "sub-*/anat/" -m 50
         '''),
         formatter_class=argparse.RawTextHelpFormatter
     )

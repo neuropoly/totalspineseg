@@ -21,7 +21,7 @@ def main():
             Examples:
             reorient_canonical -i images -o images
             For BIDS:
-            reorient_canonical -i . -o . --image-suffix "" --output-image-suffix "" -d "sub-" -u "anat"
+            reorient_canonical -i . -o . --image-suffix "" --output-image-suffix "" -p "sub-*/anat/"
         '''),
         formatter_class=argparse.RawTextHelpFormatter
     )

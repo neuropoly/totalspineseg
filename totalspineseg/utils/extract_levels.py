@@ -20,7 +20,7 @@ def main():
             Examples:
             extract_levels -s labels -o levels --canal-labels 1 2 --disc-labels 60-64 70-81 90-94 100 -r
             For BIDS:
-            extract_levels -s derivatives/labels -o derivatives/labels --seg-suffix "_seg" --output-seg-suffix "_levels" -d "sub-" -u "anat" --canal-labels  1 2 --disc-labels 60-64 70-81 90-94 100 -r
+            extract_levels -s derivatives/labels -o derivatives/labels --seg-suffix "_seg" --output-seg-suffix "_levels" -p "sub-*/anat/" --canal-labels  1 2 --disc-labels 60-64 70-81 90-94 100 -r
         '''),
         formatter_class=argparse.RawTextHelpFormatter
     )

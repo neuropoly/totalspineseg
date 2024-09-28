@@ -24,7 +24,7 @@ def main():
             Examples:
             transform_seg2image -i images -s labels -o labels_transformed
             For BIDS:
-            transform_seg2image -i . -s derivatives/labels -o derivatives/labels --image-suffix "" --output-image-suffix "" --seg-suffix "_seg" --output-seg-suffix "_seg" -d "sub-" -u "anat"
+            transform_seg2image -i . -s derivatives/labels -o derivatives/labels --image-suffix "" --output-image-suffix "" --seg-suffix "_seg" --output-seg-suffix "_seg" -p "sub-*/anat/"
         '''),
         formatter_class=argparse.RawTextHelpFormatter
     )

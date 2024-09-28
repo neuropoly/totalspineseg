@@ -23,7 +23,7 @@ def main():
             Examples:
             resample -i images -o images
             For BIDS:
-            resample -i . -o . --image-suffix "" --output-image-suffix "" -d "sub-" -u "anat" -m 1
+            resample -i . -o . --image-suffix "" --output-image-suffix "" -p "sub-*/anat/" -m 1
         '''),
         formatter_class=argparse.RawTextHelpFormatter
     )
