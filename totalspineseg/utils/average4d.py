@@ -34,18 +34,6 @@ def main():
         help='The folder where output images will be saved (required).'
     )
     parser.add_argument(
-        '--subject-dir', '-d', type=str, default=None, nargs='?', const='',
-        help=' '.join(f'''
-            Is every subject has its oen direcrory.
-            If this argument will be provided without value it will look for any directory in the segmentation directory.
-            If value also provided it will be used as a prefix to subject directory, defaults to False (no subjet directory).
-        '''.split())
-    )
-    parser.add_argument(
-        '--subject-subdir', '-u', type=str, default='',
-        help='Subfolder inside subject folder containing masks, defaults to no subfolder.'
-    )
-    parser.add_argument(
         '--prefix', '-p', type=str, default='',
         help='File prefix to work on.'
     )
@@ -76,8 +64,6 @@ def main():
     # Get the command-line argument values
     images_path = args.images_dir
     output_images_path = args.output_images_dir
-    subject_dir = args.subject_dir
-    subject_subdir = args.subject_subdir
     prefix = args.prefix
     image_suffix = args.image_suffix
     output_image_suffix = args.output_image_suffix
@@ -91,8 +77,6 @@ def main():
             Running {Path(__file__).stem} with the following params:
             images_path = "{images_path}"
             output_images_path = "{output_images_path}"
-            subject_dir = "{subject_dir}"
-            subject_subdir = "{subject_subdir}"
             prefix = "{prefix}"
             image_suffix = "{image_suffix}"
             output_image_suffix = "{output_image_suffix}"
@@ -104,8 +88,6 @@ def main():
     average4d_mp(
         images_path=images_path,
         output_images_path=output_images_path,
-        subject_dir=subject_dir,
-        subject_subdir=subject_subdir,
         prefix=prefix,
         image_suffix=image_suffix,
         output_image_suffix=output_image_suffix,
@@ -117,8 +99,6 @@ def main():
 def average4d_mp(
         images_path,
         output_images_path,
-        subject_dir=None,
-        subject_subdir='',
         prefix='',
         image_suffix='_0000',
         output_image_suffix='_0000',
@@ -133,10 +113,6 @@ def average4d_mp(
     output_images_path = Path(output_images_path)
 
     glob_pattern = ""
-    if subject_dir is not None:
-        glob_pattern += f"{subject_dir}*/"
-    if len(subject_subdir) > 0:
-        glob_pattern += f"{subject_subdir}/"
     glob_pattern += f'{prefix}*{image_suffix}.nii.gz'
 
     # Process the NIfTI image and segmentation files

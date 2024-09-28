@@ -52,18 +52,6 @@ def main():
         '''.split()),
     )
     parser.add_argument(
-        '--subject-dir', '-d', type=str, default=None, nargs='?', const='',
-        help=' '.join(f'''
-            Is every subject has its oen direcrory.
-            If this argument will be provided without value it will look for any directory in the segmentation directory.
-            If value also provided it will be used as a prefix to subject directory, defaults to False (no subjet directory).
-        '''.split()),
-    )
-    parser.add_argument(
-        '--subject-subdir', '-u', type=str, default='',
-        help='Subfolder inside subject folder containing masks, defaults to no subfolder.'
-    )
-    parser.add_argument(
         '--prefix', '-p', type=str, default='',
         help='File prefix to work on.'
     )
@@ -109,8 +97,6 @@ def main():
     update_segs_path = args.update_segs_dir
     update_from_segs_path = args.update_from_segs_dir
     map_list = args.map
-    subject_dir = args.subject_dir
-    subject_subdir = args.subject_subdir
     prefix = args.prefix
     seg_suffix = args.seg_suffix
     output_seg_suffix = args.output_seg_suffix
@@ -130,8 +116,6 @@ def main():
             update_segs_dir = "{update_segs_path}"
             update_from_segs_dir = "{update_from_segs_path}"
             map = {map_list}
-            subject_dir = "{subject_dir}"
-            subject_subdir = "{subject_subdir}"
             prefix = "{prefix}"
             seg_suffix = "{seg_suffix}"
             output_seg_suffix = "{output_seg_suffix}"
@@ -160,8 +144,6 @@ def main():
         update_segs_path=update_segs_path,
         update_from_segs_path=update_from_segs_path,
         map_dict=map_dict,
-        subject_dir=subject_dir,
-        subject_subdir=subject_subdir,
         prefix=prefix,
         seg_suffix=seg_suffix,
         output_seg_suffix=output_seg_suffix,
@@ -179,8 +161,6 @@ def map_labels_mp(
         update_segs_path=None,
         update_from_segs_path=None,
         map_dict={},
-        subject_dir=None,
-        subject_subdir='',
         prefix='',
         seg_suffix='',
         output_seg_suffix='',
@@ -200,10 +180,6 @@ def map_labels_mp(
     update_from_segs_path = update_from_segs_path and Path(update_from_segs_path)
 
     glob_pattern = ""
-    if subject_dir is not None:
-        glob_pattern += f"{subject_dir}*/"
-    if len(subject_subdir) > 0:
-        glob_pattern += f"{subject_subdir}/"
     glob_pattern += f'{prefix}*{seg_suffix}.nii.gz'
 
     # Process the NIfTI image and segmentation files

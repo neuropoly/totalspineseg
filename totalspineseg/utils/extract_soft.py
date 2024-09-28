@@ -41,18 +41,6 @@ def main():
         help='The folder where output soft segmentations will be saved (required).'
     )
     parser.add_argument(
-        '--subject-dir', '-d', type=str, default=None, nargs='?', const='',
-        help=' '.join(f'''
-            Is every subject has its oen direcrory.
-            If this argument will be provided without value it will look for any directory in the segmentation directory.
-            If value also provided it will be used as a prefix to subject directory, defaults to False (no subjet directory).
-        '''.split())
-    )
-    parser.add_argument(
-        '--subject-subdir', '-u', type=str, default='',
-        help='Subfolder inside subject folder containing masks, defaults to no subfolder.'
-    )
-    parser.add_argument(
         '--prefix', '-p', type=str, default='',
         help='File prefix to work on.'
     )
@@ -104,8 +92,6 @@ def main():
     npzs_path = args.npzs_dir
     segs_path = args.segs_dir
     output_segs_path = args.output_segs_dir
-    subject_dir = args.subject_dir
-    subject_subdir = args.subject_subdir
     prefix = args.prefix
     npz_suffix = args.npz_suffix
     seg_suffix = args.seg_suffix
@@ -125,8 +111,6 @@ def main():
             npzs_path = "{npzs_path}"
             segs_path = "{segs_path}"
             output_segs_path = "{output_segs_path}"
-            subject_dir = "{subject_dir}"
-            subject_subdir = "{subject_subdir}"
             prefix = "{prefix}"
             npz_suffix = "{npz_suffix}"
             seg_suffix = "{seg_suffix}"
@@ -144,8 +128,6 @@ def main():
         npzs_path=npzs_path,
         segs_path=segs_path,
         output_segs_path=output_segs_path,
-        subject_dir=subject_dir,
-        subject_subdir=subject_subdir,
         prefix=prefix,
         npz_suffix=npz_suffix,
         seg_suffix=seg_suffix,
@@ -163,8 +145,6 @@ def extract_soft_mp(
         npzs_path,
         segs_path,
         output_segs_path,
-        subject_dir=None,
-        subject_subdir='',
         prefix='',
         npz_suffix='',
         seg_suffix='',
@@ -185,10 +165,6 @@ def extract_soft_mp(
     output_segs_path = Path(output_segs_path)
 
     glob_pattern = ""
-    if subject_dir is not None:
-        glob_pattern += f"{subject_dir}*/"
-    if len(subject_subdir) > 0:
-        glob_pattern += f"{subject_subdir}/"
     glob_pattern += f'{prefix}*{npz_suffix}.npz'
 
     # Process the NIfTI npz and segmentation files
