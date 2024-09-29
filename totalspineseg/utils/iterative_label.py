@@ -25,7 +25,7 @@ def main():
             iterative_label -s labels_init -o labels -l localizers --selected-disc-landmarks 2 5 --disc-labels 1-5 --disc-landmark-labels 2 3 4 5 --disc-landmark-output-labels 63 71 91 100 --canal-labels 7 8 --canal-output-label 2 --cord-labels 9 --cord-output-label 1 --loc-disc-labels 63-100 -r
             iterative_label -s labels_init -o labels -l localizers --selected-disc-landmarks 4 7 --disc-labels 1-7 --disc-landmark-labels 4 5 6 7 --disc-landmark-output-labels 63 71 91 100 --vertebrae-labels 9-14 --vertebrae-landmark-output-labels 13 21 41 50 --vertebrae-extra-labels 8 --canal-labels 15 16 --canal-output-label 2 --cord-labels 17 --cord-output-label 1 --sacrum-labels 14 --sacrum-output-label 50 --loc-disc-labels 63-100 -r
             For BIDS:
-            iterative_label -s derivatives/labels -o derivatives/labels --seg-suffix "_seg" --output-seg-suffix "_seg_seq" -d "sub-" -u "anat" --selected-disc-landmarks 2 5 3 4 --disc-labels 1-5 --disc-landmark-labels 2 3 4 5 --disc-landmark-output-labels 63 71 91 100 --canal-labels 7 8 --canal-output-label 2 --cord-labels 9 --cord-output-label 1 -r
+            iterative_label -s derivatives/labels -o derivatives/labels --seg-suffix "_seg" --output-seg-suffix "_seg_seq" -p "sub-*/anat/" --selected-disc-landmarks 2 5 3 4 --disc-labels 1-5 --disc-landmark-labels 2 3 4 5 --disc-landmark-output-labels 63 71 91 100 --canal-labels 7 8 --canal-output-label 2 --cord-labels 9 --cord-output-label 1 -r
         '''),
         formatter_class=argparse.RawTextHelpFormatter
     )
@@ -45,18 +45,6 @@ def main():
             The algorithm will use the localizers' segmentations to detect the matching vertebrae and discs. The localizer and the image must be aligned.
             Matching will based on the majority of the voxels of the first vertebra or disc in the localizer, that intersect with the input segmentation.
         '''.split())
-    )
-    parser.add_argument(
-        '--subject-dir', '-d', type=str, default=None, nargs='?', const='',
-        help=' '.join(f'''
-            Is every subject has its oen direcrory.
-            If this argument will be provided without value it will look for any directory in the segmentation directory.
-            If value also provided it will be used as a prefix to subject directory (for example "sub-"), defaults to False (no subjet directory).
-        '''.split())
-    )
-    parser.add_argument(
-        '--subject-subdir', '-u', type=str, default='',
-        help='Subfolder inside subject folder containing masks (for example "anat"), defaults to no subfolder.'
     )
     parser.add_argument(
         '--prefix', '-p', type=str, default='',
@@ -183,8 +171,6 @@ def main():
     segs_path = args.segs_dir
     output_segs_path = args.output_segs_dir
     locs_path = args.locs_dir
-    subject_dir = args.subject_dir
-    subject_subdir = args.subject_subdir
     prefix = args.prefix
     seg_suffix = args.seg_suffix
     output_seg_suffix = args.output_seg_suffix
@@ -221,8 +207,6 @@ def main():
             segs_dir = "{segs_path}"
             output_segs_dir = "{output_segs_path}"
             locs_dir = "{locs_path}"
-            subject_dir = "{subject_dir}"
-            subject_subdir = "{subject_subdir}"
             prefix = "{prefix}"
             seg_suffix = "{seg_suffix}"
             output_seg_suffix = "{output_seg_suffix}"
@@ -263,8 +247,6 @@ def main():
         segs_path=segs_path,
         output_segs_path=output_segs_path,
         locs_path=locs_path,
-        subject_dir=subject_dir,
-        subject_subdir=subject_subdir,
         prefix=prefix,
         seg_suffix=seg_suffix,
         output_seg_suffix=output_seg_suffix,
@@ -299,8 +281,6 @@ def iterative_label_mp(
         segs_path,
         output_segs_path,
         locs_path=None,
-        subject_dir=None,
-        subject_subdir='',
         prefix='',
         seg_suffix='',
         output_seg_suffix='',
@@ -337,12 +317,7 @@ def iterative_label_mp(
     output_segs_path = Path(output_segs_path)
     locs_path = locs_path and Path(locs_path)
 
-    glob_pattern = ""
-    if subject_dir is not None:
-        glob_pattern += f"{subject_dir}*/"
-    if len(subject_subdir) > 0:
-        glob_pattern += f"{subject_subdir}/"
-    glob_pattern += f'{prefix}*{seg_suffix}.nii.gz'
+    glob_pattern = f'{prefix}*{seg_suffix}.nii.gz'
 
     # Process the NIfTI image and segmentation files
     seg_path_list = list(segs_path.glob(glob_pattern))
