@@ -122,7 +122,7 @@ def main():
     nnUNet_exports = data_path / 'nnUNet' / 'exports'
 
     # If not both steps models are installed, use the release subfolder
-    if not (nnUNet_results / dataset).is_dir() or not (nnUNet_results / dataset).is_dir():
+    if not (nnUNet_results / step1_dataset).is_dir() or not (nnUNet_results / step2_dataset).is_dir():
         # TODO Think of better way to get the release
         release = step1_zip_url.split('/')[-2]
         nnUNet_results = nnUNet_results / release
