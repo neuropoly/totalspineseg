@@ -2,6 +2,7 @@ import os, argparse, warnings, subprocess, textwrap, torch, totalspineseg, psuti
 from fnmatch import fnmatch
 from pathlib import Path
 from urllib.request import urlretrieve
+from importlib.metadata import metadata
 from tqdm import tqdm
 from totalspineseg import *
 
@@ -107,11 +108,10 @@ def main():
     # Datasets data
     step1_dataset = 'Dataset101_TotalSpineSeg_step1'
     step2_dataset = 'Dataset102_TotalSpineSeg_step2'
+
     # Read urls from 'pyproject.toml'
-    # TODO: Maybe improve with importlib.metadata - dict([_.split(', ') for _ in metadata('totalspineseg').get_all('Project-URL')])[dataset]
-    pyproject_text = (Path(totalspineseg.__path__[0]).parent / 'pyproject.toml').read_text()
-    step1_zip_url = re.search(f'{step1_dataset} = "(http.*?)"', pyproject_text).group(1)
-    step2_zip_url = re.search(f'{step2_dataset} = "(http.*?)"', pyproject_text).group(1)
+    step1_zip_url = dict([_.split(', ') for _ in metadata('totalspineseg').get_all('Project-URL')])[step1_dataset]
+    step2_zip_url = dict([_.split(', ') for _ in metadata('totalspineseg').get_all('Project-URL')])[step2_dataset]
 
     fold = 0
 
