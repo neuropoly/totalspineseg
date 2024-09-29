@@ -155,24 +155,23 @@ def main():
             # If the pretrained model is not installed, install it from zip
             print(f'Installing the pretrained model for {dataset}...')
 
-            # Check if the zip file exists
-            zip_file = next(nnUNet_exports.glob(f'{dataset}*.zip'), None)
+            # Get the download URL from the package metadata in pyproject.toml
+            zip_url = dict([_.split(', ') for _ in metadata('totalspineseg').get_all('Project-URL')])[dataset]
+            zip_name = zip_url.split('/')[-1]
+            zip_file = nnUNet_exports / zip_name
 
-            if not zip_file:
+            # Check if the zip file exists
+            if not zip_file.is_file():
                 # If the zip file is not found, download it from the releases
                 print(f'Downloading the pretrained model for {dataset}...')
                 with tqdm(unit='B', unit_scale=True, miniters=1, unit_divisor=1024, disable=quiet) as pbar:
                     urlretrieve(
-                        # Get the download URL from the package metadata in pyproject.toml
-                        dict([_.split(', ') for _ in metadata('totalspineseg').get_all('Project-URL')])[dataset],
-                        nnUNet_exports / f'{dataset}.zip',
+                        zip_url,
+                        nnUNet_exports / zip_name,
                         lambda b, bsize, tsize=None: (pbar.total == tsize or pbar.reset(tsize)) and pbar.update(b * bsize - pbar.n),
                     )
 
-                # Check if the zip file exists
-                zip_file = next(nnUNet_exports.glob(f'{dataset}*.zip'), None)
-
-            if not zip_file:
+            if not zip_file.is_file():
                 raise FileNotFoundError(f'Could not download the pretrained model for {dataset}.')
 
             # Install the pretrained model from the zip file
