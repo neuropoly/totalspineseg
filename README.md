@@ -94,6 +94,11 @@ When not available, sacrum segmentations were generated using the [totalsegmenta
    echo "export TOTALSPINESEG_DATA=\"$TOTALSPINESEG_DATA\"" >> venv/bin/activate
    ```
 
+**Note:** If you pull a new version from GitHub, make sure to reinstall the package to apply the updates using the following command:
+```bash
+python3 -m pip install -e $TOTALSPINESEG --upgrade
+```
+
 ## Training
 
 To train the TotalSpineSeg model, you will need the following hardware specifications:
