@@ -1,4 +1,4 @@
-import os, argparse, warnings, subprocess, textwrap, torch, totalspineseg, psutil, shutil, re
+import os, argparse, warnings, subprocess, textwrap, torch, psutil, shutil
 from fnmatch import fnmatch
 from pathlib import Path
 from urllib.request import urlretrieve
