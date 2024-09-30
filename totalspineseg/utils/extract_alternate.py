@@ -228,7 +228,7 @@ def extract_alternate(
         prioratize_labels=[],
     ):
     '''
-    This function extract binary masks that include every other intervertebral disc (IVD).
+    This function extracts binary masks that include every other intervertebral discs (IVD).
     It loops through the segmentation labels from superior to inferior, selecting alternating discs.
     To choose the first IVD to include, it uses the first disc in the image that matches the labels provided in the prioratize_labels argument, if supplied.
     If prioratize_labels is not provided, it starts from the first disc in the image.
