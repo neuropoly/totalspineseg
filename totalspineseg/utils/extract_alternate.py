@@ -15,7 +15,7 @@ def main():
     parser = argparse.ArgumentParser(
         description=' '.join(f'''
             Extract alternate labels from the segmentation.
-            This script extracts binary masks that include every other intervertebral disc (IVD).
+            This script extracts binary masks that include every other intervertebral discs (IVD).
             It loops through the segmentation labels from superior to inferior, selecting alternating discs.
             To choose the first IVD to include, it uses the first disc in the image that matches the labels provided in the --prioratize-labels argument, if supplied.
             If --prioratize-labels is not provided, it starts from the first disc in the image.
