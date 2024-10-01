@@ -151,10 +151,12 @@ Please ensure that your system meets these requirements before proceeding with t
 
 1. Run the model on a folder containing the images in .nii.gz format, or on a single .nii.gz file:
    ```bash
-   totalspineseg INPUT OUTPUT_FOLDER [--step1]
+   totalspineseg INPUT OUTPUT_FOLDER [--step1] [--iso]
    ```
 
    This will process the images in INPUT or the single image and save the results in OUTPUT_FOLDER. If you haven't trained the model, the script will automatically download the pre-trained models from the GitHub release.
+
+   **Important Note:** By default, the output segmentations are resampled back to the input image space. If you prefer to obtain the outputs in the model's original 1mm isotropic resolution, especially useful for visualization purposes, we strongly recommend using the `--iso` argument.
 
    Additionally, you can use the `--step1` parameter to run only the step 1 model, which outputs a single label for all vertebrae, including the sacrum.
 
