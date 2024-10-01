@@ -94,6 +94,11 @@ When not available, sacrum segmentations were generated using the [totalsegmenta
    echo "export TOTALSPINESEG_DATA=\"$TOTALSPINESEG_DATA\"" >> venv/bin/activate
    ```
 
+**Note:** If you pull a new version from GitHub, make sure to reinstall the package to apply the updates using the following command:
+```bash
+python3 -m pip install -e $TOTALSPINESEG --upgrade
+```
+
 ## Training
 
 To train the TotalSpineSeg model, you will need the following hardware specifications:
@@ -224,8 +229,6 @@ TotalSpineSeg demonstrates robust performance across a wide range of imaging par
 ![Model Output Preview](https://github.com/user-attachments/assets/78da2599-3bf2-4bc0-95b2-328acecd956f)
 
 The examples shown above include segmentation results on various contrasts (T1w, T2w, STIR, MTS, T2star, and even CT images), acquisition orientations (sagittal, axial), and resolutions.
-
-For a more detailed view of the output examples, you can check the [PDF version](https://github.com/user-attachments/files/16873633/preview.pdf) that includes step 1 and step 2 results together with the iterative labeling algorithm for each step.
 
 ## List of Classes
 

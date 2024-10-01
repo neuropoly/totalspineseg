@@ -577,18 +577,6 @@ def iterative_label(
         mask_aterior_to_canal,
     )
 
-    # Combine sequential vertebrae labels if there is no disc between them
-    vert_mask_labeled, vert_num_labels, vert_sorted_labels, vert_sorted_z_indices = _merge_vertebrae_labels_with_no_disc_between(
-        seg,
-        vert_mask_labeled,
-        vert_num_labels,
-        vert_sorted_labels,
-        vert_sorted_z_indices,
-        disc_sorted_z_indices,
-        canal_centerline_indices,
-        mask_aterior_to_canal,
-    )
-
     # Combine extra labels with adjacent vertebrae labels
     vert_mask_labeled, vert_num_labels, vert_sorted_labels, vert_sorted_z_indices = _merge_extra_labels_with_adjacent_vertebrae(
         seg,
@@ -690,6 +678,20 @@ def iterative_label(
 
         # Sort the labels by their z-index (reversed to go from superior to inferior)
         sorted_z_indices, sorted_labels, is_vert = zip(*sorted(zip(sorted_z_indices, sorted_labels, is_vert))[::-1])
+        sorted_z_indices, sorted_labels, is_vert = list(sorted_z_indices), list(sorted_labels), list(is_vert)
+
+        # Look for two discs with no vertebrae between them, if found, look if there is there is 2 vertebrae without a disc between them just next to the discs and switch the second disk with the first vertebrae, if not found, look if there is there is 2 vertebrae without a disc between them just above to the discs and switch the first disk with the second vertebrae.
+        # This is useful in cases where only the spinous processes is segmented in the last vertebrae and the disc is not segmented
+        for idx in range(len(sorted_labels) - 1):
+            if not is_vert[idx] and not is_vert[idx + 1]: # This is two discs without a vertebrae between them
+                if idx < len(sorted_labels) - 3 and is_vert[idx + 2] and is_vert[idx + 3]: # This is two vertebrae without a disc between them just next to the discs
+                    sorted_labels[idx + 1], sorted_labels[idx + 2] = sorted_labels[idx + 2], sorted_labels[idx + 1]
+                    sorted_z_indices[idx + 1], sorted_z_indices[idx + 2] = sorted_z_indices[idx + 2], sorted_z_indices[idx + 1]
+                    is_vert[idx + 1], is_vert[idx + 2] = is_vert[idx + 2], is_vert[idx + 1]
+                elif idx > 1 and is_vert[idx - 1] and is_vert[idx - 2]:
+                    sorted_labels[idx], sorted_labels[idx - 1] = sorted_labels[idx - 1], sorted_labels[idx]
+                    sorted_z_indices[idx], sorted_z_indices[idx - 1] = sorted_z_indices[idx - 1], sorted_z_indices[idx]
+                    is_vert[idx], is_vert[idx - 1] = is_vert[idx - 1], is_vert[idx]
 
         # Make a dict mapping disc to vertebrae labels
         disc_output_labels_2vert = dict(zip(all_possible_disc_output_labels, all_possible_vertebrae_output_labels[2:]))
@@ -721,7 +723,12 @@ def iterative_label(
                         map_vert_sorted_labels_2output[l] = o
 
             elif l_vert_output > 0: # This is a vertebrae
-                map_vert_sorted_labels_2output[curr_l] = l_vert_output
+                # If this is the last vertebrae and no disc btween it and the prev vertebrae, map it to the next vertebrae output label
+                # This is useful in cases where only the spinous processes is segmented in the last vertebrae and the disc is not segmented
+                if idx == len(sorted_labels) - 1 and idx > 0 and is_vert[idx - 1] and l_vert_output != all_possible_vertebrae_output_labels[-1]:
+                    map_vert_sorted_labels_2output[curr_l] = all_possible_vertebrae_output_labels[all_possible_vertebrae_output_labels.index(l_vert_output) + 1]
+                else:
+                    map_vert_sorted_labels_2output[curr_l] = l_vert_output
 
         # Label the vertebrae with the output labels superio-inferior
         for l, o in map_vert_sorted_labels_2output.items():
@@ -946,54 +953,6 @@ def _merge_vertebrae_with_same_label(
             # Add the current label to the new sorted labels
             new_sorted_labels.append(l)
             prev_l, prev_orig_label = l, curr_orig_label
-
-    sorted_labels = new_sorted_labels
-
-    # Reduce size of mask_labeled
-    if mask_labeled.max() < np.iinfo(np.uint8).max:
-        mask_labeled = mask_labeled.astype(np.uint8)
-    elif mask_labeled.max() < np.iinfo(np.uint16).max:
-        mask_labeled = mask_labeled.astype(np.uint16)
-
-    # Sort the labels by their z-index (reversed to go from superior to inferior)
-    sorted_z_indices, sorted_labels = _sort_labels_si(
-        mask_labeled, sorted_labels, canal_centerline_indices, mask_aterior_to_canal
-    )
-
-    return mask_labeled, num_labels, list(sorted_labels), list(sorted_z_indices)
-
-def _merge_vertebrae_labels_with_no_disc_between(
-        seg,
-        mask_labeled,
-        num_labels,
-        sorted_labels,
-        sorted_z_indices,
-        disc_sorted_z_indices,
-        canal_centerline_indices,
-        mask_aterior_to_canal,
-    ):
-    '''
-    Combine sequential vertebrae labels if there is no disc between them.
-    '''
-    if num_labels == 0 or len(disc_sorted_z_indices) == 0:
-        return mask_labeled, num_labels, sorted_labels, sorted_z_indices
-
-    new_sorted_labels = []
-
-    # Store the previous label and the z index of the previous label
-    prev_l, prev_z = 0, 0
-
-    for l, z in zip(sorted_labels, sorted_z_indices):
-        # Do not combine first and last vertebrae since it can be C1 or only contain the spinous process
-        if l not in sorted_labels[:2] and l != sorted_labels[-1] and prev_l > 0 and not any(z < _ < prev_z for _ in disc_sorted_z_indices):
-            # Combine the current label with the previous label
-            mask_labeled[mask_labeled == l] = prev_l
-            num_labels -= 1
-
-        else:
-            # Add the current label to the new sorted labels
-            new_sorted_labels.append(l)
-            prev_l, prev_z = l, z
 
     sorted_labels = new_sorted_labels
 

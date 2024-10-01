@@ -1,4 +1,4 @@
-import os, argparse, warnings, json, subprocess, textwrap, torch, totalspineseg, psutil, shutil
+import os, argparse, warnings, subprocess, textwrap, torch, psutil, shutil
 from fnmatch import fnmatch
 from pathlib import Path
 from urllib.request import urlretrieve
@@ -84,10 +84,6 @@ def main():
     # Parse the command-line arguments
     args = parser.parse_args()
 
-    # Locate the path to the totalspineseg library
-    totalspineseg_path = Path(totalspineseg.__path__[0]).parent
-    resources_path = totalspineseg_path / 'totalspineseg' / 'resources'
-
     # Get the command-line argument values
     input_path = args.input
     output_path = args.output
@@ -109,22 +105,33 @@ def main():
             or use the --data-dir argument to specify the correct path.
         '''.split()))
 
+    # Datasets data
+    step1_dataset = 'Dataset101_TotalSpineSeg_step1'
+    step2_dataset = 'Dataset102_TotalSpineSeg_step2'
+
+    # Read urls from 'pyproject.toml'
+    step1_zip_url = dict([_.split(', ') for _ in metadata('totalspineseg').get_all('Project-URL')])[step1_dataset]
+    step2_zip_url = dict([_.split(', ') for _ in metadata('totalspineseg').get_all('Project-URL')])[step2_dataset]
+
+    fold = 0
+
     # Set nnUNet paths
     nnUNet_raw = data_path / 'nnUNet' / 'raw'
     nnUNet_preprocessed = data_path / 'nnUNet' / 'preprocessed'
     nnUNet_results = data_path / 'nnUNet' / 'results'
     nnUNet_exports = data_path / 'nnUNet' / 'exports'
 
+    # If not both steps models are installed, use the release subfolder
+    if not (nnUNet_results / step1_dataset).is_dir() or not (nnUNet_results / step2_dataset).is_dir():
+        # TODO Think of better way to get the release
+        release = step1_zip_url.split('/')[-2]
+        nnUNet_results = nnUNet_results / release
+
     # Create the nnUNet directories if they do not exist
     nnUNet_raw.mkdir(parents=True, exist_ok=True)
     nnUNet_preprocessed.mkdir(parents=True, exist_ok=True)
     nnUNet_results.mkdir(parents=True, exist_ok=True)
     nnUNet_exports.mkdir(parents=True, exist_ok=True)
-
-    # Set the nnUNet variables
-    step1_dataset = 'Dataset101_TotalSpineSeg_step1'
-    step2_dataset = 'Dataset102_TotalSpineSeg_step2'
-    fold = 0
 
     # Set nnUNet environment variables
     os.environ['nnUNet_def_n_proc'] = str(max_workers_nnunet)
@@ -150,31 +157,28 @@ def main():
         '''))
 
     # Installing the pretrained models if not already installed
-    for dataset in [step1_dataset, step2_dataset]:
+    for dataset, zip_url in [(step1_dataset, step1_zip_url), (step2_dataset, step2_zip_url)]:
         if not (nnUNet_results / dataset).is_dir():
-            # If the pretrained model is not installed, install it from zip
-            print(f'Installing the pretrained model for {dataset}...')
+            # Get the zip file name and path
+            zip_name = zip_url.split('/')[-1]
+            zip_file = nnUNet_exports / zip_name
 
             # Check if the zip file exists
-            zip_file = next(nnUNet_exports.glob(f'{dataset}*.zip'), None)
-
-            if not zip_file:
+            if not zip_file.is_file():
                 # If the zip file is not found, download it from the releases
-                print(f'Downloading the pretrained model for {dataset}...')
+                if not quiet: print(f'Downloading the pretrained model from {zip_url}...')
                 with tqdm(unit='B', unit_scale=True, miniters=1, unit_divisor=1024, disable=quiet) as pbar:
                     urlretrieve(
-                        # Get the download URL from the package metadata in pyproject.toml
-                        dict([_.split(', ') for _ in metadata('totalspineseg').get_all('Project-URL')])[dataset],
-                        nnUNet_exports / f'{dataset}.zip',
+                        zip_url,
+                        nnUNet_exports / zip_name,
                         lambda b, bsize, tsize=None: (pbar.total == tsize or pbar.reset(tsize)) and pbar.update(b * bsize - pbar.n),
                     )
 
-                # Check if the zip file exists
-                zip_file = next(nnUNet_exports.glob(f'{dataset}*.zip'), None)
-
-            if not zip_file:
+            if not zip_file.is_file():
                 raise FileNotFoundError(f'Could not download the pretrained model for {dataset}.')
 
+            # If the pretrained model is not installed, install it from zip
+            if not quiet: print(f'Installing the pretrained model from {zip_file}...')
             # Install the pretrained model from the zip file
             subprocess.run(['nnUNetv2_install_pretrained_model_from_zip', str(zip_file)])
 
