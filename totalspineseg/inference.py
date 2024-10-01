@@ -91,7 +91,7 @@ def main():
     # Get the command-line argument values
     input_path = args.input
     output_path = args.output
-    iso = args.iso
+    output_iso = args.iso
     loc_path = args.loc
     suffix = args.suffix
     loc_suffix = args.loc_suffix
@@ -151,7 +151,7 @@ def main():
             Running TotalSpineSeg with the following parameters:
             input = "{input_path}"
             output = "{output_path}"
-            iso = {iso}
+            iso = {output_iso}
             loc = "{loc_path}"
             suffix = {suffix}
             loc_suffix = "{loc_suffix}"
@@ -704,7 +704,7 @@ def main():
             },
         )
 
-    if not iso:
+    if not output_iso:
         if not quiet: print('\n' 'Resampling step1_output to the input images space:')
         transform_seg2image_mp(
             input_path,
@@ -748,16 +748,17 @@ def main():
             max_workers=max_workers,
             quiet=quiet,
         )
-        if not quiet: print('\n' 'Resampling step2_output to the input images space:')
-        transform_seg2image_mp(
-            input_path,
-            output_path / 'step2_output',
-            output_path / 'step2_output',
-            image_suffix = '',
-            overwrite=True,
-            max_workers=max_workers,
-            quiet=quiet,
-        )
+        if not step1_only:
+            if not quiet: print('\n' 'Resampling step2_output to the input images space:')
+            transform_seg2image_mp(
+                input_path,
+                output_path / 'step2_output',
+                output_path / 'step2_output',
+                image_suffix = '',
+                overwrite=True,
+                max_workers=max_workers,
+                quiet=quiet,
+            )
 
 if __name__ == '__main__':
     main()
