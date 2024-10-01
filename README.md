@@ -211,8 +211,8 @@ In this example, main images are placed in the `images` folder and corresponding
 To use localizer-based labeling:
 
 ```bash
-# Process localizer images
-totalspineseg localizers localizers_output
+# Process localizer images. We recommend using the --iso flag for the localizer to ensure consistent resolution.
+totalspineseg localizers localizers_output --iso
 
 # Run model on main images using localizer output
 totalspineseg images output --loc localizers_output/step2_output --suffix _T2w --loc-suffix _T1w
