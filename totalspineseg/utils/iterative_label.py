@@ -683,15 +683,31 @@ def iterative_label(
         # Look for two discs with no vertebrae between them, if found, look if there is there is 2 vertebrae without a disc between them just next to the discs and switch the second disk with the first vertebrae, if not found, look if there is there is 2 vertebrae without a disc between them just above to the discs and switch the first disk with the second vertebrae.
         # This is useful in cases where only the spinous processes is segmented in the last vertebrae and the disc is not segmented
         for idx in range(len(sorted_labels) - 1):
-            if not is_vert[idx] and not is_vert[idx + 1]: # This is two discs without a vertebrae between them
-                if idx < len(sorted_labels) - 3 and is_vert[idx + 2] and is_vert[idx + 3]: # This is two vertebrae without a disc between them just next to the discs
+            # Cehck if this is two discs without a vertebrae between them
+            if not is_vert[idx] and not is_vert[idx + 1]:
+                # Check if there is two vertebrae without a disc between them just next to the discs
+                if idx < len(sorted_labels) - 3 and is_vert[idx + 2] and is_vert[idx + 3]:
                     sorted_labels[idx + 1], sorted_labels[idx + 2] = sorted_labels[idx + 2], sorted_labels[idx + 1]
                     sorted_z_indices[idx + 1], sorted_z_indices[idx + 2] = sorted_z_indices[idx + 2], sorted_z_indices[idx + 1]
                     is_vert[idx + 1], is_vert[idx + 2] = is_vert[idx + 2], is_vert[idx + 1]
+
+                # Check if there is two vertebrae without a disc between them just above to the discs
                 elif idx > 1 and is_vert[idx - 1] and is_vert[idx - 2]:
                     sorted_labels[idx], sorted_labels[idx - 1] = sorted_labels[idx - 1], sorted_labels[idx]
                     sorted_z_indices[idx], sorted_z_indices[idx - 1] = sorted_z_indices[idx - 1], sorted_z_indices[idx]
                     is_vert[idx], is_vert[idx - 1] = is_vert[idx - 1], is_vert[idx]
+
+        # If there is a disc at the top and 2 vertebrae below it, switch the disc with the first vertebrae
+        if len(sorted_labels) > 2 and not is_vert[0] and is_vert[1] and is_vert[2]:
+            sorted_labels[0], sorted_labels[1] = sorted_labels[1], sorted_labels[0]
+            sorted_z_indices[0], sorted_z_indices[1] = sorted_z_indices[1], sorted_z_indices[0]
+            is_vert[0], is_vert[1] = is_vert[1], is_vert[0]
+
+        # If there is a disc at the bottom and 2 vertebrae above it, switch the disc with the second vertebrae
+        if len(sorted_labels) > 2 and not is_vert[-1] and is_vert[-2] and is_vert[-3]:
+            sorted_labels[-1], sorted_labels[-2] = sorted_labels[-2], sorted_labels[-1]
+            sorted_z_indices[-1], sorted_z_indices[-2] = sorted_z_indices[-2], sorted_z_indices[-1]
+            is_vert[-1], is_vert[-2] = is_vert[-2], is_vert[-1]
 
         # Make a dict mapping disc to vertebrae labels
         disc_output_labels_2vert = dict(zip(all_possible_disc_output_labels, all_possible_vertebrae_output_labels[2:]))
