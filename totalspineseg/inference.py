@@ -36,6 +36,10 @@ def main():
         help='The output folder where the model outputs will be stored.'
     )
     parser.add_argument(
+        '--iso', action="store_true", default=False,
+        help='Use isotropic output as output by the model instead of resampling output to the input, defaults to false.'
+    )
+    parser.add_argument(
         '--loc', '-l', type=Path, default=None,
         help=' '.join(f'''
             Folder containing localizers segmentations or a single .nii.gz localizer segmentation to use for detecting first vertebrae and disc if C1 and C2-C3 disc or the Sacrum and L5-S disc not found in the image, Optional.
@@ -87,6 +91,7 @@ def main():
     # Get the command-line argument values
     input_path = args.input
     output_path = args.output
+    iso = args.iso
     loc_path = args.loc
     suffix = args.suffix
     loc_suffix = args.loc_suffix
@@ -146,6 +151,7 @@ def main():
             Running TotalSpineSeg with the following parameters:
             input = "{input_path}"
             output = "{output_path}"
+            iso = {iso}
             loc = "{loc_path}"
             suffix = {suffix}
             loc_suffix = "{loc_suffix}"
@@ -696,6 +702,61 @@ def main():
                 78: 'T7T8', 79: 'T8T9', 80: 'T9T10', 81: 'T10T11', 82: 'T11T12',
                 91: 'T12L1', 92: 'L1L2', 93: 'L2L3', 94: 'L3L4', 95: 'L4L5', 96: 'L5L6', 100: 'L5S'
             },
+        )
+
+    if not iso:
+        if not quiet: print('\n' 'Resampling step1_output to the input images space:')
+        transform_seg2image_mp(
+            input_path,
+            output_path / 'step1_output',
+            output_path / 'step1_output',
+            image_suffix = '',
+            overwrite=True,
+            max_workers=max_workers,
+            quiet=quiet,
+        )
+        if not quiet: print('\n' 'Resampling step1_cord to the input images space:')
+        transform_seg2image_mp(
+            input_path,
+            output_path / 'step1_cord',
+            output_path / 'step1_cord',
+            image_suffix = '',
+            interpolation = 'linear',
+            overwrite=True,
+            max_workers=max_workers,
+            quiet=quiet,
+        )
+        if not quiet: print('\n' 'Resampling step1_canal to the input images space:')
+        transform_seg2image_mp(
+            input_path,
+            output_path / 'step1_canal',
+            output_path / 'step1_canal',
+            image_suffix = '',
+            interpolation = 'linear',
+            overwrite=True,
+            max_workers=max_workers,
+            quiet=quiet,
+        )
+        if not quiet: print('\n' 'Resampling step1_levels to the input images space:')
+        transform_seg2image_mp(
+            input_path,
+            output_path / 'step1_levels',
+            output_path / 'step1_levels',
+            image_suffix = '',
+            interpolation = 'label',
+            overwrite=True,
+            max_workers=max_workers,
+            quiet=quiet,
+        )
+        if not quiet: print('\n' 'Resampling step2_output to the input images space:')
+        transform_seg2image_mp(
+            input_path,
+            output_path / 'step2_output',
+            output_path / 'step2_output',
+            image_suffix = '',
+            overwrite=True,
+            max_workers=max_workers,
+            quiet=quiet,
         )
 
 if __name__ == '__main__':
