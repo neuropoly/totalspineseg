@@ -1,11 +1,11 @@
 # TotalSpineSeg
 
-TotalSpineSeg is a tool for automatic instance segmentation of all vertebrae, intervertebral discs (IVDs), spinal cord, and spinal canal in MRI images. It is robust to various MRI contrasts, acquisition orientations, and resolutions. The model used in TotalSpineSeg is based on [nnUNet](https://github.com/MIC-DKFZ/nnUNet) as the backbone for training and inference.
+TotalSpineSeg is a tool for automatic instance segmentation of all vertebrae, intervertebral discs (IVDs), spinal cord, and spinal canal in MRI images. It is robust to various MRI contrasts, acquisition orientations, and resolutions. The model used in TotalSpineSeg is based on [nnU-Net](https://github.com/MIC-DKFZ/nnUNet) as the backbone for training and inference.
 
 If you use this model, please cite our work:
 > Warszawer Y, Molinier N, Valošek J, Shirbint E, Benveniste PL, Achiron A, Eshaghi A and Cohen-Adad J. _Fully Automatic Vertebrae and Spinal Cord Segmentation Using a Hybrid Approach Combining nnU-Net and Iterative Algorithm_.	Proceedings of the 32th Annual Meeting of ISMRM. 2024
 
-Please also cite nnUNet since our work is heavily based on it:
+Please also cite nnU-Net since our work is heavily based on it:
 > Isensee, F., Jaeger, P. F., Kohl, S. A., Petersen, J., & Maier-Hein, K. H. (2021). nnU-Net: a self-configuring method for deep learning-based biomedical image segmentation. Nature methods, 18(2), 203-211.
 
 ![Thumbnail](https://github.com/user-attachments/assets/2c1b1ff9-daaa-479f-8d21-01a66b9c9cb4)
