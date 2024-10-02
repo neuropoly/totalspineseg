@@ -85,8 +85,8 @@ def main():
         help='Take the largest component when using dilate.'
     )
     parser.add_argument(
-        '--override', '-r', action="store_true", default=False,
-        help='Override existing output files, defaults to false (Do not override).'
+        '--overwrite', '-r', action="store_true", default=False,
+        help='Overwrite existing output files, defaults to false (Do not overwrite).'
     )
     parser.add_argument(
         '--max-workers', '-w', type=int, default=mp.cpu_count(),
@@ -114,7 +114,7 @@ def main():
     seg_labels = args.seg_labels
     dilate = args.dilate
     largest = args.largest
-    override = args.override
+    overwrite = args.overwrite
     max_workers = args.max_workers
     quiet = args.quiet
 
@@ -135,7 +135,7 @@ def main():
             seg_labels = {seg_labels}
             dilate = {dilate}
             largest = {largest}
-            override = {override}
+            overwrite = {overwrite}
             max_workers = {max_workers}
             quiet = {quiet}
         '''))
@@ -154,7 +154,7 @@ def main():
         seg_labels=seg_labels,
         dilate=dilate,
         largest=largest,
-        override=override,
+        overwrite=overwrite,
         max_workers=max_workers,
         quiet=quiet,
     )
@@ -173,7 +173,7 @@ def extract_soft_mp(
         seg_labels=[1],
         dilate=0,
         largest=False,
-        override=False,
+        overwrite=False,
         max_workers=mp.cpu_count(),
         quiet=False,
     ):
@@ -203,7 +203,7 @@ def extract_soft_mp(
             seg_labels=seg_labels,
             dilate=dilate,
             largest=largest,
-            override=override,
+            overwrite=overwrite,
         ),
         npz_path_list,
         seg_path_list,
@@ -221,7 +221,7 @@ def _extract_soft(
         seg_labels=[1],
         dilate=0,
         largest=False,
-        override=False,
+        overwrite=False,
     ):
     '''
     Wrapper function to handle IO.
@@ -231,7 +231,7 @@ def _extract_soft(
     output_seg_path = Path(output_seg_path)
 
     # If the output seg already exists and we are not overriding it, return
-    if not override and output_seg_path.exists():
+    if not overwrite and output_seg_path.exists():
         return
 
     # Check if the segmentation file exists

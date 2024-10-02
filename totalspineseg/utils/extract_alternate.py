@@ -15,6 +15,11 @@ def main():
     parser = argparse.ArgumentParser(
         description=' '.join(f'''
             Extract alternate labels from the segmentation.
+            This script extracts binary masks that include every other intervertebral discs (IVD).
+            It loops through the segmentation labels from superior to inferior, selecting alternating discs.
+            To choose the first IVD to include, it uses the first disc in the image that matches the labels provided in the --prioratize-labels argument, if supplied.
+            If --prioratize-labels is not provided, it starts from the first disc in the image.
+            For inference purposes, this prioritization is not needed, as the goal is simply to include every other disc in the mask, without concern for which disc is selected first.
         '''.split()),
         epilog=textwrap.dedent('''
             Examples:
@@ -66,8 +71,8 @@ def main():
         help='Specify labels that will be prioratized in the output, the first label in the list will be included in the output, defaults to [] (The first label in the list that is in the segmentation).'
     )
     parser.add_argument(
-        '--override', '-r', action="store_true", default=False,
-        help='Override existing output files, defaults to false (Do not override).'
+        '--overwrite', '-r', action="store_true", default=False,
+        help='Overwrite existing output files, defaults to false (Do not overwrite).'
     )
     parser.add_argument(
         '--max-workers', '-w', type=int, default=mp.cpu_count(),
@@ -89,9 +94,9 @@ def main():
     prefix = args.prefix
     seg_suffix = args.seg_suffix
     output_seg_suffix = args.output_seg_suffix
-    labels = [_ for __ in args.labels for _ in (__ if isinstance(__, list) else [__])]
-    prioratize_labels = [_ for __ in args.prioratize_labels for _ in (__ if isinstance(__, list) else [__])]
-    override = args.override
+    labels = [l for raw in args.labels for l in (raw if isinstance(raw, list) else [raw])]
+    prioratize_labels = [l for raw in args.prioratize_labels for l in (raw if isinstance(raw, list) else [raw])]
+    overwrite = args.overwrite
     max_workers = args.max_workers
     quiet = args.quiet
 
@@ -108,7 +113,7 @@ def main():
             output_seg_suffix = "{output_seg_suffix}"
             labels = {labels}
             prioratize_labels = {prioratize_labels}
-            override = {override}
+            overwrite = {overwrite}
             max_workers = {max_workers}
             quiet = {quiet}
         '''))
@@ -123,7 +128,7 @@ def main():
         output_seg_suffix=output_seg_suffix,
         labels=labels,
         prioratize_labels=prioratize_labels,
-        override=override,
+        overwrite=overwrite,
         max_workers=max_workers,
         quiet=quiet,
     )
@@ -138,7 +143,7 @@ def extract_alternate_mp(
         output_seg_suffix='',
         labels=[],
         prioratize_labels=[],
-        override=False,
+        overwrite=False,
         max_workers=mp.cpu_count(),
         quiet=False,
     ):
@@ -164,7 +169,7 @@ def extract_alternate_mp(
             _extract_alternate,
             labels=labels,
             prioratize_labels=prioratize_labels,
-            override=override,
+            overwrite=overwrite,
         ),
         seg_path_list,
         output_seg_path_list,
@@ -178,7 +183,7 @@ def _extract_alternate(
         output_seg_path,
         labels=[],
         prioratize_labels=[],
-        override=False,
+        overwrite=False,
     ):
     '''
     Wrapper function to handle IO.
@@ -187,7 +192,7 @@ def _extract_alternate(
     output_seg_path = Path(output_seg_path)
 
     # If the output image already exists and we are not overriding it, return
-    if not override and output_seg_path.exists():
+    if not overwrite and output_seg_path.exists():
         return
 
     # Load segmentation
@@ -223,10 +228,11 @@ def extract_alternate(
         prioratize_labels=[],
     ):
     '''
-    Extract vertebrae levels from Spinal Canal and Discs.
-
-    The function extracts the vertebrae levels from the input segmentation by finding the closest voxel in the canal centerline to the middle of each disc.
-    The superior voxels in the canal centerline are set to 1 and the middle voxels between C2-C3 and the superior voxels are set to 2.
+    This function extracts binary masks that include every other intervertebral discs (IVD).
+    It loops through the segmentation labels from superior to inferior, selecting alternating discs.
+    To choose the first IVD to include, it uses the first disc in the image that matches the labels provided in the prioratize_labels argument, if supplied.
+    If prioratize_labels is not provided, it starts from the first disc in the image.
+    For inference purposes, this prioritization is not needed, as the goal is simply to include every other disc in the mask, without concern for which disc is selected first.
 
     Parameters
     ----------

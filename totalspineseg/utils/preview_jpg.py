@@ -97,8 +97,8 @@ def main():
         '''.split()),
     )
     parser.add_argument(
-        '--override', '-r', action="store_true", default=False,
-        help='Override existing output files, defaults to false (Do not override).'
+        '--overwrite', '-r', action="store_true", default=False,
+        help='Overwrite existing output files, defaults to false (Do not overwrite).'
     )
     parser.add_argument(
         '--max-workers', '-w', type=int, default=mp.cpu_count(),
@@ -126,7 +126,7 @@ def main():
     sliceloc = args.sliceloc
     label_text_right_list = args.label_text_right
     label_text_left_list = args.label_text_left
-    override = args.override
+    overwrite = args.overwrite
     max_workers = args.max_workers
     quiet = args.quiet
 
@@ -153,7 +153,7 @@ def main():
             sliceloc = {sliceloc}
             label_texts_right = {label_texts_right}
             label_texts_left = {label_texts_left}
-            override = {override}
+            overwrite = {overwrite}
             max_workers = {max_workers}
             quiet = {quiet}
         '''))
@@ -172,7 +172,7 @@ def main():
         sliceloc=sliceloc,
         label_texts_right=label_texts_right,
         label_texts_left=label_texts_left,
-        override=override,
+        overwrite=overwrite,
         max_workers=max_workers,
         quiet=quiet,
     )
@@ -205,7 +205,7 @@ def preview_jpg_mp(
         sliceloc=0.5,
         label_texts_right={},
         label_texts_left={},
-        override=False,
+        overwrite=False,
         max_workers=mp.cpu_count(),
         quiet=False,
     ):
@@ -237,7 +237,7 @@ def preview_jpg_mp(
             sliceloc=sliceloc,
             label_texts_right=label_texts_right,
             label_texts_left=label_texts_left,
-            override=override,
+            overwrite=overwrite,
         ),
         image_path_list,
         output_path_list,
@@ -255,7 +255,7 @@ def _preview_jpg(
         sliceloc=0.5,
         label_texts_right={},
         label_texts_left={},
-        override=False,
+        overwrite=False,
     ):
     '''
     Combine the specified slice of the image and possibly the segmentation file and save the result as a JPG image.
@@ -265,7 +265,7 @@ def _preview_jpg(
     seg_path = seg_path and Path(seg_path)
 
     # If the output image already exists and we are not overriding it, return
-    if not override and output_path.exists():
+    if not overwrite and output_path.exists():
         return
 
     try:

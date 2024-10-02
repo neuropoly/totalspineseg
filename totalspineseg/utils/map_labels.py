@@ -89,8 +89,8 @@ def main():
         help='Keep unmapped labels as they are in the output segmentation, defaults to false (discard unmapped labels).'
     )
     parser.add_argument(
-        '--override', '-r', action="store_true", default=False,
-        help='Override existing output files, defaults to false (Do not override).'
+        '--overwrite', '-r', action="store_true", default=False,
+        help='Overwrite existing output files, defaults to false (Do not overwrite).'
     )
     parser.add_argument(
         '--max-workers', '-w', type=int, default=mp.cpu_count(),
@@ -118,7 +118,7 @@ def main():
     update_seg_suffix = args.update_seg_suffix
     update_from_seg_suffix = args.update_from_seg_suffix
     keep_unmapped = args.keep_unmapped
-    override = args.override
+    overwrite = args.overwrite
     max_workers = args.max_workers
     quiet = args.quiet
 
@@ -139,7 +139,7 @@ def main():
             update_seg_suffix = "{update_seg_suffix}"
             update_from_seg_suffix = "{update_from_seg_suffix}"
             keep_unmapped = {keep_unmapped}
-            override = {override}
+            overwrite = {overwrite}
             max_workers = {max_workers}
             quiet = {quiet}
         '''))
@@ -169,7 +169,7 @@ def main():
         update_seg_suffix=update_seg_suffix,
         update_from_seg_suffix=update_from_seg_suffix,
         keep_unmapped=keep_unmapped,
-        override=override,
+        overwrite=overwrite,
         max_workers=max_workers,
         quiet=quiet,
     )
@@ -188,7 +188,7 @@ def map_labels_mp(
         update_seg_suffix='',
         update_from_seg_suffix='',
         keep_unmapped=False,
-        override=False,
+        overwrite=False,
         max_workers=mp.cpu_count(),
         quiet=False,
     ):
@@ -218,7 +218,7 @@ def map_labels_mp(
             _map_labels,
             map_dict=map_dict,
             keep_unmapped=keep_unmapped,
-            override=override,
+            overwrite=overwrite,
         ),
         seg_path_list,
         output_seg_path_list,
@@ -236,7 +236,7 @@ def _map_labels(
         update_from_seg_path=None,
         map_dict={},
         keep_unmapped=False,
-        override=False,
+        overwrite=False,
     ):
     '''
     Wrapper function to handle IO.
@@ -247,7 +247,7 @@ def _map_labels(
     update_from_seg_path = update_from_seg_path and Path(update_from_seg_path)
 
     # If the output image already exists and we are not overriding it, return
-    if not override and output_seg_path.exists():
+    if not overwrite and output_seg_path.exists():
         return
 
     # Load segmentation

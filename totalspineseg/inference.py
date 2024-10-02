@@ -1,4 +1,4 @@
-import os, argparse, warnings, json, subprocess, textwrap, torch, totalspineseg, psutil, shutil
+import os, argparse, warnings, subprocess, textwrap, torch, psutil, shutil
 from fnmatch import fnmatch
 from pathlib import Path
 from urllib.request import urlretrieve
@@ -84,10 +84,6 @@ def main():
     # Parse the command-line arguments
     args = parser.parse_args()
 
-    # Locate the path to the totalspineseg library
-    totalspineseg_path = Path(totalspineseg.__path__[0]).parent
-    resources_path = totalspineseg_path / 'totalspineseg' / 'resources'
-
     # Get the command-line argument values
     input_path = args.input
     output_path = args.output
@@ -109,8 +105,15 @@ def main():
             or use the --data-dir argument to specify the correct path.
         '''.split()))
 
-    # Add the custom nnUNetTrainer class to the nnUNet library
-    add_nnunet_trainer()
+    # Datasets data
+    step1_dataset = 'Dataset101_TotalSpineSeg_step1'
+    step2_dataset = 'Dataset102_TotalSpineSeg_step2'
+
+    # Read urls from 'pyproject.toml'
+    step1_zip_url = dict([_.split(', ') for _ in metadata('totalspineseg').get_all('Project-URL')])[step1_dataset]
+    step2_zip_url = dict([_.split(', ') for _ in metadata('totalspineseg').get_all('Project-URL')])[step2_dataset]
+
+    fold = 0
 
     # Set nnUNet paths
     nnUNet_raw = data_path / 'nnUNet' / 'raw'
@@ -118,16 +121,17 @@ def main():
     nnUNet_results = data_path / 'nnUNet' / 'results'
     nnUNet_exports = data_path / 'nnUNet' / 'exports'
 
+    # If not both steps models are installed, use the release subfolder
+    if not (nnUNet_results / step1_dataset).is_dir() or not (nnUNet_results / step2_dataset).is_dir():
+        # TODO Think of better way to get the release
+        release = step1_zip_url.split('/')[-2]
+        nnUNet_results = nnUNet_results / release
+
     # Create the nnUNet directories if they do not exist
     nnUNet_raw.mkdir(parents=True, exist_ok=True)
     nnUNet_preprocessed.mkdir(parents=True, exist_ok=True)
     nnUNet_results.mkdir(parents=True, exist_ok=True)
     nnUNet_exports.mkdir(parents=True, exist_ok=True)
-
-    # Set the nnUNet variables
-    step1_dataset = 'Dataset101_TotalSpineSeg_step1'
-    step2_dataset = 'Dataset102_TotalSpineSeg_step2'
-    fold = 0
 
     # Set nnUNet environment variables
     os.environ['nnUNet_def_n_proc'] = str(max_workers_nnunet)
@@ -153,31 +157,28 @@ def main():
         '''))
 
     # Installing the pretrained models if not already installed
-    for dataset in [step1_dataset, step2_dataset]:
+    for dataset, zip_url in [(step1_dataset, step1_zip_url), (step2_dataset, step2_zip_url)]:
         if not (nnUNet_results / dataset).is_dir():
-            # If the pretrained model is not installed, install it from zip
-            print(f'Installing the pretrained model for {dataset}...')
+            # Get the zip file name and path
+            zip_name = zip_url.split('/')[-1]
+            zip_file = nnUNet_exports / zip_name
 
             # Check if the zip file exists
-            zip_file = next(nnUNet_exports.glob(f'{dataset}*.zip'), None)
-
-            if not zip_file:
+            if not zip_file.is_file():
                 # If the zip file is not found, download it from the releases
-                print(f'Downloading the pretrained model for {dataset}...')
+                if not quiet: print(f'Downloading the pretrained model from {zip_url}...')
                 with tqdm(unit='B', unit_scale=True, miniters=1, unit_divisor=1024, disable=quiet) as pbar:
                     urlretrieve(
-                        # Get the download URL from the package metadata in pyproject.toml
-                        dict([_.split(', ') for _ in metadata('totalspineseg').get_all('Project-URL')])[dataset],
-                        nnUNet_exports / f'{dataset}.zip',
+                        zip_url,
+                        nnUNet_exports / zip_name,
                         lambda b, bsize, tsize=None: (pbar.total == tsize or pbar.reset(tsize)) and pbar.update(b * bsize - pbar.n),
                     )
 
-                # Check if the zip file exists
-                zip_file = next(nnUNet_exports.glob(f'{dataset}*.zip'), None)
-
-            if not zip_file:
+            if not zip_file.is_file():
                 raise FileNotFoundError(f'Could not download the pretrained model for {dataset}.')
 
+            # If the pretrained model is not installed, install it from zip
+            if not quiet: print(f'Installing the pretrained model from {zip_file}...')
             # Install the pretrained model from the zip file
             subprocess.run(['nnUNetv2_install_pretrained_model_from_zip', str(zip_file)])
 
@@ -194,7 +195,7 @@ def main():
             pattern=sum([[f'*{s}.nii.gz', f'sub-*/anat/*{s}.nii.gz'] for s in suffix], []),
             flat=True,
             replace={'.nii.gz': '_0000.nii.gz'},
-            override=True,
+            overwrite=True,
             max_workers=max_workers,
             quiet=quiet,
         )
@@ -209,7 +210,8 @@ def main():
         locs = list(loc_path.glob(f'*{loc_suffix}.nii.gz')) + list(loc_path.glob(f'sub-*/anat/*{loc_suffix}.nii.gz'))
 
         # Copy the localizers to the output folder
-        for image in (output_path / 'input').glob('*_0000.nii.gz'):
+        images = list((output_path / 'input').glob('*_0000.nii.gz'))
+        for image in tqdm(images, disable=quiet):
             if loc_path.name.endswith('.nii.gz'):
                 # If the localizers are in a single file, copy it to the localizers folder
                 loc = loc_path
@@ -226,7 +228,7 @@ def main():
             output_path / 'preview',
             segs_path=output_path / 'localizers',
             output_suffix='_loc',
-            override=True,
+            overwrite=True,
             max_workers=max_workers,
             quiet=quiet,
         )
@@ -235,20 +237,20 @@ def main():
             output_path / 'preview',
             segs_path=output_path / 'localizers',
             output_suffix='_loc_tags',
-            override=True,
+            overwrite=True,
             max_workers=max_workers,
             quiet=quiet,
             label_texts_right={
                 11: 'C1', 12: 'C2', 13: 'C3', 14: 'C4', 15: 'C5', 16: 'C6', 17: 'C7',
                 21: 'T1', 22: 'T2', 23: 'T3', 24: 'T4', 25: 'T5', 26: 'T6', 27: 'T7',
                 28: 'T8', 29: 'T9', 30: 'T10', 31: 'T11', 32: 'T12',
-                41: 'L1', 42: 'L2', 43: 'L3', 44: 'L4', 45: 'L5',
+                41: 'L1', 42: 'L2', 43: 'L3', 44: 'L4', 45: 'L5', 46: 'L6',
             },
             label_texts_left={
                 50: 'Sacrum', 63: 'C2C3', 64: 'C3C4', 65: 'C4C5', 66: 'C5C6', 67: 'C6C7',
                 71: 'C7T1', 72: 'T1T2', 73: 'T2T3', 74: 'T3T4', 75: 'T4T5', 76: 'T5T6', 77: 'T6T7',
                 78: 'T7T8', 79: 'T8T9', 80: 'T9T10', 81: 'T10T11', 82: 'T11T12',
-                91: 'T12L1', 92: 'L1L2', 93: 'L2L3', 94: 'L3L4', 95: 'L4L5', 100: 'L5S'
+                91: 'T12L1', 92: 'L1L2', 93: 'L2L3', 94: 'L3L4', 95: 'L4L5', 96: 'L5L6', 100: 'L5S'
             },
         )
 
@@ -258,7 +260,7 @@ def main():
         output_path / 'input',
         image_suffix='',
         output_image_suffix='',
-        override=True,
+        overwrite=True,
         max_workers=max_workers,
         quiet=quiet,
     )
@@ -267,7 +269,7 @@ def main():
     reorient_canonical_mp(
         output_path / 'input',
         output_path / 'input',
-        override=True,
+        overwrite=True,
         max_workers=max_workers,
         quiet=quiet,
     )
@@ -278,7 +280,7 @@ def main():
         output_path / 'input',
         image_suffix='',
         output_image_suffix='',
-        override=True,
+        overwrite=True,
         max_workers=max_workers,
         quiet=quiet,
     )
@@ -288,7 +290,7 @@ def main():
         output_path / 'input',
         output_path / 'preview',
         output_suffix='_input',
-        override=True,
+        overwrite=True,
         max_workers=max_workers,
         quiet=quiet,
     )
@@ -315,13 +317,20 @@ def main():
             '--save_probabilities',
     ])
 
+    # Remove unnecessary files from output folder
+    (output_path / 'step1_raw' / 'dataset.json').unlink(missing_ok=True)
+    (output_path / 'step1_raw' / 'plans.json').unlink(missing_ok=True)
+    (output_path / 'step1_raw' / 'predict_from_raw_data_args.json').unlink(missing_ok=True)
+    for f in (output_path / 'step1_raw').glob('*.pkl'):
+        f.unlink(missing_ok=True)
+
     if not quiet: print('\n' 'Generating preview images for step 1:')
     preview_jpg_mp(
         output_path / 'input',
         output_path / 'preview',
         segs_path=output_path / 'step1_raw',
         output_suffix='_step1_raw',
-        override=True,
+        overwrite=True,
         max_workers=max_workers,
         quiet=quiet,
     )
@@ -332,7 +341,7 @@ def main():
         output_path / 'step1_output',
         binarize=True,
         dilate=5,
-        override=True,
+        overwrite=True,
         max_workers=max_workers,
         quiet=quiet,
     )
@@ -347,13 +356,14 @@ def main():
             disc_labels=[1, 2, 3, 4, 5],
             disc_landmark_labels=[2, 3, 4, 5],
             disc_landmark_output_labels=[63, 71, 91, 100],
-            canal_labels=[7, 8],
+            canal_labels=[8],
             canal_output_label=2,
             cord_labels=[9],
             cord_output_label=1,
             sacrum_labels=[6],
             sacrum_output_label=50,
-            override=True,
+            map_input_dict={7: 11},
+            overwrite=True,
             max_workers=max_workers,
             quiet=quiet,
         )
@@ -367,13 +377,14 @@ def main():
             disc_landmark_labels=[2, 3, 4, 5],
             disc_landmark_output_labels=[63, 71, 91, 100],
             loc_disc_labels=list(range(63, 101)),
-            canal_labels=[7, 8],
+            canal_labels=[8],
             canal_output_label=2,
             cord_labels=[9],
             cord_output_label=1,
             sacrum_labels=[6],
             sacrum_output_label=50,
-            override=True,
+            map_input_dict={7: 11},
+            overwrite=True,
             max_workers=max_workers,
             quiet=quiet,
         )
@@ -387,7 +398,7 @@ def main():
         cord_label=1,
         largest_canal=True,
         largest_cord=True,
-        override=True,
+        overwrite=True,
         max_workers=max_workers,
         quiet=quiet,
     )
@@ -397,7 +408,7 @@ def main():
         output_path / 'input',
         output_path / 'step1_output',
         output_path / 'step1_output',
-        override=True,
+        overwrite=True,
         max_workers=max_workers,
         quiet=quiet,
     )
@@ -408,7 +419,7 @@ def main():
         output_path / 'preview',
         segs_path=output_path / 'step1_output',
         output_suffix='_step1_output',
-        override=True,
+        overwrite=True,
         max_workers=max_workers,
         quiet=quiet,
     )
@@ -417,15 +428,28 @@ def main():
         output_path / 'preview',
         segs_path=output_path / 'step1_output',
         output_suffix='_step1_output_tags',
-        override=True,
+        overwrite=True,
         max_workers=max_workers,
         quiet=quiet,
         label_texts_left={
             63: 'C2C3', 64: 'C3C4', 65: 'C4C5', 66: 'C5C6', 67: 'C6C7',
             71: 'C7T1', 72: 'T1T2', 73: 'T2T3', 74: 'T3T4', 75: 'T4T5', 76: 'T5T6', 77: 'T6T7',
             78: 'T7T8', 79: 'T8T9', 80: 'T9T10', 81: 'T10T11', 82: 'T11T12',
-            91: 'T12L1', 92: 'L1L2', 93: 'L2L3', 94: 'L3L4', 95: 'L4L5', 100: 'L5S'
+            91: 'T12L1', 92: 'L1L2', 93: 'L2L3', 94: 'L3L4', 95: 'L4L5', 96: 'L5L6', 100: 'L5S'
         },
+    )
+
+    if not quiet: print('\n' 'Extracting spinal canal soft segmentation from step 1 model output:')
+    extract_soft_mp(
+        output_path / 'step1_raw',
+        output_path / 'step1_output',
+        output_path / 'step1_canal',
+        label=8,
+        seg_labels=[1, 2],
+        dilate=1,
+        overwrite=True,
+        max_workers=max_workers,
+        quiet=quiet,
     )
 
     if not quiet: print('\n' 'Extracting spinal cord soft segmentation from step 1 model output:')
@@ -436,29 +460,14 @@ def main():
         label=9,
         seg_labels=[1],
         dilate=1,
-        override=True,
-        max_workers=max_workers,
-        quiet=quiet,
-    )
-
-    if not quiet: print('\n' 'Extracting spinal canal soft segmentation from step 1 model output:')
-    extract_soft_mp(
-        output_path / 'step1_raw',
-        output_path / 'step1_output',
-        output_path / 'step1_canal',
-        label=7,
-        seg_labels=[1, 2],
-        dilate=1,
-        override=True,
+        overwrite=True,
         max_workers=max_workers,
         quiet=quiet,
     )
 
     if not quiet: print('\n' 'Removing the raw files from step 1 to save space...')
     for f in (output_path / 'step1_raw').glob('*.npz'):
-        f.unlink()
-    for f in (output_path / 'step1_raw').glob('*.pkl'):
-        f.unlink()
+        f.unlink(missing_ok=True)
 
     if not quiet: print('\n' 'Extracting the levels of the vertebrae and IVDs from the step 1 model output:')
     extract_levels_mp(
@@ -466,7 +475,7 @@ def main():
         output_path / 'step1_levels',
         canal_labels=[1, 2],
         disc_labels=list(range(63, 68)) + list(range(71, 83)) + list(range(91, 96)) + [100],
-        override=True,
+        overwrite=True,
         max_workers=max_workers,
         quiet=quiet,
     )
@@ -477,7 +486,7 @@ def main():
             output_path / 'input',
             output_path / 'step2_input',
             pattern=['*_0000.nii.gz'],
-            override=True,
+            overwrite=True,
             max_workers=max_workers,
             quiet=quiet,
         )
@@ -489,7 +498,7 @@ def main():
             output_path / 'step1_output',
             output_path / 'step2_input',
             margin=10,
-            override=True,
+            overwrite=True,
             max_workers=max_workers,
             quiet=quiet,
         )
@@ -500,7 +509,7 @@ def main():
             output_path / 'step1_output',
             output_path / 'step2_input',
             output_seg_suffix='_0001',
-            override=True,
+            overwrite=True,
             max_workers=max_workers,
             quiet=quiet,
         )
@@ -513,7 +522,7 @@ def main():
             seg_suffix='_0001',
             output_seg_suffix='_0001',
             labels=list(range(63, 101)),
-            override=True,
+            overwrite=True,
             max_workers=max_workers,
             quiet=quiet,
         )
@@ -525,7 +534,7 @@ def main():
             segs_path=output_path / 'step2_input',
             seg_suffix='_0001',
             output_suffix='_step2_input',
-            override=True,
+            overwrite=True,
             max_workers=max_workers,
             quiet=quiet,
         )
@@ -533,7 +542,7 @@ def main():
         # Remove images without the 2'nd channel
         for f in (output_path / 'step2_input').glob('*_0000.nii.gz'):
             if not f.with_name(f.name.replace('_0000.nii.gz', '_0001.nii.gz')).exists():
-                f.unlink()
+                f.unlink(missing_ok=True)
 
         # Get the nnUNet parameters from the results folder
         nnUNetTrainer, nnUNetPlans, configuration = next((nnUNet_results / step2_dataset).glob('*/fold_*')).parent.name.split('__')
@@ -556,9 +565,14 @@ def main():
                 '-device', device
         ])
 
+        # Remove unnecessary files from output folder
+        (output_path / 'step2_raw' / 'dataset.json').unlink(missing_ok=True)
+        (output_path / 'step2_raw' / 'plans.json').unlink(missing_ok=True)
+        (output_path / 'step2_raw' / 'predict_from_raw_data_args.json').unlink(missing_ok=True)
+
         # Remove the raw files from step 2 to save space
         for f in (output_path / 'step2_input').glob('*_0000.nii.gz'):
-            f.unlink()
+            f.unlink(missing_ok=True)
 
         if not quiet: print('\n' 'Generating preview images for step 2:')
         preview_jpg_mp(
@@ -566,7 +580,7 @@ def main():
             output_path / 'preview',
             segs_path=output_path / 'step2_raw',
             output_suffix='_step2_raw',
-            override=True,
+            overwrite=True,
             max_workers=max_workers,
             quiet=quiet,
         )
@@ -577,7 +591,7 @@ def main():
             output_path / 'step2_output',
             binarize=True,
             dilate=5,
-            override=True,
+            overwrite=True,
             max_workers=max_workers,
             quiet=quiet,
         )
@@ -587,20 +601,20 @@ def main():
             iterative_label_mp(
                 output_path / 'step2_output',
                 output_path / 'step2_output',
-                selected_disc_landmarks=[4, 7, 5, 6],
-                disc_labels=[1, 2, 3, 4, 5, 6, 7],
-                disc_landmark_labels=[4, 5, 6, 7],
+                selected_disc_landmarks=[2, 5, 3, 4],
+                disc_labels=[1, 2, 3, 4, 5],
+                disc_landmark_labels=[2, 3, 4, 5],
                 disc_landmark_output_labels=[63, 71, 91, 100],
-                vertebrae_labels=[9, 10, 11, 12, 13, 14],
+                vertebrae_labels=[7, 8, 9],
                 vertebrae_landmark_output_labels=[13, 21, 41, 50],
-                vertebrae_extra_labels=[8],
-                canal_labels=[15, 16],
+                vertebrae_extra_labels=[6],
+                canal_labels=[10],
                 canal_output_label=2,
-                cord_labels=[17],
+                cord_labels=[11],
                 cord_output_label=1,
-                sacrum_labels=[14],
+                sacrum_labels=[9],
                 sacrum_output_label=50,
-                override=True,
+                overwrite=True,
                 max_workers=max_workers,
                 quiet=quiet,
             )
@@ -609,21 +623,21 @@ def main():
                 output_path / 'step2_output',
                 output_path / 'step2_output',
                 locs_path=output_path / 'localizers',
-                selected_disc_landmarks=[4, 7],
-                disc_labels=[1, 2, 3, 4, 5, 6, 7],
-                disc_landmark_labels=[4, 5, 6, 7],
+                selected_disc_landmarks=[2, 5],
+                disc_labels=[1, 2, 3, 4, 5],
+                disc_landmark_labels=[2, 3, 4, 5],
                 disc_landmark_output_labels=[63, 71, 91, 100],
-                vertebrae_labels=[9, 10, 11, 12, 13, 14],
+                vertebrae_labels=[7, 8, 9],
                 vertebrae_landmark_output_labels=[13, 21, 41, 50],
-                vertebrae_extra_labels=[8],
+                vertebrae_extra_labels=[6],
                 loc_disc_labels=list(range(63, 101)),
-                canal_labels=[15, 16],
+                canal_labels=[10],
                 canal_output_label=2,
-                cord_labels=[17],
+                cord_labels=[11],
                 cord_output_label=1,
-                sacrum_labels=[14],
+                sacrum_labels=[9],
                 sacrum_output_label=50,
-                override=True,
+                overwrite=True,
                 max_workers=max_workers,
                 quiet=quiet,
             )
@@ -637,7 +651,7 @@ def main():
             cord_label=1,
             largest_canal=True,
             largest_cord=True,
-            override=True,
+            overwrite=True,
             max_workers=max_workers,
             quiet=quiet,
         )
@@ -647,7 +661,7 @@ def main():
             output_path / 'input',
             output_path / 'step2_output',
             output_path / 'step2_output',
-            override=True,
+            overwrite=True,
             max_workers=max_workers,
             quiet=quiet,
         )
@@ -658,7 +672,7 @@ def main():
             output_path / 'preview',
             segs_path=output_path / 'step2_output',
             output_suffix='_step2_output',
-            override=True,
+            overwrite=True,
             max_workers=max_workers,
             quiet=quiet,
         )
@@ -667,20 +681,20 @@ def main():
             output_path / 'preview',
             segs_path=output_path / 'step2_output',
             output_suffix='_step2_output_tags',
-            override=True,
+            overwrite=True,
             max_workers=max_workers,
             quiet=quiet,
             label_texts_right={
                 11: 'C1', 12: 'C2', 13: 'C3', 14: 'C4', 15: 'C5', 16: 'C6', 17: 'C7',
                 21: 'T1', 22: 'T2', 23: 'T3', 24: 'T4', 25: 'T5', 26: 'T6', 27: 'T7',
                 28: 'T8', 29: 'T9', 30: 'T10', 31: 'T11', 32: 'T12',
-                41: 'L1', 42: 'L2', 43: 'L3', 44: 'L4', 45: 'L5',
+                41: 'L1', 42: 'L2', 43: 'L3', 44: 'L4', 45: 'L5', 46: 'L6',
             },
             label_texts_left={
                 50: 'Sacrum', 63: 'C2C3', 64: 'C3C4', 65: 'C4C5', 66: 'C5C6', 67: 'C6C7',
                 71: 'C7T1', 72: 'T1T2', 73: 'T2T3', 74: 'T3T4', 75: 'T4T5', 76: 'T5T6', 77: 'T6T7',
                 78: 'T7T8', 79: 'T8T9', 80: 'T9T10', 81: 'T10T11', 82: 'T11T12',
-                91: 'T12L1', 92: 'L1L2', 93: 'L2L3', 94: 'L3L4', 95: 'L4L5', 100: 'L5S'
+                91: 'T12L1', 92: 'L1L2', 93: 'L2L3', 94: 'L3L4', 95: 'L4L5', 96: 'L5L6', 100: 'L5S'
             },
         )
 

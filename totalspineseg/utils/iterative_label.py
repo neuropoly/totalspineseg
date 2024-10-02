@@ -42,8 +42,8 @@ def main():
         '--locs-dir', '-l', type=Path, default=None,
         help=' '.join(f'''
             Folder containing localizers' segmentations to help the labeling if landmarks not found, Optional.
-            The algorithm will transform the localizer to the segmentation space and use it to detect the matching vertebrae and disc if the init label not found.
-            Mathcing will based on the magority of the voxels of the first vertebrae or disc in the localizer, that intersect with the input segmentation.
+            The algorithm will use the localizers' segmentations to detect the matching vertebrae and discs. The localizer and the image must be aligned.
+            Matching will based on the majority of the voxels of the first vertebra or disc in the localizer, that intersect with the input segmentation.
         '''.split())
     )
     parser.add_argument(
@@ -76,7 +76,7 @@ def main():
     )
     parser.add_argument(
         '--selected-disc-landmarks', type=int, nargs='+', default=[],
-        help='The selected disc labels to use as a landmark from the disc_landmark_labels.'
+        help='Discs labels to use as landmarks from the --disc-landmark-labels.'
     )
     parser.add_argument(
         '--disc-labels', type=lambda x:list(range(int(x.split('-')[0]), int(x.split('-')[-1]) + 1)), nargs='+', default=[],
@@ -108,11 +108,15 @@ def main():
     )
     parser.add_argument(
         '--vertebrae-extra-labels', type=lambda x:list(range(int(x.split('-')[0]), int(x.split('-')[-1]) + 1)), nargs='+', default=[],
-        help='Extra vertebrae labels to add to add to adjacent vertebrae labels.'
+        help='Extra vertebrae labels to add to adjacent vertebrae labels.'
     )
     parser.add_argument(
         '--region-max-sizes', type=int, nargs=4, default=[5, 12, 6, 1],
         help='The maximum number of discs/vertebrae for each region (Cervical from C3, Thoracic, Lumbar, Sacrum), defaults to [5, 12, 6, 1].'
+    )
+    parser.add_argument(
+        '--region-default-sizes', type=int, nargs=4, default=[5, 12, 5, 1],
+        help='The default number of discs/vertebrae for each region (Cervical from C3, Thoracic, Lumbar, Sacrum), defaults to [5, 12, 5, 1].'
     )
     parser.add_argument(
         '--loc-disc-labels', type=lambda x:list(range(int(x.split('-')[0]), int(x.split('-')[-1]) + 1)), nargs='+', default=[],
@@ -143,16 +147,25 @@ def main():
         help='Output label for the sacrum, defaults to 0 (Do not output).'
     )
     parser.add_argument(
+        '--map-input', type=str, nargs='+', default=[],
+        help=' '.join(f'''
+            A dict mapping labels from input into the output segmentation.
+            The format should be input_label:output_label without any spaces.
+            For example, 7:11 to map the input C1 label to 11 in output segmentation.
+        '''.split())
+    )
+    parser.add_argument(
         '--dilation-size', type=int, default=1,
         help='Number of voxels to dilate before finding connected voxels to label, defaults to 1 (No dilation).'
     )
+    # This argument is not used in the current implementation in inference script
     parser.add_argument(
         '--default-superior-disc', type=int, default=0,
         help='Default superior disc label if no init label found, defaults to 0 (Raise error if init label not found).'
     )
     parser.add_argument(
-        '--override', '-r', action="store_true", default=False,
-        help='Override existing output files, defaults to false (Do not override).'
+        '--overwrite', '-r', action="store_true", default=False,
+        help='Overwrite existing output files, defaults to false (Do not overwrite).'
     )
     parser.add_argument(
         '--max-workers', '-w', type=int, default=mp.cpu_count(),
@@ -177,25 +190,27 @@ def main():
     output_seg_suffix = args.output_seg_suffix
     loc_suffix = args.loc_suffix
     selected_disc_landmarks = args.selected_disc_landmarks
-    disc_labels = [_ for __ in args.disc_labels for _ in (__ if isinstance(__, list) else [__])]
+    disc_labels = [l for raw in args.disc_labels for l in (raw if isinstance(raw, list) else [raw])]
     disc_landmark_labels = args.disc_landmark_labels
     disc_landmark_output_labels = args.disc_landmark_output_labels
     disc_output_step = args.disc_output_step
-    vertebrae_labels = [_ for __ in args.vertebrae_labels for _ in (__ if isinstance(__, list) else [__])]
+    vertebrae_labels = [l for raw in args.vertebrae_labels for l in (raw if isinstance(raw, list) else [raw])]
     vertebrae_landmark_output_labels = args.vertebrae_landmark_output_labels
     vertebrae_output_step = args.vertebrae_output_step
-    vertebrae_extra_labels = [_ for __ in args.vertebrae_extra_labels for _ in (__ if isinstance(__, list) else [__])]
+    vertebrae_extra_labels = [l for raw in args.vertebrae_extra_labels for l in (raw if isinstance(raw, list) else [raw])]
     region_max_sizes = args.region_max_sizes
-    loc_disc_labels = [_ for __ in args.loc_disc_labels for _ in (__ if isinstance(__, list) else [__])]
-    canal_labels = [_ for __ in args.canal_labels for _ in (__ if isinstance(__, list) else [__])]
+    region_default_sizes = args.region_default_sizes
+    loc_disc_labels = [l for raw in args.loc_disc_labels for l in (raw if isinstance(raw, list) else [raw])]
+    canal_labels = [l for raw in args.canal_labels for l in (raw if isinstance(raw, list) else [raw])]
     canal_output_label = args.canal_output_label
-    cord_labels = [_ for __ in args.cord_labels for _ in (__ if isinstance(__, list) else [__])]
+    cord_labels = [l for raw in args.cord_labels for l in (raw if isinstance(raw, list) else [raw])]
     cord_output_label = args.cord_output_label
-    sacrum_labels = [_ for __ in args.sacrum_labels for _ in (__ if isinstance(__, list) else [__])]
+    sacrum_labels = [l for raw in args.sacrum_labels for l in (raw if isinstance(raw, list) else [raw])]
     sacrum_output_label = args.sacrum_output_label
+    map_input_list = args.map_input
     dilation_size = args.dilation_size
     default_superior_disc = args.default_superior_disc
-    override = args.override
+    overwrite = args.overwrite
     max_workers = args.max_workers
     quiet = args.quiet
 
@@ -222,6 +237,7 @@ def main():
             vertebrae_output_step = {vertebrae_output_step}
             vertebrae_extra_labels = {vertebrae_extra_labels}
             region_max_sizes = {region_max_sizes}
+            region_default_sizes = {region_default_sizes}
             loc_disc_labels = {loc_disc_labels}
             canal_labels = {canal_labels}
             canal_output_label = {canal_output_label}
@@ -229,12 +245,19 @@ def main():
             cord_output_label = {cord_output_label}
             sacrum_labels = {sacrum_labels}
             sacrum_output_label = {sacrum_output_label}
+            map_input = {map_input_list}
             dilation_size = {dilation_size}
             default_superior_disc = {default_superior_disc}
-            override = {override}
+            overwrite = {overwrite}
             max_workers = {max_workers}
             quiet = {quiet}
         '''))
+
+    # Load maps into a dict
+    try:
+        map_input_dict = {int(l_in): int(l_out) for l_in, l_out in map(lambda x:x.split(':'), map_input_list)}
+    except:
+        raise ValueError("Input param map_input is not in the right structure. Make sure it is in the right format, e.g., 1:2 3:5")
 
     iterative_label_mp(
         segs_path=segs_path,
@@ -256,6 +279,7 @@ def main():
         vertebrae_output_step=vertebrae_output_step,
         vertebrae_extra_labels=vertebrae_extra_labels,
         region_max_sizes=region_max_sizes,
+        region_default_sizes=region_default_sizes,
         loc_disc_labels=loc_disc_labels,
         canal_labels=canal_labels,
         canal_output_label=canal_output_label,
@@ -263,9 +287,10 @@ def main():
         cord_output_label=cord_output_label,
         sacrum_labels=sacrum_labels,
         sacrum_output_label=sacrum_output_label,
+        map_input_dict=map_input_dict,
         dilation_size=dilation_size,
         default_superior_disc=default_superior_disc,
-        override=override,
+        overwrite=overwrite,
         max_workers=max_workers,
         quiet=quiet,
     )
@@ -290,6 +315,7 @@ def iterative_label_mp(
         vertebrae_output_step=1,
         vertebrae_extra_labels=[],
         region_max_sizes=[5, 12, 6, 1],
+        region_default_sizes=[5, 12, 5, 1],
         loc_disc_labels=[],
         canal_labels=[],
         canal_output_label=0,
@@ -297,9 +323,10 @@ def iterative_label_mp(
         cord_output_label=0,
         sacrum_labels=[],
         sacrum_output_label=0,
+        map_input_dict={},
         dilation_size=1,
         default_superior_disc=0,
-        override=False,
+        overwrite=False,
         max_workers=mp.cpu_count(),
         quiet=False,
     ):
@@ -335,6 +362,7 @@ def iterative_label_mp(
             vertebrae_output_step=vertebrae_output_step,
             vertebrae_extra_labels=vertebrae_extra_labels,
             region_max_sizes=region_max_sizes,
+            region_default_sizes=region_default_sizes,
             loc_disc_labels=loc_disc_labels,
             canal_labels=canal_labels,
             canal_output_label=canal_output_label,
@@ -342,9 +370,10 @@ def iterative_label_mp(
             cord_output_label=cord_output_label,
             sacrum_labels=sacrum_labels,
             sacrum_output_label=sacrum_output_label,
+            map_input_dict=map_input_dict,
             dilation_size=dilation_size,
             default_superior_disc=default_superior_disc,
-            override=override,
+            overwrite=overwrite,
         ),
         seg_path_list,
         output_seg_path_list,
@@ -368,6 +397,7 @@ def _iterative_label(
         vertebrae_output_step=1,
         vertebrae_extra_labels=[],
         region_max_sizes=[5, 12, 6, 1],
+        region_default_sizes=[5, 12, 5, 1],
         loc_disc_labels=[],
         canal_labels=[],
         canal_output_label=0,
@@ -375,9 +405,10 @@ def _iterative_label(
         cord_output_label=0,
         sacrum_labels=[],
         sacrum_output_label=0,
+        map_input_dict={},
         dilation_size=1,
         default_superior_disc=0,
-        override=False,
+        overwrite=False,
     ):
     '''
     Wrapper function to handle IO.
@@ -387,10 +418,10 @@ def _iterative_label(
     loc_path = loc_path and Path(loc_path)
 
     # If the output image already exists and we are not overriding it, return
-    if not override and output_seg_path.exists():
+    if not overwrite and output_seg_path.exists():
         return
 
-    # Load segmentation and localizer images
+    # Load segmentation and localizer
     seg = nib.load(seg_path)
     loc = loc_path and (loc_path.is_file() or None) and nib.load(loc_path)
 
@@ -408,6 +439,7 @@ def _iterative_label(
             vertebrae_output_step=vertebrae_output_step,
             vertebrae_extra_labels=vertebrae_extra_labels,
             region_max_sizes=region_max_sizes,
+            region_default_sizes=region_default_sizes,
             loc_disc_labels=loc_disc_labels,
             canal_labels=canal_labels,
             canal_output_label=canal_output_label,
@@ -415,6 +447,7 @@ def _iterative_label(
             cord_output_label=cord_output_label,
             sacrum_labels=sacrum_labels,
             sacrum_output_label=sacrum_output_label,
+            map_input_dict=map_input_dict,
             dilation_size=dilation_size,
             disc_default_superior_output=default_superior_disc,
         )
@@ -449,6 +482,7 @@ def iterative_label(
         vertebrae_output_step=1,
         vertebrae_extra_labels=[],
         region_max_sizes=[5, 12, 6, 1],
+        region_default_sizes=[5, 12, 5, 1],
         loc_disc_labels=[],
         canal_labels=[],
         canal_output_label=0,
@@ -456,6 +490,7 @@ def iterative_label(
         cord_output_label=0,
         sacrum_labels=[],
         sacrum_output_label=0,
+        map_input_dict={},
         dilation_size=1,
         disc_default_superior_output=0,
     ):
@@ -470,8 +505,7 @@ def iterative_label(
     6. Label the discs with the output labels
     7. Find the matching vertebrae labels to the discs landmarks
     8. Label the vertebrae with the output labels
-    9. Map labels from the iteative algorithm output, to the final output (e.g., map the vertebrae label from the iteative algorithm output to the special sacrum label)
-    10. Map input labels to the final output (e.g., map the input sacrum, canal and spinal cord labels to the output labels)
+    9. Map input labels to the final output (e.g., map the input sacrum, canal and spinal cord labels to the output labels)
 
     Parameters
     ----------
@@ -480,7 +514,7 @@ def iterative_label(
     loc : nibabel.nifti1.Nifti1Image
         Localizer image to use for detecting first vertebrae and disc (optional)
     selected_disc_landmarks : list
-        List of disc labels to use as a landmark from the disc_landmark_labels
+        Discs labels to use as landmarks from the disc_landmark_labels
     disc_labels : list
         The disc labels in the segmentation
     disc_landmark_labels : list
@@ -496,9 +530,11 @@ def iterative_label(
     vertebrae_output_step : int
         The step to take between vertebrae labels in the output
     vertebrae_extra_labels : list
-        Extra vertebrae labels to add to add to adjacent vertebrae labels
+        Extra vertebrae labels to add to adjacent vertebrae labels
     region_max_sizes : list
         The maximum number of discs/vertebrae for each region (Cervical from C3, Thoracic, Lumbar, Sacrum).
+    region_default_sizes : list
+        The default number of discs/vertebrae for each region (Cervical from C3, Thoracic, Lumbar, Sacrum).
     loc_disc_labels : list
         Localizer labels to use for detecting first disc
     canal_labels : list
@@ -513,6 +549,8 @@ def iterative_label(
         Sacrum labels in the segmentation
     sacrum_output_label : int
         Output label for the sacrum
+    map_input_dict : dict
+        A dict mapping labels from input into the output segmentation
     dilation_size : int
         Number of voxels to dilate before finding connected voxels to label
     default_superior_disc : int
@@ -523,9 +561,6 @@ def iterative_label(
     nibabel.nifti1.Nifti1Image
         Segmentation image with labeled vertebrae, IVDs, Spinal Cord and canal
     '''
-    # Region default sizes for the discs and vertebrae (Cervical, Thoracic, Lumbar, Sacrum)
-    region_default_sizes=[5, 12, 5, 1]
-
     seg_data = np.asanyarray(seg.dataobj).round().astype(np.uint8)
 
     output_seg_data = np.zeros_like(seg_data)
@@ -563,18 +598,6 @@ def iterative_label(
         vert_num_labels,
         vert_sorted_labels,
         vert_sorted_z_indices,
-        canal_centerline_indices,
-        mask_aterior_to_canal,
-    )
-
-    # Combine sequential vertebrae labels if there is no disc between them
-    vert_mask_labeled, vert_num_labels, vert_sorted_labels, vert_sorted_z_indices = _merge_vertebrae_labels_with_no_disc_between(
-        seg,
-        vert_mask_labeled,
-        vert_num_labels,
-        vert_sorted_labels,
-        vert_sorted_z_indices,
-        disc_sorted_z_indices,
         canal_centerline_indices,
         mask_aterior_to_canal,
     )
@@ -680,6 +703,36 @@ def iterative_label(
 
         # Sort the labels by their z-index (reversed to go from superior to inferior)
         sorted_z_indices, sorted_labels, is_vert = zip(*sorted(zip(sorted_z_indices, sorted_labels, is_vert))[::-1])
+        sorted_z_indices, sorted_labels, is_vert = list(sorted_z_indices), list(sorted_labels), list(is_vert)
+
+        # Look for two discs with no vertebrae between them, if found, look if there is there is 2 vertebrae without a disc between them just next to the discs and switch the second disk with the first vertebrae, if not found, look if there is there is 2 vertebrae without a disc between them just above to the discs and switch the first disk with the second vertebrae.
+        # This is useful in cases where only the spinous processes is segmented in the last vertebrae and the disc is not segmented
+        for idx in range(len(sorted_labels) - 1):
+            # Cehck if this is two discs without a vertebrae between them
+            if not is_vert[idx] and not is_vert[idx + 1]:
+                # Check if there is two vertebrae without a disc between them just next to the discs
+                if idx < len(sorted_labels) - 3 and is_vert[idx + 2] and is_vert[idx + 3]:
+                    sorted_labels[idx + 1], sorted_labels[idx + 2] = sorted_labels[idx + 2], sorted_labels[idx + 1]
+                    sorted_z_indices[idx + 1], sorted_z_indices[idx + 2] = sorted_z_indices[idx + 2], sorted_z_indices[idx + 1]
+                    is_vert[idx + 1], is_vert[idx + 2] = is_vert[idx + 2], is_vert[idx + 1]
+
+                # Check if there is two vertebrae without a disc between them just above to the discs
+                elif idx > 1 and is_vert[idx - 1] and is_vert[idx - 2]:
+                    sorted_labels[idx], sorted_labels[idx - 1] = sorted_labels[idx - 1], sorted_labels[idx]
+                    sorted_z_indices[idx], sorted_z_indices[idx - 1] = sorted_z_indices[idx - 1], sorted_z_indices[idx]
+                    is_vert[idx], is_vert[idx - 1] = is_vert[idx - 1], is_vert[idx]
+
+        # If there is a disc at the top and 2 vertebrae below it, switch the disc with the first vertebrae
+        if len(sorted_labels) > 2 and not is_vert[0] and is_vert[1] and is_vert[2]:
+            sorted_labels[0], sorted_labels[1] = sorted_labels[1], sorted_labels[0]
+            sorted_z_indices[0], sorted_z_indices[1] = sorted_z_indices[1], sorted_z_indices[0]
+            is_vert[0], is_vert[1] = is_vert[1], is_vert[0]
+
+        # If there is a disc at the bottom and 2 vertebrae above it, switch the disc with the second vertebrae
+        if len(sorted_labels) > 2 and not is_vert[-1] and is_vert[-2] and is_vert[-3]:
+            sorted_labels[-1], sorted_labels[-2] = sorted_labels[-2], sorted_labels[-1]
+            sorted_z_indices[-1], sorted_z_indices[-2] = sorted_z_indices[-2], sorted_z_indices[-1]
+            is_vert[-1], is_vert[-2] = is_vert[-2], is_vert[-1]
 
         # Make a dict mapping disc to vertebrae labels
         disc_output_labels_2vert = dict(zip(all_possible_disc_output_labels, all_possible_vertebrae_output_labels[2:]))
@@ -711,7 +764,12 @@ def iterative_label(
                         map_vert_sorted_labels_2output[l] = o
 
             elif l_vert_output > 0: # This is a vertebrae
-                map_vert_sorted_labels_2output[curr_l] = l_vert_output
+                # If this is the last vertebrae and no disc btween it and the prev vertebrae, map it to the next vertebrae output label
+                # This is useful in cases where only the spinous processes is segmented in the last vertebrae and the disc is not segmented
+                if idx == len(sorted_labels) - 1 and idx > 0 and is_vert[idx - 1] and l_vert_output != all_possible_vertebrae_output_labels[-1]:
+                    map_vert_sorted_labels_2output[curr_l] = all_possible_vertebrae_output_labels[all_possible_vertebrae_output_labels.index(l_vert_output) + 1]
+                else:
+                    map_vert_sorted_labels_2output[curr_l] = l_vert_output
 
         # Label the vertebrae with the output labels superio-inferior
         for l, o in map_vert_sorted_labels_2output.items():
@@ -729,6 +787,11 @@ def iterative_label(
     if sacrum_labels is not None and len(sacrum_labels) > 0 and sacrum_output_label > 0:
         output_seg_data[np.isin(seg_data, sacrum_labels)] = sacrum_output_label
 
+    # Use the map to map input labels to the final output
+    # This is useful to map the input C1 to the output.
+    for orig, new in map_input_dict.items():
+        output_seg_data[seg_data == int(orig)] = int(new)
+
     output_seg = nib.Nifti1Image(output_seg_data, seg.affine, seg.header)
 
     return output_seg
@@ -740,12 +803,15 @@ def _get_canal_centerline_indices(
     '''
     Get the indices of the canal centerline.
     '''
+    # If no canal labels is found in the segmentation, raise an error
+    if not np.any(np.isin(canal_labels, seg_data)):
+        raise ValueError(f"No canal found in the segmentation (canal labels: {canal_labels})")
+
     # Get array of indices for x, y, and z axes
     indices = np.indices(seg_data.shape)
 
     # Create a mask of the canal
     mask_canal = np.isin(seg_data, canal_labels)
-
 
     # Create a mask the canal centerline by finding the middle voxels in x and y axes for each z index
     mask_min_x_indices = np.min(indices[0], where=mask_canal, initial=np.iinfo(indices.dtype).max, keepdims=True, axis=(0, 1))
@@ -901,7 +967,7 @@ def _merge_vertebrae_with_same_label(
     ):
     '''
     Combine sequential vertebrae labels if they have the same value in the original segmentation.
-    This is useful when part part of the vertebrae is not connected to the main part but have the same odd/even value.
+    This is useful when parts of the vertebrae are not touching in the segmentation but have the same odd/even value.
     '''
     if num_labels == 0 or len(labels) <= 1:
         return mask_labeled, num_labels, sorted_labels, sorted_z_indices
@@ -944,54 +1010,6 @@ def _merge_vertebrae_with_same_label(
 
     return mask_labeled, num_labels, list(sorted_labels), list(sorted_z_indices)
 
-def _merge_vertebrae_labels_with_no_disc_between(
-        seg,
-        mask_labeled,
-        num_labels,
-        sorted_labels,
-        sorted_z_indices,
-        disc_sorted_z_indices,
-        canal_centerline_indices,
-        mask_aterior_to_canal,
-    ):
-    '''
-    Combine sequential vertebrae labels if there is no disc between them.
-    '''
-    if num_labels == 0 or len(disc_sorted_z_indices) == 0:
-        return mask_labeled, num_labels, sorted_labels, sorted_z_indices
-
-    new_sorted_labels = []
-
-    # Store the previous label and the z index of the previous label
-    prev_l, prev_z = 0, 0
-
-    for l, z in zip(sorted_labels, sorted_z_indices):
-        # Do not combine first and last vertebrae since it can be C1 or only contain the spinous process
-        if l not in sorted_labels[:2] and l != sorted_labels[-1] and prev_l > 0 and not any(z < _ < prev_z for _ in disc_sorted_z_indices):
-            # Combine the current label with the previous label
-            mask_labeled[mask_labeled == l] = prev_l
-            num_labels -= 1
-
-        else:
-            # Add the current label to the new sorted labels
-            new_sorted_labels.append(l)
-            prev_l, prev_z = l, z
-
-    sorted_labels = new_sorted_labels
-
-    # Reduce size of mask_labeled
-    if mask_labeled.max() < np.iinfo(np.uint8).max:
-        mask_labeled = mask_labeled.astype(np.uint8)
-    elif mask_labeled.max() < np.iinfo(np.uint16).max:
-        mask_labeled = mask_labeled.astype(np.uint16)
-
-    # Sort the labels by their z-index (reversed to go from superior to inferior)
-    sorted_z_indices, sorted_labels = _sort_labels_si(
-        mask_labeled, sorted_labels, canal_centerline_indices, mask_aterior_to_canal
-    )
-
-    return mask_labeled, num_labels, list(sorted_labels), list(sorted_z_indices)
-
 def _merge_extra_labels_with_adjacent_vertebrae(
         seg,
         mask_labeled,
@@ -1004,7 +1022,8 @@ def _merge_extra_labels_with_adjacent_vertebrae(
     ):
     '''
     Combine extra labels with adjacent vertebrae labels.
-    This is useful for combining remaining of general vertebrae labels that introduce for region based training but not used in the final segmentation.
+    This is useful to combine segmentations of vertebrae introduced during region-based training, where the model sometimes outputs a general vertebrae label instead of the specific odd or even vertebrae.
+    The process adjusts these remnants by merging them with the closest odd or even vertebrae to ensure correct segmentation.
     '''
     if num_labels == 0 or len(extra_labels) == 0:
         return mask_labeled, num_labels, sorted_labels, sorted_z_indices
@@ -1060,18 +1079,10 @@ def _get_landmark_output_labels(
     # Init dict to store the output labels for the landmarks
     map_landmark_outputs = {}
 
-    # First we try to look for the landmarks in the segmentation
-    for l in selected_landmarks:
-        ############################################################################################################
-        # TODO Remove this reake when we trust all the landmarks to get all landmarks instead of the first 2
-        if len(map_landmark_outputs) > 0 and selected_landmarks.index(l) > 1:
-            break
-        ############################################################################################################
-        if l in map_landmark_labels and l in seg_data:
-            map_landmark_outputs[np.argmax(np.bincount(mask_labeled[seg_data == l].flat))] = map_landmark_labels[l]
+    mask_seg_data_landmarks = np.isin(seg_data, landmark_labels)
 
-    # If no init label found, set it from the localizer
-    if len(map_landmark_outputs) == 0 and loc_data is not None:
+    # First we try to set initial output labels from the localizer
+    if loc_data is not None:
         # Make mask for the intersection of the localizer labels and the labels in the segmentation
         mask = np.isin(loc_data, loc_labels) * np.isin(mask_labeled, sorted_labels)
         mask_labeled_masked = mask * mask_labeled
@@ -1090,6 +1101,20 @@ def _get_landmark_output_labels(
             if first_sorted_labels_in_loc > 0:
                 # Get the output label for first_sorted_labels_in_loc, the label from the localizer that has the most voxels in it
                 map_landmark_outputs[first_sorted_labels_in_loc] = np.argmax(np.bincount(loc_data_masked[mask_labeled_masked == first_sorted_labels_in_loc].flat))
+
+    # If no output label found from the localizer, try to set the output labels from landmarks in the segmentation
+    if len(map_landmark_outputs) == 0:
+        for l in selected_landmarks:
+            ############################################################################################################
+            # TODO Remove this reake when we trust all the landmarks to get all landmarks instead of the first 2
+            if len(map_landmark_outputs) > 0 and selected_landmarks.index(l) > 1:
+                break
+            ############################################################################################################
+            if l in map_landmark_labels and l in seg_data:
+                mask_labeled_l = np.argmax(np.bincount(mask_labeled[seg_data == l].flat))
+                # We map only if the landmark cover the majority of the voxels in the mask_labeled label
+                if np.argmax(np.bincount(seg_data[mask_seg_data_landmarks & (mask_labeled == mask_labeled_l)].flat)) == l:
+                    map_landmark_outputs[mask_labeled_l] = map_landmark_labels[l]
 
     # If no init label found, set the default superior label
     if len(map_landmark_outputs) == 0 and default_superior_output > 0:

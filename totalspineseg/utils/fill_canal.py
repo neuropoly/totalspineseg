@@ -75,8 +75,8 @@ def main():
         help='Take the largest spinal cord component.'
     )
     parser.add_argument(
-        '--override', '-r', action="store_true", default=False,
-        help='Override existing output files, defaults to false (Do not override).'
+        '--overwrite', '-r', action="store_true", default=False,
+        help='Overwrite existing output files, defaults to false (Do not overwrite).'
     )
     parser.add_argument(
         '--max-workers', '-w', type=int, default=mp.cpu_count(),
@@ -102,7 +102,7 @@ def main():
     cord_label = args.cord_label
     largest_canal = args.largest_canal
     largest_cord = args.largest_cord
-    override = args.override
+    overwrite = args.overwrite
     max_workers = args.max_workers
     quiet = args.quiet
 
@@ -121,7 +121,7 @@ def main():
             cord_label = {cord_label}
             largest_canal = {largest_canal}
             largest_cord = {largest_cord}
-            override = {override}
+            overwrite = {overwrite}
             max_workers = {max_workers}
             quiet = {quiet}
         '''))
@@ -138,7 +138,7 @@ def main():
         cord_label=cord_label,
         largest_canal=largest_canal,
         largest_cord=largest_cord,
-        override=override,
+        overwrite=overwrite,
         max_workers=max_workers,
         quiet=quiet,
     )
@@ -155,7 +155,7 @@ def fill_canal_mp(
         cord_label=0,
         largest_canal=False,
         largest_cord=False,
-        override=False,
+        overwrite=False,
         max_workers=mp.cpu_count(),
         quiet=False,
     ):
@@ -183,7 +183,7 @@ def fill_canal_mp(
             cord_label=cord_label,
             largest_canal=largest_canal,
             largest_cord=largest_cord,
-            override=override,
+            overwrite=overwrite,
         ),
         seg_path_list,
         output_seg_path_list,
@@ -199,7 +199,7 @@ def _fill_canal(
         cord_label=0,
         largest_canal=False,
         largest_cord=False,
-        override=False,
+        overwrite=False,
     ):
     '''
     Wrapper function to handle IO.
@@ -208,7 +208,7 @@ def _fill_canal(
     output_seg_path = Path(output_seg_path)
 
     # If the output image already exists and we are not overriding it, return
-    if not override and output_seg_path.exists():
+    if not overwrite and output_seg_path.exists():
         return
 
     # Load segmentation

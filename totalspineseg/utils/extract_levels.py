@@ -70,8 +70,8 @@ def main():
         help='The label for C1 vertebra in the segmentation, if provided it will be used to determine if C1 is in the segmentation.'
     )
     parser.add_argument(
-        '--override', '-r', action="store_true", default=False,
-        help='Override existing output files, defaults to false (Do not override).'
+        '--overwrite', '-r', action="store_true", default=False,
+        help='Overwrite existing output files, defaults to false (Do not overwrite).'
     )
     parser.add_argument(
         '--max-workers', '-w', type=int, default=mp.cpu_count(),
@@ -94,9 +94,9 @@ def main():
     seg_suffix = args.seg_suffix
     output_seg_suffix = args.output_seg_suffix
     canal_labels = args.canal_labels
-    disc_labels = [_ for __ in args.disc_labels for _ in (__ if isinstance(__, list) else [__])]
+    disc_labels = [l for raw in args.disc_labels for l in (raw if isinstance(raw, list) else [raw])]
     c1_label = args.c1_label
-    override = args.override
+    overwrite = args.overwrite
     max_workers = args.max_workers
     quiet = args.quiet
 
@@ -114,7 +114,7 @@ def main():
             canal_labels = {canal_labels}
             disc_labels = {disc_labels}
             c1_label = {c1_label}
-            override = {override}
+            overwrite = {overwrite}
             max_workers = {max_workers}
             quiet = {quiet}
         '''))
@@ -130,7 +130,7 @@ def main():
         canal_labels=canal_labels,
         disc_labels=disc_labels,
         c1_label=c1_label,
-        override=override,
+        overwrite=overwrite,
         max_workers=max_workers,
         quiet=quiet,
     )
@@ -146,7 +146,7 @@ def extract_levels_mp(
         canal_labels=[],
         disc_labels=[],
         c1_label=0,
-        override=False,
+        overwrite=False,
         max_workers=mp.cpu_count(),
         quiet=False,
     ):
@@ -173,7 +173,7 @@ def extract_levels_mp(
             canal_labels=canal_labels,
             disc_labels=disc_labels,
             c1_label=c1_label,
-            override=override,
+            overwrite=overwrite,
         ),
         seg_path_list,
         output_seg_path_list,
@@ -188,7 +188,7 @@ def _extract_levels(
         canal_labels=[],
         disc_labels=[],
         c1_label=0,
-        override=False,
+        overwrite=False,
     ):
     '''
     Wrapper function to handle IO.
@@ -197,7 +197,7 @@ def _extract_levels(
     output_seg_path = Path(output_seg_path)
 
     # If the output image already exists and we are not overriding it, return
-    if not override and output_seg_path.exists():
+    if not overwrite and output_seg_path.exists():
         return
 
     # Load segmentation
@@ -280,7 +280,7 @@ def extract_levels(
     mask_canal_centerline = mask_canal * mask_mid_x * mask_mid_y
 
     # Get the indices of the canal centerline
-    mask_canal_centerline_indices = np.array(np.nonzero(mask_canal_centerline))
+    canal_centerline_indices = np.array(np.nonzero(mask_canal_centerline)).T
 
     # Get the labels of the discs in the segmentation
     disc_labels_in_seg = np.array(disc_labels)[np.isin(disc_labels, seg_data)]
@@ -294,25 +294,33 @@ def extract_levels(
     out_labels = list(range(3 + first_disk_idx, 3 + first_disk_idx + len(disc_labels_in_seg)))
 
     # Filter the discs that are in the segmentation
-    map_labels = zip(disc_labels_in_seg, out_labels)
+    map_labels = dict(zip(disc_labels_in_seg, out_labels))
 
-    # Loop over the discs from C2-C3 to L5-S1 and find the closest voxel in the canal centerline
-    for disc_label, out_label in map_labels:
-        # Create a mask of the disc
-        mask_disc = seg_data == disc_label
+    # Create mask of the discs
+    mask_discs = np.isin(seg_data, disc_labels_in_seg)
 
-        # Find the index of the most posterior voxel in the disc
-        disc_posterior_voxel_index_y = np.min(indices[1], where=mask_disc, initial=np.iinfo(indices.dtype).max)
-        disc_posterior_voxel_index = np.mean(indices, where=[(mask_disc * indices[1]) == disc_posterior_voxel_index_y], axis=(1, 2, 3)).round().astype(indices.dtype)
+    # Get list of indices for all the discs voxels
+    discs_indices = np.nonzero(mask_discs)
+    
+    # Get the matching labels for the discs indices
+    discs_indices_labels = seg_data[discs_indices]
 
-        # Calculate the distance from disc posterior voxel to each voxel in the canal centerline
-        centerline_distances_from_disc = np.linalg.norm(mask_canal_centerline_indices - disc_posterior_voxel_index[:, None], axis=0)
+    # Make the discs_indices 2D array
+    discs_indices = np.array(discs_indices).T
 
-        # Find the voxel in the canal centerline closest to the disc posterior voxel
-        voxel_in_centerline_closest_to_disc = tuple(mask_canal_centerline_indices[:, np.argmin(centerline_distances_from_disc)])
+    # Calculate the distance of each disc voxel to each canal centerline voxel
+    discs_distances_from_all_centerline = np.linalg.norm(discs_indices[:, None, :] - canal_centerline_indices[None, ...], axis=2)
 
-        # Set the output label
-        output_seg_data[voxel_in_centerline_closest_to_disc] = out_label
+    # Find the minimum distance for each disc voxel and the corresponding canal centerline index
+    discs_distance_from_centerline = np.min(discs_distances_from_all_centerline, axis=1)
+    discs_centerline_indices = canal_centerline_indices[np.argmin(discs_distances_from_all_centerline, axis=1)]
+
+    # Find the closest canal centerline voxel to each disc label
+    disc_labels_centerline_indices = [discs_centerline_indices[discs_indices_labels == label][np.argmin(discs_distance_from_centerline[discs_indices_labels == label])] for label in disc_labels_in_seg]
+
+    # Set the output labels to the closest canal centerline voxels
+    for idx, label in zip(disc_labels_centerline_indices, disc_labels_in_seg):
+        output_seg_data[tuple(idx)] = map_labels[label]
 
     # If C2-C3 is in the segmentation, set 1 and 2 to the superior voxels in the canal centerline and the middle voxels between C2-C3 and the superior voxels
     if 3 in output_seg_data:

@@ -30,7 +30,7 @@ def main():
     )
     parser.add_argument(
         'dst', type=Path,
-        help='The destnation folder, will be created if not exist (required).'
+        help='The destination folder, will be created if not exist (required).'
     )
     parser.add_argument(
         '--pattern', '-p', type=str, nargs='+', default=['**/*'],
@@ -43,17 +43,21 @@ def main():
     parser.add_argument(
         '--replace', '-t', type=lambda x:x.split(':'), nargs='+', default=[],
         help=' '.join(f'''
-            Replace string in the destination path befor copying using regex. (e.g. -r "_w.nii.gz:_w_0001.nii.gz").
-            Notice that the replacment is done on the full path.
+            Replace string in the destination path before copying using regex. (e.g. -r "_w.nii.gz:_w_0001.nii.gz").
+            Notice that the replacement is done on the full path.
         '''.split())
     )
     parser.add_argument(
-        '--override', '-r', action="store_true", default=False,
-        help='Override existing output files, defaults to false (Do not override).'
+        '--tries', '-n', type=int, default=10,
+        help='Number of times to try copying the file in case of failure (default is 10).'
+    )
+    parser.add_argument(
+        '--overwrite', '-r', action="store_true", default=False,
+        help='Overwrite existing output files, defaults to false (Do not overwrite).'
     )
     parser.add_argument(
         '--max-workers', '-w', type=int, default=mp.cpu_count(),
-        help='Max worker to run in parallel proccess, defaults to multiprocessing.cpu_count().'
+        help='Max workers to run in parallel processes, defaults to multiprocessing.cpu_count().'
     )
     parser.add_argument(
         '--quiet', '-q', action="store_true", default=False,
@@ -69,7 +73,8 @@ def main():
     pattern = args.pattern
     flat = args.flat
     replace = dict(args.replace)
-    override = args.override
+    num_tries = args.tries
+    overwrite = args.overwrite
     max_workers = args.max_workers
     quiet = args.quiet
 
@@ -82,7 +87,8 @@ def main():
             pattern = {pattern}
             flat = {flat}
             replace = {replace}
-            override = {override}
+            tries = {num_tries}
+            overwrite = {overwrite}
             max_workers = {max_workers}
             quiet = {quiet}
         '''))
@@ -93,7 +99,8 @@ def main():
         pattern=pattern,
         flat=flat,
         replace=replace,
-        override=override,
+        num_tries=num_tries,
+        overwrite=overwrite,
         max_workers=max_workers,
         quiet=quiet,
     )
@@ -104,7 +111,8 @@ def cpdir_mp(
         pattern=['**/*'],
         flat=False,
         replace={},
-        override=False,
+        num_tries=1,
+        overwrite=False,
         max_workers=mp.cpu_count(),
         quiet=False,
     ):
@@ -129,7 +137,8 @@ def cpdir_mp(
     process_map(
         partial(
             _cpdir,
-            override=override,
+            num_tries=num_tries,
+            overwrite=overwrite,
         ),
         src_path_list,
         dst_path_list,
@@ -141,18 +150,42 @@ def cpdir_mp(
 def _cpdir(
         src_path,
         dst_path,
-        override=False,
+        num_tries=1,
+        overwrite=False,
     ):
     '''
     Copy file from src to dst.
     '''
     # If the output already exists and we are not overriding it, return
-    if not override and dst_path.exists():
+    if not overwrite and dst_path.exists():
         return
 
-    # Make sure dst directory exists and copy
+    # Make sure dst directory exists
     dst_path.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(src_path, dst_path)
+
+    # Try copying up to num_tries times
+    for attempt in range(num_tries):
+        try:
+            # Copy the file
+            shutil.copy2(src_path, dst_path)
+            # Check if destination file exists before accessing its size
+            if dst_path.exists() and src_path.stat().st_size == dst_path.stat().st_size:
+                # Successful copy
+                break
+            else:
+                # File sizes do not match or dst_path does not exist
+                if attempt == num_tries - 1:
+                    print(f"Warning: File sizes do not match after copying {src_path} to {dst_path}")
+                else:
+                    # Delete the destination file before retrying
+                    dst_path.unlink(missing_ok=True)
+        except OSError as e:
+            # Catch OSError
+            if attempt == num_tries - 1:
+                print(f"Error copying {src_path} to {dst_path}: {e}")
+            else:
+                # Delete the destination file before retrying
+                dst_path.unlink(missing_ok=True)
 
 if __name__ == '__main__':
     main()

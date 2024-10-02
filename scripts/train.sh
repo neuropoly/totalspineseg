@@ -37,9 +37,6 @@ FOLD=${2:-0}
 TOTALSPINESEG="$(realpath "${TOTALSPINESEG:-totalspineseg}")"
 TOTALSPINESEG_DATA="$(realpath "${TOTALSPINESEG_DATA:-data}")"
 
-# ensure the custom nnUNetTrainer is defined in the nnUNet library and add it if it is not
-totalspineseg_add_nnunet_trainer
-
 # Get the number of CPUs
 CORES=${SLURM_JOB_CPUS_PER_NODE:-$(lscpu -p | egrep -v '^#' | wc -l)}
 
@@ -65,9 +62,9 @@ export nnUNet_preprocessed="$TOTALSPINESEG_DATA"/nnUNet/preprocessed
 export nnUNet_results="$TOTALSPINESEG_DATA"/nnUNet/results
 export nnUNet_exports="$TOTALSPINESEG_DATA"/nnUNet/exports
 
-nnUNetTrainer=nnUNetTrainer_16000epochs
-nnUNetPlanner=ExperimentPlanner
-nnUNetPlans=nnUNetPlans
+nnUNetTrainer=${3:-nnUNetTrainer_DASegOrd0_NoMirroring}
+nnUNetPlanner=${4:-nnUNetPlannerResEncL}
+nnUNetPlans=${5:-nnUNetResEncUNetLPlans}
 configuration=3d_fullres
 data_identifier=nnUNetPlans_3d_fullres
 
@@ -84,28 +81,34 @@ echo "configuration=${configuration}"
 echo "data_identifier=${data_identifier}"
 echo "JOBSNN=${JOBSNN}"
 echo "DEVICE=${DEVICE}"
+echo "DATASETS=${DATASETS[@]}"
+echo "FOLD=${FOLD}"
 echo ""
 
-echo "Working with datasets: ${DATASETS[@]}, fold: $FOLD"
-
 for d in ${DATASETS[@]}; do
-
     # Get the dataset name
     d_name=$(basename "$(ls -d "$nnUNet_raw"/Dataset${d}_*)")
 
-    if [ ! -f "$nnUNet_preprocessed"/$d_name/${nnUNetPlans}.json ]; then
-        echo "Preprocess dataset $d_name"
-        nnUNetv2_plan_and_preprocess -d $d -pl $nnUNetPlanner -c $configuration -npfp $JOBSNN -np $JOBSNN --verify_dataset_integrity
-        # Change the patch size to [224, 160, 80] for dataset 103 and [128, 96, 96] for 101 and 102
-        if [ $d -eq 103 ]; then
-            jq ".configurations[\"${configuration}\"].patch_size = [224, 160, 80]" "$nnUNet_preprocessed"/$d_name/${nnUNetPlans}.json > "$nnUNet_preprocessed"/$d_name/${nnUNetPlans}_new.json
-        else
-            jq ".configurations[\"${configuration}\"].patch_size = [128, 96, 96]" "$nnUNet_preprocessed"/$d_name/${nnUNetPlans}.json > "$nnUNet_preprocessed"/$d_name/${nnUNetPlans}_new.json
-        fi
-        mv "$nnUNet_preprocessed"/$d_name/${nnUNetPlans}_new.json "$nnUNet_preprocessed"/$d_name/${nnUNetPlans}.json
+    if [ ! -f "$nnUNet_preprocessed"/$d_name/dataset_fingerprint.json ]; then
+        echo "Extracting fingerprint dataset $d_name"
+        # --verify_dataset_integrity not working in nnunetv2==2.4.2
+        # https://github.com/MIC-DKFZ/nnUNet/issues/2144
+        # But nnUNetTrainer_DASegOrd0_NoMirroring not working in nnunetv2==2.5.1
+        # https://github.com/MIC-DKFZ/nnUNet/issues/2480
+        nnUNetv2_extract_fingerprint -d $d -np $JOBSNN #--verify_dataset_integrity
     fi
 
-    echo "Training nnUNet model for dataset $d_name"
+    if [ ! -f "$nnUNet_preprocessed"/$d_name/${nnUNetPlans}.json ]; then
+        echo "Planning dataset $d_name"
+        nnUNetv2_plan_experiment -d $d -pl $nnUNetPlanner -overwrite_plans_name $nnUNetPlans
+    fi
+
+    # If already preprocess do not preprocess again
+    if [[ ! -d "$nnUNet_preprocessed"/$d_name/$data_identifier || ! $(find "$nnUNet_raw"/$d_name/labelsTr -name "*.nii.gz" | wc -l) -eq $(find "$nnUNet_preprocessed"/$d_name/$data_identifier -name "*.npz" | wc -l) || ! $(find "$nnUNet_raw"/$d_name/labelsTr -name "*.nii.gz" | wc -l) -eq $(find "$nnUNet_preprocessed"/$d_name/$data_identifier -name "*.pkl" | wc -l) ]]; then
+        nnUNetv2_preprocess -d $d -plans_name $nnUNetPlans -c $configuration -np $JOBSNN
+    fi
+
+    echo "Training dataset $d_name fold $FOLD"
     # if already decompressed do not decompress again
     if [ $(find "$nnUNet_preprocessed"/$d_name/$data_identifier -name "*.npy" | wc -l) -eq $(( 2 * $(find "$nnUNet_preprocessed"/$d_name/$data_identifier -name "*.npz" | wc -l))) ]; then DECOMPRESSED="--use_compressed"; else DECOMPRESSED=""; fi
     nnUNetv2_train $d $configuration $FOLD -tr $nnUNetTrainer -p $nnUNetPlans --c -device $DEVICE $DECOMPRESSED

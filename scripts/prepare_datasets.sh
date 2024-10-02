@@ -75,8 +75,8 @@ for dsp in "$bids"/*; do
     echo "Working on $dsn"
 
     echo "Adding label-canal_seg and label-SC_seg to label-spine_dseg"
-    totalspineseg_map_labels -m 1:201 -s "$bids"/$dsn/derivatives/labels_iso -o "$bids"/$dsn/derivatives/labels_iso  --update-segs-dir "$bids"/$dsn/derivatives/labels_iso --seg-suffix "_label-canal_seg" --output-seg-suffix "_label-spine_dseg" --update-seg-suffix "_label-spine_dseg" -d "sub-" -u "anat" -r -w $JOBS
-    totalspineseg_map_labels -m 1:200 -s "$bids"/$dsn/derivatives/labels_iso -o "$bids"/$dsn/derivatives/labels_iso  --update-segs-dir "$bids"/$dsn/derivatives/labels_iso --seg-suffix "_label-SC_seg" --output-seg-suffix "_label-spine_dseg" --update-seg-suffix "_label-spine_dseg" -d "sub-" -u "anat" -r -w $JOBS
+    totalspineseg_map_labels -m 1:2 -s "$bids"/$dsn/derivatives/labels_iso -o "$bids"/$dsn/derivatives/labels_iso  --update-segs-dir "$bids"/$dsn/derivatives/labels_iso --seg-suffix "_label-canal_seg" --output-seg-suffix "_label-spine_dseg" --update-seg-suffix "_label-spine_dseg" -d "sub-" -u "anat" -r -w $JOBS
+    totalspineseg_map_labels -m 1:1 -s "$bids"/$dsn/derivatives/labels_iso -o "$bids"/$dsn/derivatives/labels_iso  --update-segs-dir "$bids"/$dsn/derivatives/labels_iso --seg-suffix "_label-SC_seg" --output-seg-suffix "_label-spine_dseg" --update-seg-suffix "_label-spine_dseg" -d "sub-" -u "anat" -r -w $JOBS
 
     echo "Copy images and labels into the nnUNet dataset folder"
     totalspineseg_cpdir "$bids"/$dsn "$nnUNet_raw"/$SRC_DATASET/imagesTr -p "sub-*/anat/sub-*.nii.gz" -f -t sub-:sub-${dsw} .nii.gz:_0000.nii.gz -r -w $JOBS
@@ -124,7 +124,7 @@ done
 
 if [ $NOAUG -eq 0 ]; then
     echo "Generate augmentations"
-    totalspineseg_augment -i "$nnUNet_raw"/$SRC_DATASET/imagesTr -s "$nnUNet_raw"/$SRC_DATASET/labelsTr -o "$nnUNet_raw"/Dataset100_TotalSpineSeg_Aug/imagesTr -g "$nnUNet_raw"/Dataset100_TotalSpineSeg_Aug/labelsTr --labels2image --seg-classes 202-224 18-41,92 200 201 -r -w $JOBS
+    totalspineseg_augment -i "$nnUNet_raw"/$SRC_DATASET/imagesTr -s "$nnUNet_raw"/$SRC_DATASET/labelsTr -o "$nnUNet_raw"/Dataset100_TotalSpineSeg_Aug/imagesTr -g "$nnUNet_raw"/Dataset100_TotalSpineSeg_Aug/labelsTr --labels2image --seg-classes 1 2 11-50 63-100 -r -w $JOBS
     totalspineseg_cpdir "$nnUNet_raw"/$SRC_DATASET "$nnUNet_raw"/Dataset100_TotalSpineSeg_Aug -p "*Ts/*.nii.gz" -r -w $JOBS
     totalspineseg_transform_seg2image -i "$nnUNet_raw"/Dataset100_TotalSpineSeg_Aug/imagesTr -s "$nnUNet_raw"/Dataset100_TotalSpineSeg_Aug/labelsTr -o "$nnUNet_raw"/Dataset100_TotalSpineSeg_Aug/labelsTr -r -w $JOBS
     SRC_DATASET=Dataset100_TotalSpineSeg_Aug
@@ -145,11 +145,11 @@ if [ $PREP_102 -eq 1 ]; then
     # This make a copy of the labelsTr then later we will map the labels so the odds and evens IVDs are switched
     totalspineseg_cpdir "$nnUNet_raw"/$SRC_DATASET "$nnUNet_raw"/Dataset102_TotalSpineSeg_step2 -p "imagesTr/*.nii.gz" -t "_0000.nii.gz:_o2e_0000.nii.gz" -r -w $JOBS
     # This will map the labels to the second input channel
-    totalspineseg_map_labels -m "$resources"/labels_maps/nnunet_step2_input.json -s "$nnUNet_raw"/$SRC_DATASET/labelsTr -o "$nnUNet_raw"/Dataset102_TotalSpineSeg_step2/imagesTr --output-seg-suffix _0001 -r -w $JOBS
+    totalspineseg_extract_alternate -s "$nnUNet_raw"/$SRC_DATASET/labelsTr -o "$nnUNet_raw"/Dataset102_TotalSpineSeg_step2/imagesTr --labels 63-100 --prioratize-labels 63 65 67 72 74 76 78 80 82 92 94 --output-seg-suffix _0001 -r -w $JOBS -r
     # This will map the labels to the extra images second input channel so the odd and even IVDs are switched
-    totalspineseg_map_labels -m "$resources"/labels_maps/nnunet_step2_input_o2e.json -s "$nnUNet_raw"/$SRC_DATASET/labelsTr -o "$nnUNet_raw"/Dataset102_TotalSpineSeg_step2/imagesTr --output-seg-suffix _o2e_0001 -r -w $JOBS
+    totalspineseg_extract_alternate -s "$nnUNet_raw"/$SRC_DATASET/labelsTr -o "$nnUNet_raw"/Dataset102_TotalSpineSeg_step2/imagesTr --labels 63-100 --prioratize-labels 64 66 71 73 75 77 79 81 91 93 95 --output-seg-suffix _o2e_0001 -r -w $JOBS -r
     # This will map the labels to the second input channel for the test set
-    totalspineseg_map_labels -m "$resources"/labels_maps/nnunet_step2_input.json -s "$nnUNet_raw"/$SRC_DATASET/labelsTs -o "$nnUNet_raw"/Dataset102_TotalSpineSeg_step2/imagesTs --output-seg-suffix _0001 -r -w $JOBS
+    totalspineseg_extract_alternate -s "$nnUNet_raw"/$SRC_DATASET/labelsTs -o "$nnUNet_raw"/Dataset102_TotalSpineSeg_step2/imagesTs --labels 63-100 --prioratize-labels 63 65 67 72 74 76 78 80 82 92 94 --output-seg-suffix _0001 -r -w $JOBS -r
     totalspineseg_map_labels -m "$resources"/labels_maps/nnunet_step2.json -s "$nnUNet_raw"/$SRC_DATASET/labelsTr -o "$nnUNet_raw"/Dataset102_TotalSpineSeg_step2/labelsTr -r -w $JOBS
     # This will map the extra images labels so the odd and even IVDs are switched
     totalspineseg_map_labels -m "$resources"/labels_maps/nnunet_step2_o2e.json -s "$nnUNet_raw"/$SRC_DATASET/labelsTr -o "$nnUNet_raw"/Dataset102_TotalSpineSeg_step2/labelsTr --output-seg-suffix _o2e -r -w $JOBS
