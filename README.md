@@ -192,7 +192,7 @@ Key points:
 
 TotalSpineSeg supports using localizer images to improve the labeling process, particularly useful for images with different fields of view (FOV) where landmarks like C1 and sacrum may not be visible. It uses localizer information to accurately label vertebrae and discs in the main image.
 
-![Localizer](https://github.com/user-attachments/assets/5acf0208-a322-46f9-bbde-b3c961a87ec4)
+![Localizer](https://github.com/user-attachments/assets/c00ec3b6-2f04-4bbc-be08-b7ae1373b6ae)
 
 Example of directory structure:
 
@@ -228,7 +228,7 @@ Note: If the localizer and main image files have the same names, you can omit th
 
 TotalSpineSeg demonstrates robust performance across a wide range of imaging parameters. Here are some examples of the model output:
 
-![Model Output Preview](https://github.com/user-attachments/assets/78da2599-3bf2-4bc0-95b2-328acecd956f)
+![Model Output Preview](https://github.com/user-attachments/assets/b4c85ce8-c59b-4ab1-b02a-37638c9ac375)
 
 The examples shown above include segmentation results on various contrasts (T1w, T2w, STIR, MTS, T2star, and even CT images), acquisition orientations (sagittal, axial), and resolutions.
 
