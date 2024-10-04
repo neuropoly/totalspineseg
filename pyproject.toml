@@ -62,7 +62,7 @@ homepage = "https://github.com/neuropoly/totalspineseg"
 repository = "https://github.com/neuropoly/totalspineseg"
 Dataset101_TotalSpineSeg_step1 = "https://github.com/neuropoly/totalspineseg/releases/download/r20240921/Dataset101_TotalSpineSeg_step1_r20240921.zip"
 Dataset102_TotalSpineSeg_step2 = "https://github.com/neuropoly/totalspineseg/releases/download/r20240921/Dataset102_TotalSpineSeg_step2_r20240921.zip"
-Dataset300_SacrumDataset = ""
+Dataset300_SacrumDataset = "https://github.com/neuropoly/totalspineseg/releases/download/sacrum-seg/Dataset300_SacrumDataset.zip"
 
 [project.scripts]
 totalspineseg = "totalspineseg.inference:main"
