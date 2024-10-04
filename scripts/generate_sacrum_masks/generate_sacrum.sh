@@ -103,7 +103,7 @@ cd "$DATASETS_PATH"
 FILES=$(jq -r '.TESTING[]' "${PATH_CONFIG}")
 
 # Download and install nnUNet weights
-# download_weights "$NNUNET_MODEL" "$NNUNET_RESULTS" "$NNUNET_EXPORTS"
+download_weights "$NNUNET_MODEL" "$NNUNET_RESULTS" "$NNUNET_EXPORTS"
 
 # Loop across the files
 for FILE_PATH in $FILES; do
