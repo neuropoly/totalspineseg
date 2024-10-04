@@ -32,6 +32,7 @@ NNUNET_RESULTS="$TOTALSPINESEG_DATA/nnUNet/results/sacrum"
 NNUNET_EXPORTS="$TOTALSPINESEG_DATA/nnUNet/exports"
 NNUNET_MODEL="Dataset300_SacrumDataset"
 PATH_NNUNET_MODEL="$NNUNET_RESULTS/$NNUNET_MODEL/nnUNetTrainer__nnUNetPlans__3d_fullres/"
+ZIP_URL="https://github.com/neuropoly/totalspineseg/releases/download/sacrum-seg/Dataset300_SacrumDataset.zip"
 PROCESS="nnUNet3D"
 DERIVATIVE_FOLDER="labels"
 FOLD="0"
@@ -83,11 +84,12 @@ keep_largest_component(){
 # Keep largest component only
 download_weights(){
   local dataset="$1"
-  local download_path="$2"
-  local export_path="$2"
+  local url="$2"
+  local results_path="$3"
+  local exports_path="$4"
 
   # Call python function
-  python3 "${PATH_REPO}"/totalspineseg/utils/download_weights_nnunet.py --nnunet-dataset "${dataset}" --download-folder "${download_path}" --export-folder "${export_path}"
+  totalspineseg_install_weight --nnunet-dataset "${dataset}" --zip-url "${url}" --results-folder "${results_path}" --exports-folder "${exports_path}"
 }
 
 # ======================================================================================================================
@@ -103,7 +105,7 @@ cd "$DATASETS_PATH"
 FILES=$(jq -r '.TESTING[]' "${PATH_CONFIG}")
 
 # Download and install nnUNet weights
-download_weights "$NNUNET_MODEL" "$NNUNET_RESULTS" "$NNUNET_EXPORTS"
+download_weights "$NNUNET_MODEL" "$ZIP_URL" "$NNUNET_RESULTS" "$NNUNET_EXPORTS"
 
 # Loop across the files
 for FILE_PATH in $FILES; do

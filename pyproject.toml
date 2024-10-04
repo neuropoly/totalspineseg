@@ -81,6 +81,7 @@ totalspineseg_crop_image2seg = "totalspineseg.utils.crop_image2seg:main"
 totalspineseg_extract_soft = "totalspineseg.utils.extract_soft:main"
 totalspineseg_extract_levels = "totalspineseg.utils.extract_levels:main"
 totalspineseg_extract_alternate = "totalspineseg.utils.extract_alternate:main"
+totalspineseg_install_weight = "totalspineseg.utils.install_weight:main"
 
 [build-system]
 requires = ["pip>=23", "setuptools>=67"]

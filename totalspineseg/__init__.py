@@ -13,3 +13,4 @@ from .utils.preview_jpg import preview_jpg_mp
 from .utils.reorient_canonical import reorient_canonical_mp
 from .utils.resample import resample, resample_mp
 from .utils.transform_seg2image import transform_seg2image, transform_seg2image_mp
+from .utils.install_weight import install_weight
