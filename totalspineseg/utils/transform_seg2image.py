@@ -195,11 +195,18 @@ def _transform_seg2image(
     )
 
     # Ensure correct segmentation dtype, affine and header
-    output_seg = nib.Nifti1Image(
-        np.asanyarray(output_seg.dataobj).round().astype(np.uint8),
-        output_seg.affine, output_seg.header
-    )
-    output_seg.set_data_dtype(np.uint8)
+    if interpolation == 'linear':
+        output_seg = nib.Nifti1Image(
+            np.asanyarray(output_seg.dataobj).astype(np.float32),
+            output_seg.affine, output_seg.header
+        )
+        output_seg.set_data_dtype(np.float32)
+    else:
+        output_seg = nib.Nifti1Image(
+            np.asanyarray(output_seg.dataobj).round().astype(np.uint8),
+            output_seg.affine, output_seg.header
+        )
+        output_seg.set_data_dtype(np.uint8)
     output_seg.set_qform(output_seg.affine)
     output_seg.set_sform(output_seg.affine)
 
@@ -231,7 +238,11 @@ def transform_seg2image(
     '''
     image_data = np.asanyarray(image.dataobj).astype(np.float64)
     image_affine = image.affine.copy()
-    seg_data = np.asanyarray(seg.dataobj).round().astype(np.uint8)
+    seg_data = np.asanyarray(seg.dataobj)
+    if interpolation == 'linear':
+        seg_data = seg_data.astype(np.float32)
+    else:
+        seg_data = seg_data.round().astype(np.uint8)
     seg_affine = seg.affine.copy()
 
     # Dilations size - the maximum of factor by which the image zooms are larger than the segmentation zooms
@@ -261,7 +272,11 @@ def transform_seg2image(
 
     # Resample the segmentation to the image space
     tio_output_seg = tio.Resample(tio_img)(tio_seg)
-    output_seg_data = tio_output_seg.data.numpy()[0, ...].astype(np.uint8)
+    output_seg_data = tio_output_seg.data.numpy()[0, ...]
+    if interpolation == 'linear':
+        output_seg_data = output_seg_data.astype(np.float32)
+    else:
+        output_seg_data = output_seg_data.round().astype(np.uint8)
 
     if interpolation == 'label':
         # Initialize the output segmentation to zeros

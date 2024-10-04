@@ -1,11 +1,11 @@
 # TotalSpineSeg
 
-TotalSpineSeg is a tool for automatic instance segmentation of all vertebrae, intervertebral discs (IVDs), spinal cord, and spinal canal in MRI images. It is robust to various MRI contrasts, acquisition orientations, and resolutions. The model used in TotalSpineSeg is based on [nnUNet](https://github.com/MIC-DKFZ/nnUNet) as the backbone for training and inference.
+TotalSpineSeg is a tool for automatic instance segmentation of all vertebrae, intervertebral discs (IVDs), spinal cord, and spinal canal in MRI images. It is robust to various MRI contrasts, acquisition orientations, and resolutions. The model used in TotalSpineSeg is based on [nnU-Net](https://github.com/MIC-DKFZ/nnUNet) as the backbone for training and inference.
 
 If you use this model, please cite our work:
 > Warszawer Y, Molinier N, Valošek J, Shirbint E, Benveniste PL, Achiron A, Eshaghi A and Cohen-Adad J. _Fully Automatic Vertebrae and Spinal Cord Segmentation Using a Hybrid Approach Combining nnU-Net and Iterative Algorithm_.	Proceedings of the 32th Annual Meeting of ISMRM. 2024
 
-Please also cite nnUNet since our work is heavily based on it:
+Please also cite nnU-Net since our work is heavily based on it:
 > Isensee, F., Jaeger, P. F., Kohl, S. A., Petersen, J., & Maier-Hein, K. H. (2021). nnU-Net: a self-configuring method for deep learning-based biomedical image segmentation. Nature methods, 18(2), 203-211.
 
 ![Thumbnail](https://github.com/user-attachments/assets/2c1b1ff9-daaa-479f-8d21-01a66b9c9cb4)
@@ -192,7 +192,7 @@ Key points:
 
 TotalSpineSeg supports using localizer images to improve the labeling process, particularly useful for images with different fields of view (FOV) where landmarks like C1 and sacrum may not be visible. It uses localizer information to accurately label vertebrae and discs in the main image.
 
-![Localizer](https://github.com/user-attachments/assets/5acf0208-a322-46f9-bbde-b3c961a87ec4)
+![Localizer](https://github.com/user-attachments/assets/c00ec3b6-2f04-4bbc-be08-b7ae1373b6ae)
 
 Example of directory structure:
 
@@ -211,8 +211,8 @@ In this example, main images are placed in the `images` folder and corresponding
 To use localizer-based labeling:
 
 ```bash
-# Process localizer images
-totalspineseg localizers localizers_output
+# Process localizer images. We recommend using the --iso flag for the localizer to ensure consistent resolution.
+totalspineseg localizers localizers_output --iso
 
 # Run model on main images using localizer output
 totalspineseg images output --loc localizers_output/step2_output --suffix _T2w --loc-suffix _T1w
@@ -228,7 +228,7 @@ Note: If the localizer and main image files have the same names, you can omit th
 
 TotalSpineSeg demonstrates robust performance across a wide range of imaging parameters. Here are some examples of the model output:
 
-![Model Output Preview](https://github.com/user-attachments/assets/78da2599-3bf2-4bc0-95b2-328acecd956f)
+![Model Output Preview](https://github.com/user-attachments/assets/b4c85ce8-c59b-4ab1-b02a-37638c9ac375)
 
 The examples shown above include segmentation results on various contrasts (T1w, T2w, STIR, MTS, T2star, and even CT images), acquisition orientations (sagittal, axial), and resolutions.
 
