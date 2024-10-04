@@ -1,11 +1,11 @@
 # TotalSpineSeg
 
-TotalSpineSeg is a tool for automatic instance segmentation of all vertebrae, intervertebral discs (IVDs), spinal cord, and spinal canal in MRI images. It is robust to various MRI contrasts, acquisition orientations, and resolutions. The model used in TotalSpineSeg is based on [nnUNet](https://github.com/MIC-DKFZ/nnUNet) as the backbone for training and inference.
+TotalSpineSeg is a tool for automatic instance segmentation of all vertebrae, intervertebral discs (IVDs), spinal cord, and spinal canal in MRI images. It is robust to various MRI contrasts, acquisition orientations, and resolutions. The model used in TotalSpineSeg is based on [nnU-Net](https://github.com/MIC-DKFZ/nnUNet) as the backbone for training and inference.
 
 If you use this model, please cite our work:
 > Warszawer Y, Molinier N, Valošek J, Shirbint E, Benveniste PL, Achiron A, Eshaghi A and Cohen-Adad J. _Fully Automatic Vertebrae and Spinal Cord Segmentation Using a Hybrid Approach Combining nnU-Net and Iterative Algorithm_.	Proceedings of the 32th Annual Meeting of ISMRM. 2024
 
-Please also cite nnUNet since our work is heavily based on it:
+Please also cite nnU-Net since our work is heavily based on it:
 > Isensee, F., Jaeger, P. F., Kohl, S. A., Petersen, J., & Maier-Hein, K. H. (2021). nnU-Net: a self-configuring method for deep learning-based biomedical image segmentation. Nature methods, 18(2), 203-211.
 
 ![Thumbnail](https://github.com/user-attachments/assets/2c1b1ff9-daaa-479f-8d21-01a66b9c9cb4)
@@ -151,10 +151,12 @@ Please ensure that your system meets these requirements before proceeding with t
 
 1. Run the model on a folder containing the images in .nii.gz format, or on a single .nii.gz file:
    ```bash
-   totalspineseg INPUT OUTPUT_FOLDER [--step1]
+   totalspineseg INPUT OUTPUT_FOLDER [--step1] [--iso]
    ```
 
    This will process the images in INPUT or the single image and save the results in OUTPUT_FOLDER. If you haven't trained the model, the script will automatically download the pre-trained models from the GitHub release.
+
+   **Important Note:** By default, the output segmentations are resampled back to the input image space. If you prefer to obtain the outputs in the model's original 1mm isotropic resolution, especially useful for visualization purposes, we strongly recommend using the `--iso` argument.
 
    Additionally, you can use the `--step1` parameter to run only the step 1 model, which outputs a single label for all vertebrae, including the sacrum.
 
@@ -209,8 +211,8 @@ In this example, main images are placed in the `images` folder and corresponding
 To use localizer-based labeling:
 
 ```bash
-# Process localizer images
-totalspineseg localizers localizers_output
+# Process localizer images. We recommend using the --iso flag for the localizer to ensure consistent resolution.
+totalspineseg localizers localizers_output --iso
 
 # Run model on main images using localizer output
 totalspineseg images output --loc localizers_output/step2_output --suffix _T2w --loc-suffix _T1w
