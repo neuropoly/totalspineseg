@@ -89,7 +89,7 @@ download_weights(){
   local exports_path="$4"
 
   # Call python function
-  totalspineseg_install_weight --nnunet-dataset "${dataset}" --zip-url "${url}" --results-folder "${results_path}" --exports-folder "${exports_path}"
+  totalspineseg_install_weights --nnunet-dataset "${dataset}" --zip-url "${url}" --results-folder "${results_path}" --exports-folder "${exports_path}"
 }
 
 # ======================================================================================================================

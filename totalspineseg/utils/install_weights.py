@@ -24,7 +24,7 @@ def main():
     quiet = args.quiet
 
     # Install nnUNet weight
-    install_weight(
+    install_weights(
         nnunet_dataset=nnunet_dataset,
         zip_url=zip_url,
         results_folder=results_folder,
@@ -32,7 +32,7 @@ def main():
         quiet=quiet
     )
 
-def install_weight(
+def install_weights(
     nnunet_dataset,
     zip_url,
     results_folder,

@@ -164,7 +164,7 @@ def main():
 
     # Installing the pretrained models if not already installed
     for dataset, zip_url in [(step1_dataset, step1_zip_url), (step2_dataset, step2_zip_url)]:
-        install_weight(
+        install_weights(
             nnunet_dataset=dataset,
             zip_url=zip_url,
             results_folder=nnUNet_results,
