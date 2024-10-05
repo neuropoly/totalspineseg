@@ -1,7 +1,6 @@
 import os, argparse, warnings, subprocess, textwrap, torch, psutil, shutil
 from fnmatch import fnmatch
 from pathlib import Path
-from urllib.request import urlretrieve
 from importlib.metadata import metadata
 from tqdm import tqdm
 from totalspineseg import *
