@@ -62,6 +62,7 @@ homepage = "https://github.com/neuropoly/totalspineseg"
 repository = "https://github.com/neuropoly/totalspineseg"
 Dataset101_TotalSpineSeg_step1 = "https://github.com/neuropoly/totalspineseg/releases/download/r20240921/Dataset101_TotalSpineSeg_step1_r20240921.zip"
 Dataset102_TotalSpineSeg_step2 = "https://github.com/neuropoly/totalspineseg/releases/download/r20240921/Dataset102_TotalSpineSeg_step2_r20240921.zip"
+Dataset300_SacrumDataset = "https://github.com/neuropoly/totalspineseg/releases/download/sacrum-seg/Dataset300_SacrumDataset.zip"
 
 [project.scripts]
 totalspineseg = "totalspineseg.inference:main"
@@ -80,6 +81,7 @@ totalspineseg_crop_image2seg = "totalspineseg.utils.crop_image2seg:main"
 totalspineseg_extract_soft = "totalspineseg.utils.extract_soft:main"
 totalspineseg_extract_levels = "totalspineseg.utils.extract_levels:main"
 totalspineseg_extract_alternate = "totalspineseg.utils.extract_alternate:main"
+totalspineseg_install_weights = "totalspineseg.utils.install_weights:main"
 
 [build-system]
 requires = ["pip>=23", "setuptools>=67"]
