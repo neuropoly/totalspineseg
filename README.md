@@ -1,5 +1,5 @@
 # TotalSpineSeg
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.13891845.svg)](https://doi.org/10.5281/zenodo.13891845)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.13894354.svg)](https://doi.org/10.5281/zenodo.13894354)
 
 TotalSpineSeg is a tool for automatic instance segmentation of all vertebrae, intervertebral discs (IVDs), spinal cord, and spinal canal in MRI images. It is robust to various MRI contrasts, acquisition orientations, and resolutions. The model used in TotalSpineSeg is based on [nnU-Net](https://github.com/MIC-DKFZ/nnUNet) as the backbone for training and inference.
 
