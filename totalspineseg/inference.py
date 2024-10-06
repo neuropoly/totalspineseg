@@ -173,14 +173,14 @@ def main():
 
     if not quiet: print('\n' 'Making input dir with _0000 suffix:')
     if input_path.name.endswith('.nii.gz'):
-        # If the input is a single file, copy it to the input folder
-        (output_path / 'input').mkdir(parents=True, exist_ok=True)
-        shutil.copy(input_path, output_path / 'input' / input_path.name.replace('.nii.gz', '_0000.nii.gz'))
+        # If the input is a single file, copy it to the input_raw folder
+        (output_path / 'input_raw').mkdir(parents=True, exist_ok=True)
+        shutil.copy(input_path, output_path / 'input_raw' / input_path.name.replace('.nii.gz', '_0000.nii.gz'))
     else:
-        # If the input is a folder, copy the files to the input folder
+        # If the input is a folder, copy the files to the input_raw folder
         cpdir_mp(
             input_path,
-            output_path / 'input',
+            output_path / 'input_raw',
             pattern=sum([[f'*{s}.nii.gz', f'sub-*/anat/*{s}.nii.gz'] for s in suffix], []),
             flat=True,
             replace={'.nii.gz': '_0000.nii.gz'},
@@ -188,6 +188,15 @@ def main():
             max_workers=max_workers,
             quiet=quiet,
         )
+
+    if not quiet: print('\n' 'Copying the input images to the input folder for processing:')
+    cpdir_mp(
+        output_path / 'input_raw',
+        output_path / 'input',
+        overwrite=True,
+        max_workers=max_workers,
+        quiet=quiet,
+    )
 
     if loc_path is not None:
         if not quiet: print('\n' 'Copying localizers to the output folder:')
@@ -221,6 +230,8 @@ def main():
             max_workers=max_workers,
             quiet=quiet,
         )
+
+        if not quiet: print('\n' 'Generating preview images for the localizers with tags:')
         preview_jpg_mp(
             output_path / 'input',
             output_path / 'preview',
@@ -412,6 +423,8 @@ def main():
         max_workers=max_workers,
         quiet=quiet,
     )
+
+    if not quiet: print('\n' 'Generating preview images for the step 1 labeled images with tags:')
     preview_jpg_mp(
         output_path / 'input',
         output_path / 'preview',
@@ -665,6 +678,8 @@ def main():
             max_workers=max_workers,
             quiet=quiet,
         )
+
+        if not quiet: print('\n' 'Generating preview images for the final output with tags:')
         preview_jpg_mp(
             output_path / 'input',
             output_path / 'preview',
@@ -690,20 +705,18 @@ def main():
     if not output_iso:
         if not quiet: print('\n' 'Resampling step1_output to the input images space:')
         transform_seg2image_mp(
-            input_path,
+            output_path / 'input_raw',
             output_path / 'step1_output',
             output_path / 'step1_output',
-            image_suffix = '',
             overwrite=True,
             max_workers=max_workers,
             quiet=quiet,
         )
         if not quiet: print('\n' 'Resampling step1_cord to the input images space:')
         transform_seg2image_mp(
-            input_path,
+            output_path / 'input_raw',
             output_path / 'step1_cord',
             output_path / 'step1_cord',
-            image_suffix = '',
             interpolation = 'linear',
             overwrite=True,
             max_workers=max_workers,
@@ -711,10 +724,9 @@ def main():
         )
         if not quiet: print('\n' 'Resampling step1_canal to the input images space:')
         transform_seg2image_mp(
-            input_path,
+            output_path / 'input_raw',
             output_path / 'step1_canal',
             output_path / 'step1_canal',
-            image_suffix = '',
             interpolation = 'linear',
             overwrite=True,
             max_workers=max_workers,
@@ -722,10 +734,9 @@ def main():
         )
         if not quiet: print('\n' 'Resampling step1_levels to the input images space:')
         transform_seg2image_mp(
-            input_path,
+            output_path / 'input_raw',
             output_path / 'step1_levels',
             output_path / 'step1_levels',
-            image_suffix = '',
             interpolation = 'label',
             overwrite=True,
             max_workers=max_workers,
@@ -734,14 +745,16 @@ def main():
         if not step1_only:
             if not quiet: print('\n' 'Resampling step2_output to the input images space:')
             transform_seg2image_mp(
-                input_path,
+                output_path / 'input_raw',
                 output_path / 'step2_output',
                 output_path / 'step2_output',
-                image_suffix = '',
                 overwrite=True,
                 max_workers=max_workers,
                 quiet=quiet,
             )
+
+    # Remove the input_raw folder
+    shutil.rmtree(output_path / 'input_raw', ignore_errors=True)
 
 if __name__ == '__main__':
     main()
