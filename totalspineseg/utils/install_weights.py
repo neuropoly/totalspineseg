@@ -1,44 +1,87 @@
-import os
-import argparse
+import os, argparse, subprocess, textwrap
 from pathlib import Path
-import subprocess
-from importlib.metadata import metadata
 from urllib.request import urlretrieve
 from tqdm import tqdm
+import warnings
+
+warnings.filterwarnings("ignore")
+
 
 def main():
-    # parse command line arguments
-    parser = argparse.ArgumentParser(description='Download nnunet weights from totalspineseg repository.')
-    parser.add_argument('--nnunet-dataset', required=True, type=str, help='Name of the nnUNet dataset present in the pyproject.toml (Required)')
-    parser.add_argument('--zip-url', required=True, type=str, help='URL of the weights contained inside the pyproject.toml (Required)')
-    parser.add_argument('--results-folder', required=True, type=Path, help='Results folder where the weights will be stored (Required)')
-    parser.add_argument('--exports-folder', required=True, type=Path, help='Exports folder where the zipped weights will be dowloaded (Required)')
-    parser.add_argument('--quiet', '-q', action="store_true", default=False, help='Do not display inputs and progress bar, defaults to false (Default=False).')
+
+    # Description and arguments
+    parser = argparse.ArgumentParser(
+        description=' '.join(f'''
+            This script download nnunet weights zip file from url into exports folder and install it into results folder.
+        '''.split()),
+        epilog=textwrap.dedent('''
+            Examples:
+            install_weights --nnunet-dataset Dataset101_TotalSpineSeg_step1 --zip-url https://github.com/neuropoly/totalspineseg/releases/download/r20241005/Dataset101_TotalSpineSeg_step1_r20241005.zip --results-folder results --exports-folder exports
+        '''),
+        formatter_class=argparse.RawTextHelpFormatter
+    )
+    parser.add_argument(
+        '--nnunet-dataset', type=str, required=True,
+        help='Name of the nnUNet dataset to install (required).'
+    )
+    parser.add_argument(
+        '--zip-url', type=str, required=True,
+        help='URL of the zip file to download (required).'
+    )
+    parser.add_argument(
+        '--results-folder', type=Path, required=True,
+        help='Results folder where the weights will be stored (Required).'
+    )
+    parser.add_argument(
+        '--exports-folder', type=Path, required=True,
+        help='Exports folder where the zipped weights will be dowloaded (Required).'
+    )
+    parser.add_argument(
+        '--quiet', '-q', action="store_true", default=False,
+        help='Do not display inputs and progress bar, defaults to false (display).'
+    )
+
+    # Parse the command-line arguments
     args = parser.parse_args()
 
-    # Datasets data
+    # Get the command-line argument values
     nnunet_dataset = args.nnunet_dataset
-    zip_url=args.zip_url
+    zip_url = args.zip_url
     results_folder = args.results_folder
     exports_folder = args.exports_folder
     quiet = args.quiet
 
-    # Install nnUNet weight
+    # Print the argument values if not quiet
+    if not quiet:
+        print(textwrap.dedent(f'''
+            Running {Path(__file__).stem} with the following params:
+            nnunet_dataset = "{nnunet_dataset}"
+            zip_url = "{zip_url}"
+            results_folder = "{results_folder}"
+            exports_folder = "{exports_folder}"
+            quiet = {quiet}
+        '''))
+
     install_weights(
         nnunet_dataset=nnunet_dataset,
         zip_url=zip_url,
         results_folder=results_folder,
         exports_folder=exports_folder,
-        quiet=quiet
+        quiet=quiet,
     )
 
 def install_weights(
-    nnunet_dataset,
-    zip_url,
-    results_folder,
-    exports_folder,
-    quiet
-):
+        nnunet_dataset,
+        zip_url,
+        results_folder,
+        exports_folder,
+        quiet=False,
+    ):
+    '''
+    Download nnunet weights from url.
+    '''
+    results_folder = Path(results_folder)
+    exports_folder = Path(exports_folder)
 
     # Create the download and export folder if they do not exist
     results_folder.mkdir(parents=True, exist_ok=True)
@@ -69,7 +112,6 @@ def install_weights(
         # Install the pretrained model from the zip file
         os.environ['nnUNet_results'] = str(results_folder)
         subprocess.run(['nnUNetv2_install_pretrained_model_from_zip', str(zip_file)])
-
 
 if __name__ == '__main__':
     main()
