@@ -294,7 +294,7 @@ def iterative_label_mp(
         vertebrae_landmark_output_labels=[],
         vertebrae_output_step=1,
         vertebrae_extra_labels=[],
-        region_max_sizes=[5, 12, 6, 1],
+        region_max_sizes=[7, 19, 9, 1],
         region_default_sizes=[5, 12, 5, 1],
         loc_disc_labels=[],
         canal_labels=[],
@@ -590,7 +590,6 @@ def iterative_label(
     )
 
     # Get the landmark disc labels and output labels - {label in sorted labels: output label}
-    # TODO Currently only the first 2 landmark from selected_disc_landmarks is used, to get all landmarks see TODO in the function
     map_disc_sorted_labels_landmark2output = _get_landmark_output_labels(
         seg,
         loc,
@@ -1079,11 +1078,6 @@ def _get_landmark_output_labels(
     # If no output label found from the localizer, try to set the output labels from landmarks in the segmentation
     if len(map_landmark_outputs) == 0:
         for l in selected_landmarks:
-            ############################################################################################################
-            # TODO Remove this reake when we trust all the landmarks to get all landmarks instead of the first 2
-            if len(map_landmark_outputs) > 0 and selected_landmarks.index(l) > 1:
-                break
-            ############################################################################################################
             if l in map_landmark_labels and l in seg_data:
                 mask_labeled_l = np.argmax(np.bincount(mask_labeled[seg_data == l].flat))
                 # We map only if the landmark cover the majority of the voxels in the mask_labeled label
