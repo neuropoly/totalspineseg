@@ -1064,7 +1064,6 @@ def _get_landmark_output_labels(
         loc_data_masked = mask * loc_data
 
         # First we try to look for the landmarks in the localizer
-        # TODO Edge case if map_output_dict used for discs, but it is not used in the current implementation
         for output_label in np.array(landmark_output_labels)[np.isin(landmark_output_labels, loc_data_masked)].tolist():
             # Map the label with the most voxels in the localizer landmark to the output label
             map_landmark_outputs[np.argmax(np.bincount(mask_labeled_masked[loc_data_masked == output_label].flat))] = output_label
