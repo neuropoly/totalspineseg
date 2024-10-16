@@ -288,13 +288,12 @@ def extract_levels(
 
     # Find the minimum distance for each disc voxel and the corresponding canal centerline index
     discs_distance_from_centerline = np.min(discs_distances_from_all_centerline, axis=1)
-    discs_centerline_indices = canal_centerline_indices[np.argmin(discs_distances_from_all_centerline, axis=1)]
 
-    # Find the closest canal centerline voxel to each disc label
-    disc_labels_centerline_indices = [discs_centerline_indices[discs_indices_labels == label][np.argmin(discs_distance_from_centerline[discs_indices_labels == label])] for label in disc_labels_in_seg]
+    # Find the closest voxel to the canal centerline for each disc label (posterior tip)
+    disc_labels_indices = [discs_indices[discs_indices_labels == label][np.argmin(discs_distance_from_centerline[discs_indices_labels == label])] for label in disc_labels_in_seg]
 
-    # Set the output labels to the closest canal centerline voxels
-    for idx, label in zip(disc_labels_centerline_indices, disc_labels_in_seg):
+    # Set the output labels to the closest voxel to the canal centerline for each disc
+    for idx, label in zip(disc_labels_indices, disc_labels_in_seg):
         output_seg_data[tuple(idx)] = map_labels[label]
 
     # If C2-C3 is in the segmentation, set 1 and 2 to the superior voxels in the canal centerline and the middle voxels between C2-C3 and the superior voxels
