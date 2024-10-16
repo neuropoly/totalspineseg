@@ -55,11 +55,11 @@ def main():
     )
     parser.add_argument(
         '--c1-label', type=int, default=0,
-        help='The label for C1 vertebra in the segmentation, if provided it will be used to determine if C1 is in the segmentation.'
+        help='The label for C1 vertebra in the segmentation, if provided it will be used to extract the level 1.'
     )
     parser.add_argument(
         '--c2-label', type=int, default=0,
-        help='The label that contains the segmentation of the vertebrae C2 (this label may also be used with other vertebrae), if provided it will be used to extract the level 1.'
+        help='The label for C2 vertebra in the segmentation (this label may also be used with other vertebrae), if provided it will be used to extract the level 1.'
     )
     parser.add_argument(
         '--overwrite', '-r', action="store_true", default=False,
