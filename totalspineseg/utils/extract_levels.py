@@ -58,6 +58,10 @@ def main():
         help='The label for C1 vertebra in the segmentation, if provided it will be used to determine if C1 is in the segmentation.'
     )
     parser.add_argument(
+        '--vert-label', type=int, default=0,
+        help='The label used for all the vertebrae, if provided it will be used to extract the level 1.'
+    )
+    parser.add_argument(
         '--overwrite', '-r', action="store_true", default=False,
         help='Overwrite existing output files, defaults to false (Do not overwrite).'
     )
@@ -82,6 +86,7 @@ def main():
     canal_labels = args.canal_labels
     disc_labels = [l for raw in args.disc_labels for l in (raw if isinstance(raw, list) else [raw])]
     c1_label = args.c1_label
+    vert_label = args.vert_label
     overwrite = args.overwrite
     max_workers = args.max_workers
     quiet = args.quiet
@@ -98,6 +103,7 @@ def main():
             canal_labels = {canal_labels}
             disc_labels = {disc_labels}
             c1_label = {c1_label}
+            vert_label = {vert_label}
             overwrite = {overwrite}
             max_workers = {max_workers}
             quiet = {quiet}
@@ -112,6 +118,7 @@ def main():
         canal_labels=canal_labels,
         disc_labels=disc_labels,
         c1_label=c1_label,
+        vert_label=vert_label,
         overwrite=overwrite,
         max_workers=max_workers,
         quiet=quiet,
@@ -126,6 +133,7 @@ def extract_levels_mp(
         canal_labels=[],
         disc_labels=[],
         c1_label=0,
+        vert_label=0,
         overwrite=False,
         max_workers=mp.cpu_count(),
         quiet=False,
@@ -148,6 +156,7 @@ def extract_levels_mp(
             canal_labels=canal_labels,
             disc_labels=disc_labels,
             c1_label=c1_label,
+            vert_label=vert_label,
             overwrite=overwrite,
         ),
         seg_path_list,
@@ -163,6 +172,7 @@ def _extract_levels(
         canal_labels=[],
         disc_labels=[],
         c1_label=0,
+        vert_label=0,
         overwrite=False,
     ):
     '''
@@ -184,6 +194,7 @@ def _extract_levels(
             canal_labels=canal_labels,
             disc_labels=disc_labels,
             c1_label=c1_label,
+            vert_label=vert_label,
         )
     except ValueError as e:
         output_seg_path.is_file() and output_seg_path.unlink()
@@ -208,6 +219,7 @@ def extract_levels(
         canal_labels=[],
         disc_labels=[],
         c1_label=0,
+        vert_label=0,
     ):
     '''
     Extract vertebrae levels from Spinal Canal and Discs.
