@@ -315,7 +315,7 @@ def extract_levels(
             # Find the location of the C2-C3 disc
             c2c3_index = np.unravel_index(np.argmax(output_seg_data == 3), seg_data.shape)
 
-            # Find the minimum coordinate of the vertebra C1
+            # Find the maximum coordinate of the vertebra C1
             c1_coords = np.where(seg_data == c1_label)
             c1_z_max_index = np.max(c1_coords[2])
 
