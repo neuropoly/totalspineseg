@@ -477,6 +477,8 @@ def main():
         output_path / 'step1_levels',
         canal_labels=[1, 2],
         disc_labels=list(range(63, 68)) + list(range(71, 83)) + list(range(91, 96)) + [100],
+        c1_label=11,
+        vert_label=50,
         overwrite=True,
         max_workers=max_workers,
         quiet=quiet,

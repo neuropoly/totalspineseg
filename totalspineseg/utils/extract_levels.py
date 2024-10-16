@@ -308,27 +308,31 @@ def extract_levels(
     for idx, label in zip(disc_labels_indices, disc_labels_in_seg):
         output_seg_data[tuple(idx)] = map_labels[label]
 
-    # If C2-C3 is in the segmentation, set 1 and 2 to the superior voxels in the canal centerline and the middle voxels between C2-C3 and the superior voxels
-    if 3 in output_seg_data:
-        # Find the location of the C2-C3 disc
-        c2c3_index = np.unravel_index(np.argmax(output_seg_data == 3), seg_data.shape)
+    # If C2-C3 and C1 are in the segmentation, set 1 and 2
+    if 3 in output_seg_data and vert_label != 0 and c1_label != 0:
+        # Place 1 at the top of C2 if C1 is visible in the image
+        if c1_label in seg_data:
+            # Find the location of the C2-C3 disc
+            c2c3_index = np.unravel_index(np.argmax(output_seg_data == 3), seg_data.shape)
 
-        # Find the location of the superior voxels in the canal centerline
-        canal_superior_index = np.unravel_index(np.argmax(mask_canal_centerline * indices[2]), seg_data.shape)
+            # Find the minimum coordinate of the vertebra C1
+            c1_coords = np.where(seg_data == c1_label)
+            c1_z_max_index = np.max(c1_coords[2])
 
-        if (c1_label > 0 and c1_label in seg_data) or (c1_label == 0 and canal_superior_index[2] - c2c3_index[2] >= 8 and output_seg_data.shape[2] - canal_superior_index[2] >= 2):
-            # If C1 is in the segmentation or C2-C3 at least 8 voxels below the top of the canal and the top of the canal is at least 2 voxels from the top of the image
+            # Extract coordinate of the vertebrae
+            # The coordinate of 1 needs to be in the same slice as 3 but below the max index of C1
+            vert_coords = np.where(seg_data[c2c3_index[0],:,:c1_z_max_index] == vert_label)
+
+            # Find top pixel of the vertebrae
+            argmax_z = np.argmax(vert_coords[1])
+            top_vert_voxel = tuple([c2c3_index[0]]+[vert_coords[i][argmax_z] for i in range(2)])
+
             # Set 1 to the superior voxels
-            output_seg_data[canal_superior_index] = 1
+            output_seg_data[top_vert_voxel] = 1
 
             # Set 2 to the middle voxels between C2-C3 and the superior voxels
-            c1c2_z_index = (canal_superior_index[2] + c2c3_index[2]) // 2
-            c1c2_index = np.unravel_index(np.argmax(mask_canal_centerline * (indices[2] == c1c2_z_index)), seg_data.shape)
+            c1c2_index = tuple([(top_vert_voxel[i] + c2c3_index[i]) // 2 for i in range(3)])
             output_seg_data[c1c2_index] = 2
-
-        elif canal_superior_index[2] - c2c3_index[2] >= 4:
-            # If C2-C3 at least 4 voxels below the top of the canal
-            output_seg_data[canal_superior_index] = 2
 
     output_seg = nib.Nifti1Image(output_seg_data, seg.affine, seg.header)
 
