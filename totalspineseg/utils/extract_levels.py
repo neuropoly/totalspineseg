@@ -58,8 +58,8 @@ def main():
         help='The label for C1 vertebra in the segmentation, if provided it will be used to determine if C1 is in the segmentation.'
     )
     parser.add_argument(
-        '--vert-label', type=int, default=0,
-        help='The label used for all the vertebrae, if provided it will be used to extract the level 1.'
+        '--c2-label', type=int, default=0,
+        help='The label that contains the segmentation of the vertebrae C2 (this label may also be used with other vertebrae), if provided it will be used to extract the level 1.'
     )
     parser.add_argument(
         '--overwrite', '-r', action="store_true", default=False,
@@ -86,7 +86,7 @@ def main():
     canal_labels = args.canal_labels
     disc_labels = [l for raw in args.disc_labels for l in (raw if isinstance(raw, list) else [raw])]
     c1_label = args.c1_label
-    vert_label = args.vert_label
+    c2_label = args.c2_label
     overwrite = args.overwrite
     max_workers = args.max_workers
     quiet = args.quiet
@@ -103,7 +103,7 @@ def main():
             canal_labels = {canal_labels}
             disc_labels = {disc_labels}
             c1_label = {c1_label}
-            vert_label = {vert_label}
+            c2_label = {c2_label}
             overwrite = {overwrite}
             max_workers = {max_workers}
             quiet = {quiet}
@@ -118,7 +118,7 @@ def main():
         canal_labels=canal_labels,
         disc_labels=disc_labels,
         c1_label=c1_label,
-        vert_label=vert_label,
+        c2_label=c2_label,
         overwrite=overwrite,
         max_workers=max_workers,
         quiet=quiet,
@@ -133,7 +133,7 @@ def extract_levels_mp(
         canal_labels=[],
         disc_labels=[],
         c1_label=0,
-        vert_label=0,
+        c2_label=0,
         overwrite=False,
         max_workers=mp.cpu_count(),
         quiet=False,
@@ -156,7 +156,7 @@ def extract_levels_mp(
             canal_labels=canal_labels,
             disc_labels=disc_labels,
             c1_label=c1_label,
-            vert_label=vert_label,
+            c2_label=c2_label,
             overwrite=overwrite,
         ),
         seg_path_list,
@@ -172,7 +172,7 @@ def _extract_levels(
         canal_labels=[],
         disc_labels=[],
         c1_label=0,
-        vert_label=0,
+        c2_label=0,
         overwrite=False,
     ):
     '''
@@ -194,7 +194,7 @@ def _extract_levels(
             canal_labels=canal_labels,
             disc_labels=disc_labels,
             c1_label=c1_label,
-            vert_label=vert_label,
+            c2_label=c2_label,
         )
     except ValueError as e:
         output_seg_path.is_file() and output_seg_path.unlink()
@@ -219,7 +219,7 @@ def extract_levels(
         canal_labels=[],
         disc_labels=[],
         c1_label=0,
-        vert_label=0,
+        c2_label=0,
     ):
     '''
     Extract vertebrae levels from Spinal Canal and Discs.
@@ -309,7 +309,7 @@ def extract_levels(
         output_seg_data[tuple(idx)] = map_labels[label]
 
     # If C2-C3 and C1 are in the segmentation, set 1 and 2
-    if 3 in output_seg_data and vert_label != 0 and c1_label != 0:
+    if 3 in output_seg_data and c2_label != 0 and c1_label != 0:
         # Place 1 at the top of C2 if C1 is visible in the image
         if c1_label in seg_data:
             # Find the location of the C2-C3 disc
@@ -321,7 +321,7 @@ def extract_levels(
 
             # Extract coordinate of the vertebrae
             # The coordinate of 1 needs to be in the same slice as 3 but below the max index of C1
-            vert_coords = np.where(seg_data[c2c3_index[0],:,:c1_z_max_index] == vert_label)
+            vert_coords = np.where(seg_data[c2c3_index[0],:,:c1_z_max_index] == c2_label)
 
             # Find top pixel of the vertebrae
             argmax_z = np.argmax(vert_coords[1])
