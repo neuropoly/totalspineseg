@@ -333,7 +333,7 @@ def _preview_jpg(
     if (label_texts_right or label_texts_left) and seg_path and seg_path.is_file():
         draw = ImageDraw.Draw(output_image)
         # Use a bold TrueType font for better sharpness and boldness
-        font = ImageFont.load_default(size=16)
+        font = ImageFont.load_default(size=15)
         width, height = output_image.size
         used_positions = []
         for label in unique_labels:
@@ -439,7 +439,7 @@ def _preview_jpg(
 
     # Make sure output directory exists and save the image
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_image.save(output_path)
+    output_image.save(output_path, quality=95)
 
 if __name__ == '__main__':
     main()
