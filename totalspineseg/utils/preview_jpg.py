@@ -5,6 +5,7 @@ from functools import partial
 from pathlib import Path
 from nibabel import freesurfer
 import numpy as np
+import scipy.ndimage as ndi
 from tqdm.contrib.concurrent import process_map
 import torchio as tio
 import warnings
@@ -67,6 +68,10 @@ def main():
         help='Slice location within the specified orientation (0-1). Default is 0.5 (middle slice).'
     )
     parser.add_argument(
+        '--levels', action="store_true", default=False,
+        help='extend the segmentation ortogonal to the orien and dilate 3 voxels to ensure visibility of the levels. Usful for single point each label like vertebrae levels.'
+    )
+    parser.add_argument(
         '--label-text-right', '-ltr', type=str, nargs='+', default=[],
         help=' '.join('''
             JSON file or mapping from label integers to text labels to be placed on the right side.
@@ -110,6 +115,7 @@ def main():
     seg_suffix = args.seg_suffix
     orient = args.orient
     sliceloc = args.sliceloc
+    levels = args.levels
     label_text_right_list = args.label_text_right
     label_text_left_list = args.label_text_left
     overwrite = args.overwrite
@@ -135,6 +141,7 @@ def main():
             seg_suffix = "{seg_suffix}"
             orient = "{orient}"
             sliceloc = {sliceloc}
+            levels = {levels}
             label_texts_right = {label_texts_right}
             label_texts_left = {label_texts_left}
             overwrite = {overwrite}
@@ -152,6 +159,7 @@ def main():
         seg_suffix=seg_suffix,
         orient=orient,
         sliceloc=sliceloc,
+        levels=levels,
         label_texts_right=label_texts_right,
         label_texts_left=label_texts_left,
         overwrite=overwrite,
@@ -183,6 +191,7 @@ def preview_jpg_mp(
         seg_suffix='',
         orient='sag',
         sliceloc=0.5,
+        levels=False,
         label_texts_right={},
         label_texts_left={},
         overwrite=False,
@@ -210,6 +219,7 @@ def preview_jpg_mp(
             _preview_jpg,
             orient=orient,
             sliceloc=sliceloc,
+            levels=levels,
             label_texts_right=label_texts_right,
             label_texts_left=label_texts_left,
             overwrite=overwrite,
@@ -228,6 +238,7 @@ def _preview_jpg(
         seg_path=None,
         orient='sag',
         sliceloc=0.5,
+        levels=False,
         label_texts_right={},
         label_texts_left={},
         overwrite=False,
@@ -281,6 +292,12 @@ def _preview_jpg(
 
         seg_data = seg.data.squeeze().numpy().round().astype(np.uint8)
 
+        if levels:
+            # Extend the segmentation ortogonal to the orien and dilate 3 voxels to ensure visibility of the levels
+            seg_data = np.broadcast_to(np.max(seg_data, axis=axis, keepdims=True), image_data.shape)
+            # Dilate the segmentation to ensure visibility of the levels
+            seg_data = ndi.grey_dilation(seg_data, size=(3, 3, 3))
+
         slice_seg = seg_data.take(slice_index, axis=axis)
 
         # Flip and rotate the segmentation slice
@@ -316,10 +333,7 @@ def _preview_jpg(
     if (label_texts_right or label_texts_left) and seg_path and seg_path.is_file():
         draw = ImageDraw.Draw(output_image)
         # Use a bold TrueType font for better sharpness and boldness
-        try:
-            font = ImageFont.truetype("DejaVuSans-Bold.ttf", size=15)
-        except IOError:
-            font = ImageFont.load_default()
+        font = ImageFont.load_default(size=16)
         width, height = output_image.size
         used_positions = []
         for label in unique_labels:
