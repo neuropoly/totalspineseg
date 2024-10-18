@@ -293,9 +293,9 @@ def _preview_jpg(
         seg_data = seg.data.squeeze().numpy().round().astype(np.uint8)
 
         if levels:
-            # Extend the segmentation ortogonal to the orien and dilate 3 voxels to ensure visibility of the levels
-            seg_data = np.broadcast_to(np.max(seg_data, axis=axis, keepdims=True), image_data.shape)
-            # Dilate the segmentation to ensure visibility of the levels
+            # Extend the segmentation ortogonal to orient
+            seg_data = np.broadcast_to(np.max(seg_data, axis=axis, keepdims=True), seg_data.shape)
+            # Dilate 3 voxels to ensure visibility of the levels
             seg_data = ndi.grey_dilation(seg_data, size=(3, 3, 3))
 
         slice_seg = seg_data.take(slice_index, axis=axis)
