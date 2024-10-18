@@ -488,6 +488,7 @@ def main():
         output_path / 'preview',
         segs_path=output_path / 'step1_levels',
         output_suffix='_step1_levels_tags',
+        levels=True,
         overwrite=True,
         max_workers=max_workers,
         quiet=quiet,
