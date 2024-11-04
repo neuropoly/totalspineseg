@@ -332,7 +332,11 @@ def extract_levels(
 
             # Set 2 to the middle voxels between C2-C3 and the superior voxels
             c1c2_index = tuple([(top_vert_voxel[i] + c2c3_index[i]) // 2 for i in range(3)])
-            output_seg_data[c1c2_index] = 2
+
+            # Project 2 on the anterior line
+            c1c2_distances_from_all_centerline = np.linalg.norm(c1c2_index - canal_centerline_indices[None, ...], axis=2)
+            c1c2_index_centerline = canal_centerline_indices[np.argmin(c1c2_distances_from_all_centerline, axis=1)]
+            output_seg_data[tuple(c1c2_index_centerline[0])] = 2
 
     output_seg = nib.Nifti1Image(output_seg_data, seg.affine, seg.header)
 
