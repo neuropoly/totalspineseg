@@ -257,16 +257,16 @@ def extract_levels(
     if not np.any(mask_canal):
         raise ValueError(f"No canal labels found in the segmentation.")
 
-    # Create a canal centerline shifted toward the posterior tip by finding the middle voxels in x and the maximum voxels in y for each z index
+    # Create a canal anteriorline shifted toward the posterior tip by finding the middle voxels in x and the maximum voxels in y for each z index
     mask_min_x_indices = np.min(indices[0], where=mask_canal, initial=np.iinfo(indices.dtype).max, keepdims=True, axis=(0, 1))
     mask_max_x_indices = np.max(indices[0], where=mask_canal, initial=np.iinfo(indices.dtype).min, keepdims=True, axis=(0, 1))
     mask_mid_x = indices[0] == ((mask_min_x_indices + mask_max_x_indices) // 2)
     mask_max_y_indices = np.max(indices[1], where=mask_canal, initial=np.iinfo(indices.dtype).min, keepdims=True, axis=(0, 1))
     mask_max_y = indices[1] == mask_max_y_indices
-    mask_canal_centerline = mask_canal * mask_mid_x * mask_max_y
+    mask_canal_anteriorline = mask_canal * mask_mid_x * mask_max_y
 
-    # Get the indices of the canal centerline
-    canal_centerline_indices = np.array(np.nonzero(mask_canal_centerline)).T
+    # Get the indices of the canal anteriorline
+    canal_anteriorline_indices = np.array(np.nonzero(mask_canal_anteriorline)).T
 
     # Get the labels of the discs in the segmentation
     disc_labels_in_seg = np.array(disc_labels)[np.isin(disc_labels, seg_data)]
@@ -294,18 +294,18 @@ def extract_levels(
     # Make the discs_indices 2D array
     discs_indices = np.array(discs_indices).T
 
-    # Calculate the distance of each disc voxel to each canal centerline voxel
-    discs_distances_from_all_centerline = np.linalg.norm(discs_indices[:, None, :] - canal_centerline_indices[None, ...], axis=2)
+    # Calculate the distance of each disc voxel to each canal anteriorline voxel
+    discs_distances_from_all_anteriorline = np.linalg.norm(discs_indices[:, None, :] - canal_anteriorline_indices[None, ...], axis=2)
 
-    # Find the minimum distance for each disc voxel and the corresponding canal centerline index
-    discs_distance_from_centerline = np.min(discs_distances_from_all_centerline, axis=1)
-    discs_centerline_indices = canal_centerline_indices[np.argmin(discs_distances_from_all_centerline, axis=1)]
+    # Find the minimum distance for each disc voxel and the corresponding canal anteriorline index
+    discs_distance_from_anteriorline = np.min(discs_distances_from_all_anteriorline, axis=1)
+    discs_anteriorline_indices = canal_anteriorline_indices[np.argmin(discs_distances_from_all_anteriorline, axis=1)]
 
-    # Find the closest voxel to the canal centerline for each disc label (posterior tip)
-    disc_labels_centerline_indices = [discs_centerline_indices[discs_indices_labels == label][np.argmin(discs_distance_from_centerline[discs_indices_labels == label])] for label in disc_labels_in_seg]
+    # Find the closest voxel to the canal anteriorline for each disc label (posterior tip)
+    disc_labels_anteriorline_indices = [discs_anteriorline_indices[discs_indices_labels == label][np.argmin(discs_distance_from_anteriorline[discs_indices_labels == label])] for label in disc_labels_in_seg]
 
-    # Set the output labels to the closest voxel to the canal centerline for each disc
-    for idx, label in zip(disc_labels_centerline_indices, disc_labels_in_seg):
+    # Set the output labels to the closest voxel to the canal anteriorline for each disc
+    for idx, label in zip(disc_labels_anteriorline_indices, disc_labels_in_seg):
         output_seg_data[tuple(idx)] = map_labels[label]
 
     # If C2-C3 and C1 are in the segmentation, set 1 and 2
@@ -334,9 +334,9 @@ def extract_levels(
             c1c2_index = tuple([(top_vert_voxel[i] + c2c3_index[i]) // 2 for i in range(3)])
 
             # Project 2 on the anterior line
-            c1c2_distances_from_all_centerline = np.linalg.norm(c1c2_index - canal_centerline_indices[None, ...], axis=2)
-            c1c2_index_centerline = canal_centerline_indices[np.argmin(c1c2_distances_from_all_centerline, axis=1)]
-            output_seg_data[tuple(c1c2_index_centerline[0])] = 2
+            c1c2_distances_from_all_anteriorline = np.linalg.norm(c1c2_index - canal_anteriorline_indices[None, ...], axis=2)
+            c1c2_index_anteriorline = canal_anteriorline_indices[np.argmin(c1c2_distances_from_all_anteriorline, axis=1)]
+            output_seg_data[tuple(c1c2_index_anteriorline[0])] = 2
 
     output_seg = nib.Nifti1Image(output_seg_data, seg.affine, seg.header)
 
