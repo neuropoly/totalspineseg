@@ -226,6 +226,7 @@ def extract_levels(
 
     The function extracts the vertebrae levels from the input segmentation by finding the closest voxel in the canal anteriorline to the middle of each disc.
     The superior voxels of the top vertebrae is set to 1 and the middle voxels between C2-C3 and the superior voxels are set to 2.
+    The generated labeling convention follows the one from SCT (https://spinalcordtoolbox.com/stable/user_section/tutorials/vertebral-labeling/labeling-conventions.html)
 
     Parameters
     ----------
