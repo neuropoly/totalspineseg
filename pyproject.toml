@@ -6,7 +6,7 @@ description = "TotalSpineSeg is a tool for automatic instance segmentation and l
 readme = "README.md"
 authors = [
     { name = "Yehuda Warszawer", email = "yehuda.warszawer@sheba.health.gov.il"},
-    { name = "Nathan Molinier"},
+    { name = "Nathan Molinier", email = "nathan.molinier@polymtl.ca"},
     { name = "Jan Valosek"},
     { name = "Emanuel Shirbint"},
     { name = "Pierre-Louis Benveniste"},
