@@ -13,13 +13,11 @@ def main():
     parser = argparse.ArgumentParser(
         description=textwrap.dedent('''
             This script runs inference using the trained TotalSpineSeg nnUNet model.
-            If not already installed, the script will download the pretrained models from the GitHub releases.
         '''),
         epilog=textwrap.dedent('''
             Examples:
             totalspineseg input.nii.gz output_folder
             totalspineseg input.nii.gz output_folder --loc output_folder_loc/step2_output/localizer.nii.gz
-            totalspineseg input_folder output_folder
             totalspineseg input_folder output_folder --step1
             totalspineseg input_folder output_folder --loc output_folder_loc/step2_output
             totalspineseg input_folder output_folder --loc output_folder_loc/step2_output --loc-suffix _loc
