@@ -11,6 +11,7 @@ Please also cite nnU-Net since our work is heavily based on it:
 
 ![Thumbnail](https://github.com/user-attachments/assets/2c1b1ff9-daaa-479f-8d21-01a66b9c9cb4)
 
+
 ## Table of Contents
 
 - [Model Description](#model-description)
