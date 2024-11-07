@@ -11,7 +11,6 @@ Please also cite nnU-Net since our work is heavily based on it:
 
 ![Thumbnail](https://github.com/user-attachments/assets/2c1b1ff9-daaa-479f-8d21-01a66b9c9cb4)
 
-
 ## Table of Contents
 
 - [Model Description](#model-description)
@@ -63,42 +62,33 @@ When not available, sacrum segmentations were generated using the [totalsegmenta
 
 1. Open a `bash` terminal in the directory where you want to work.
 
-1. Create the installation directory:
-   ```bash
-   mkdir TotalSpineSeg
-   cd TotalSpineSeg
-   ```
+2. Create the installation directory:
+```bash
+mkdir TotalSpineSeg
+cd TotalSpineSeg
+```
 
-1. Create and activate a virtual environment (highly recommended):
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate
-   ```
+3. Create and activate a virtual environment (highly recommended):
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
 
-1. Clone and install this repository:
+4. Install this repository using one of the following options:
+   - Git clone (for developpers)
    ```bash
    git clone https://github.com/neuropoly/totalspineseg.git
    python3 -m pip install -e totalspineseg
    ```
-
-1. For CUDA GPU support, install **PyTorch** following the instructions on their [website](https://pytorch.org/). Be sure to add the `--upgrade` flag to your installation command to replace any existing PyTorch installation.
-   Example:
-     ```bash
-     python3 -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 --upgrade
-     ```
-
-1. Set the path to TotalSpineSeg and data folders in the virtual environment:
-   ```bash
-   mkdir data
-   export TOTALSPINESEG="$(realpath totalspineseg)"
-   export TOTALSPINESEG_DATA="$(realpath data)"
-   echo "export TOTALSPINESEG=\"$TOTALSPINESEG\"" >> venv/bin/activate
-   echo "export TOTALSPINESEG_DATA=\"$TOTALSPINESEG_DATA\"" >> venv/bin/activate
+   - PyPI installation (for inference only)
+   ```
+   pip install totalspineseg
    ```
 
-**Note:** If you pull a new version from GitHub, make sure to reinstall the package to apply the updates using the following command:
+5. For CUDA GPU support, install **PyTorch** following the instructions on their [website](https://pytorch.org/). Be sure to add the `--upgrade` flag to your installation command to replace any existing PyTorch installation.
+   Example:
 ```bash
-python3 -m pip install -e $TOTALSPINESEG --upgrade
+python3 -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 --upgrade
 ```
 
 ## Training
@@ -112,36 +102,45 @@ Please ensure that your system meets these requirements before proceeding with t
 
 1. Make sure that the `bash` terminal is opened with the virtual environment (if used) activated (using `source <path to installation directory>/venv/bin/activate`).
 
-1. Ensure training dependencies are installed:
-   ```bash
-   apt-get install git git-annex jq -y
-   ```
+2. Ensure training dependencies are installed:
+```bash
+apt-get install git git-annex jq -y
+```
 
-1. Download the required datasets into `$TOTALSPINESEG_DATA/bids` (make sure you have access to the specified repositories):
-   ```bash
-   bash "$TOTALSPINESEG"/scripts/download_datasets.sh
-   ```
+3. Set the path to TotalSpineSeg and data folders in the virtual environment:
+```bash
+mkdir data
+export TOTALSPINESEG="$(realpath totalspineseg)"
+export TOTALSPINESEG_DATA="$(realpath data)"
+echo "export TOTALSPINESEG=\"$TOTALSPINESEG\"" >> venv/bin/activate
+echo "export TOTALSPINESEG_DATA=\"$TOTALSPINESEG_DATA\"" >> venv/bin/activate
+```
 
-1. Temporary step (until all labels are pushed into the repositories) - Download labels into `$TOTALSPINESEG_DATA/bids`:
-   ```bash
-   curl -L -O https://github.com/neuropoly/totalspineseg/releases/download/labels/labels_iso_bids_0924.zip
-   unzip -qo labels_iso_bids_0924.zip -d "$TOTALSPINESEG_DATA"
-   rm labels_iso_bids_0924.zip
-   ```
+4. Download the required datasets into `$TOTALSPINESEG_DATA/bids` (make sure you have access to the specified repositories):
+```bash
+bash "$TOTALSPINESEG"/scripts/download_datasets.sh
+```
 
-1. Prepare datasets in nnUNetv2 structure into `$TOTALSPINESEG_DATA/nnUnet`:
-   ```bash
-   bash "$TOTALSPINESEG"/scripts/prepare_datasets.sh [DATASET_ID] [-noaug]
-   ```
+5. Temporary step (until all labels are pushed into the repositories) - Download labels into `$TOTALSPINESEG_DATA/bids`:
+```bash
+curl -L -O https://github.com/neuropoly/totalspineseg/releases/download/labels/labels_iso_bids_0924.zip
+unzip -qo labels_iso_bids_0924.zip -d "$TOTALSPINESEG_DATA"
+rm labels_iso_bids_0924.zip
+```
+
+6. Prepare datasets in nnUNetv2 structure into `$TOTALSPINESEG_DATA/nnUnet`:
+```bash
+bash "$TOTALSPINESEG"/scripts/prepare_datasets.sh [DATASET_ID] [-noaug]
+```
 
    The script optionally accepts `DATASET_ID` as the first positional argument to specify the dataset to prepare. It can be either 101, 102, 103, or all. If `all` is specified, it will prepare all datasets (101, 102, 103). By default, it will prepare datasets 101 and 102.
 
    Additionally, you can use the `-noaug` parameter to prepare the datasets without data augmentations.
 
-1. Train the model:
-   ```bash
-   bash "$TOTALSPINESEG"/scripts/train.sh [DATASET_ID [FOLD]]
-   ```
+7. Train the model:
+```bash
+bash "$TOTALSPINESEG"/scripts/train.sh [DATASET_ID [FOLD]]
+```
 
    The script optionally accepts `DATASET_ID` as the first positional argument to specify the dataset to train. It can be either 101, 102, 103, or all. If `all` is specified, it will train all datasets (101, 102, 103). By default, it will train datasets 101 and 102.
 
@@ -151,10 +150,15 @@ Please ensure that your system meets these requirements before proceeding with t
 
 1. Make sure that the `bash` terminal is opened with the virtual environment (if used) activated (using `source <path to installation directory>/venv/bin/activate`).
 
-1. Run the model on a folder containing the images in .nii.gz format, or on a single .nii.gz file:
-   ```bash
-   totalspineseg INPUT OUTPUT_FOLDER [--step1] [--iso]
-   ```
+2. Install the inference weights using this command (If you did not train a new model)
+```
+totalspineseg_init
+```
+
+3. Run the model on a folder containing the images in .nii.gz format, or on a single .nii.gz file:
+```bash
+totalspineseg INPUT OUTPUT_FOLDER [--step1] [--iso]
+```
 
    This will process the images in INPUT or the single image and save the results in OUTPUT_FOLDER. If you haven't trained the model, the script will automatically download the pre-trained models from the GitHub release.
 
@@ -163,9 +167,9 @@ Please ensure that your system meets these requirements before proceeding with t
    Additionally, you can use the `--step1` parameter to run only the step 1 model, which outputs a single label for all vertebrae, including the sacrum.
 
    For more options, you can use the `--help` parameter:
-   ```bash
-   totalspineseg --help
-   ```
+```bash
+totalspineseg --help
+```
 
 **Output Data Structure:**
 
