@@ -2,6 +2,7 @@ import os, argparse, warnings, subprocess, textwrap, torch, psutil, shutil
 from fnmatch import fnmatch
 from pathlib import Path
 from importlib.metadata import metadata
+import importlib.resources
 from tqdm import tqdm
 from totalspineseg import *
 
