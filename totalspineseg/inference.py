@@ -113,9 +113,9 @@ def main():
     step1_dataset = 'Dataset101_TotalSpineSeg_step1'
     step2_dataset = 'Dataset102_TotalSpineSeg_step2'
 
-    # Read urls from 'pyproject.toml'
+    # Read urls from 'pyproject.toml' to extract the release
     step1_zip_url = dict([_.split(', ') for _ in metadata('totalspineseg').get_all('Project-URL')])[step1_dataset]
-    step2_zip_url = dict([_.split(', ') for _ in metadata('totalspineseg').get_all('Project-URL')])[step2_dataset]
+    release_weights = step1_zip_url.split('/')[-2]
 
     fold = 0
 
@@ -127,9 +127,8 @@ def main():
 
     # If not both steps models are installed, use the release subfolder
     if not (nnUNet_results / step1_dataset).is_dir() or not (nnUNet_results / step2_dataset).is_dir():
-        # TODO Think of better way to get the release
-        release = step1_zip_url.split('/')[-2]
-        nnUNet_results = nnUNet_results / release
+        # TODO Think of better way to get the release weights
+        nnUNet_results = nnUNet_results / release_weights
 
     # Create the nnUNet directories if they do not exist
     nnUNet_raw.mkdir(parents=True, exist_ok=True)
@@ -160,16 +159,6 @@ def main():
             max_workers_nnunet = {max_workers_nnunet}
             device = "{device}"
         '''))
-
-    # Installing the pretrained models if not already installed
-    for dataset, zip_url in [(step1_dataset, step1_zip_url), (step2_dataset, step2_zip_url)]:
-        install_weights(
-            nnunet_dataset=dataset,
-            zip_url=zip_url,
-            results_folder=nnUNet_results,
-            exports_folder=nnUNet_exports,
-            quiet=quiet
-        )
 
     if not quiet: print('\n' 'Making input dir with _0000 suffix:')
     if input_path.name.endswith('.nii.gz'):
