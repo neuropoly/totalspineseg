@@ -62,6 +62,7 @@ Dataset102_TotalSpineSeg_step2 = "https://github.com/neuropoly/totalspineseg/rel
 
 [project.scripts]
 totalspineseg = "totalspineseg.inference:main"
+totalspineseg_init = "totalspineseg.init_inference:main"
 totalspineseg_cpdir = "totalspineseg.utils.cpdir:main"
 totalspineseg_fill_canal = "totalspineseg.utils.fill_canal:main"
 totalspineseg_augment = "totalspineseg.utils.augment:main"
