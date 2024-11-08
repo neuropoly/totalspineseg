@@ -28,6 +28,11 @@ def main():
     # Get the command-line argument values
     quiet = args.quiet
 
+    # Initialize inference
+    init_inference(quiet=quiet)
+
+
+def init_inference(quiet):
     # Datasets data
     step1_dataset = 'Dataset101_TotalSpineSeg_step1'
     step2_dataset = 'Dataset102_TotalSpineSeg_step2'

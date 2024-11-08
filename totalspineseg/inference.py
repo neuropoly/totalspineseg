@@ -97,7 +97,41 @@ def main():
         data_path = Path(os.environ.get('TOTALSPINESEG_DATA', ''))
     else:
         data_path = importlib.resources.files(models)
+    
+    # Run inference
+    inference(
+        input_path=input_path,
+        output_path=output_path,
+        data_path=data_path,
+        output_iso=output_iso,
+        loc_path=loc_path,
+        suffix=suffix,
+        loc_suffix=loc_suffix,
+        step1_only=step1_only,
+        max_workers=max_workers,
+        max_workers_nnunet=max_workers_nnunet,
+        device=device,
+        quiet=quiet
+    )
 
+
+def inference(
+        input_path,
+        output_path,
+        data_path,
+        output_iso,
+        loc_path,
+        suffix,
+        loc_suffix,
+        step1_only,
+        max_workers,
+        max_workers_nnunet,
+        device,
+        quiet
+    ):
+    '''
+    Inference function
+    '''
     # Check if the data folder exists
     if not data_path.exists():
         raise FileNotFoundError(' '.join(f'''
