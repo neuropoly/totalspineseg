@@ -111,6 +111,7 @@ def main():
     step2_dataset = 'Dataset102_TotalSpineSeg_step2'
 
     # Read urls from 'pyproject.toml' to extract the release
+    # TODO Think of better way to get the release weights
     step1_zip_url = dict([_.split(', ') for _ in metadata('totalspineseg').get_all('Project-URL')])[step1_dataset]
     release_weights = step1_zip_url.split('/')[-2]
 
@@ -120,18 +121,17 @@ def main():
     nnUNet_raw = data_path / 'nnUNet' / 'raw'
     nnUNet_preprocessed = data_path / 'nnUNet' / 'preprocessed'
     nnUNet_results = data_path / 'nnUNet' / 'results'
-    nnUNet_exports = data_path / 'nnUNet' / 'exports'
 
     # If not both steps models are installed, use the release subfolder
     if not (nnUNet_results / step1_dataset).is_dir() or not (nnUNet_results / step2_dataset).is_dir():
-        # TODO Think of better way to get the release weights
         nnUNet_results = nnUNet_results / release_weights
+        # Check if weights are available
+        if not (nnUNet_results / step1_dataset).is_dir() or not (nnUNet_results / step2_dataset).is_dir():
+            raise FileNotFoundError('Model weights are missing, please run `totalspineseg_init` before running inference.')
 
     # Create the nnUNet directories if they do not exist
     nnUNet_raw.mkdir(parents=True, exist_ok=True)
     nnUNet_preprocessed.mkdir(parents=True, exist_ok=True)
-    nnUNet_results.mkdir(parents=True, exist_ok=True)
-    nnUNet_exports.mkdir(parents=True, exist_ok=True)
 
     # Set nnUNet environment variables
     os.environ['nnUNet_def_n_proc'] = str(max_workers_nnunet)
