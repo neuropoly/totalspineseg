@@ -160,7 +160,7 @@ totalspineseg_init
 totalspineseg INPUT OUTPUT_FOLDER [--step1] [--iso]
 ```
 
-   This will process the images in INPUT or the single image and save the results in OUTPUT_FOLDER. If you haven't trained the model, the script will automatically download the pre-trained models from the GitHub release.
+   This will process the images in INPUT or the single image and save the results in OUTPUT_FOLDER.
 
    **Important Note:** By default, the output segmentations are resampled back to the input image space. If you prefer to obtain the outputs in the model's original 1mm isotropic resolution, especially useful for visualization purposes, we strongly recommend using the `--iso` argument.
 
