@@ -91,18 +91,11 @@ def main():
     max_workers_nnunet = min(args.max_workers_nnunet, max_workers)
     device = args.device
     quiet = args.quiet
-
-    # Init data_path
-    if 'TOTALSPINESEG_DATA' in os.environ:
-        data_path = Path(os.environ.get('TOTALSPINESEG_DATA', ''))
-    else:
-        data_path = importlib.resources.files(models)
     
     # Run inference
     inference(
         input_path=input_path,
         output_path=output_path,
-        data_path=data_path,
         output_iso=output_iso,
         loc_path=loc_path,
         suffix=suffix,
@@ -118,7 +111,6 @@ def main():
 def inference(
         input_path,
         output_path,
-        data_path,
         output_iso,
         loc_path,
         suffix,
@@ -132,6 +124,12 @@ def inference(
     '''
     Inference function
     '''
+    # Init data_path
+    if 'TOTALSPINESEG_DATA' in os.environ:
+        data_path = Path(os.environ.get('TOTALSPINESEG_DATA', ''))
+    else:
+        data_path = importlib.resources.files(models)
+    
     # Check if the data folder exists
     if not data_path.exists():
         raise FileNotFoundError(' '.join(f'''
