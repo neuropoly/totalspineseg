@@ -28,11 +28,20 @@ def main():
     # Get the command-line argument values
     quiet = args.quiet
 
+    # Init data_path
+    if 'TOTALSPINESEG_DATA' in os.environ:
+        data_path = Path(os.environ.get('TOTALSPINESEG_DATA', ''))
+    else:
+        data_path = importlib.resources.files(models)
+
     # Initialize inference
-    init_inference(quiet=quiet)
+    init_inference(
+        data_path=data_path,
+        quiet=quiet
+        )
 
 
-def init_inference(quiet):
+def init_inference(data_path, quiet):
     # Datasets data
     step1_dataset = 'Dataset101_TotalSpineSeg_step1'
     step2_dataset = 'Dataset102_TotalSpineSeg_step2'
@@ -40,12 +49,6 @@ def init_inference(quiet):
     # Read urls from 'pyproject.toml'
     step1_zip_url = dict([_.split(', ') for _ in metadata('totalspineseg').get_all('Project-URL')])[step1_dataset]
     step2_zip_url = dict([_.split(', ') for _ in metadata('totalspineseg').get_all('Project-URL')])[step2_dataset]
-
-    # Init data_path
-    if 'TOTALSPINESEG_DATA' in os.environ:
-        data_path = Path(os.environ.get('TOTALSPINESEG_DATA', ''))
-    else:
-        data_path = importlib.resources.files(models)
     
     # Set nnUNet paths
     nnUNet_results = data_path / 'nnUNet' / 'results'
@@ -54,8 +57,8 @@ def init_inference(quiet):
     # If not both steps models are installed, use the release subfolder
     if not (nnUNet_results / step1_dataset).is_dir() or not (nnUNet_results / step2_dataset).is_dir():
         # TODO Think of better way to get the release
-        release = step1_zip_url.split('/')[-2]
-        nnUNet_results = nnUNet_results / release
+        weights_release = step1_zip_url.split('/')[-2]
+        nnUNet_results = nnUNet_results / weights_release
 
     # Installing the pretrained models if not already installed
     for dataset, zip_url in [(step1_dataset, step1_zip_url), (step2_dataset, step2_zip_url)]:
