@@ -787,6 +787,21 @@ def inference(
                 max_workers=max_workers,
                 quiet=quiet,
             )
+    # Print all the output paths
+    if not quiet: print('\nResults of iterative labeling algorithm for step 1:')
+    if not quiet: print(f'{str(output_path)}/step1_output',)
+
+    if not quiet: print('\nSpinal cord soft segmentations:')
+    if not quiet: print(f'{str(output_path)}/step1_cord',)
+
+    if not quiet: print('\nSpinal canal soft segmentations:')
+    if not quiet: print(f'{str(output_path)}/step1_canal',)
+
+    if not quiet: print('\nSingle voxel in canal centerline at each intervertebral disc level:')
+    if not quiet: print(f'{str(output_path)}/step1_levels',)
+
+    if not quiet and not step1_only: print('\nSegmentation and labeling of the vertebrae, discs, spinal cord and spinal canal:')
+    if not quiet and not step1_only: print(f'{str(output_path)}/step2_output',)
 
     # Remove the input_raw folder
     shutil.rmtree(output_path / 'input_raw', ignore_errors=True)
