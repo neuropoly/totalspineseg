@@ -201,6 +201,7 @@ def inference(
             loc_suffix = "{loc_suffix}"
             step1_only = {step1_only}
             data_dir = "{data_path}"
+            release_weights = "{release_weights}"
             max_workers = {max_workers}
             max_workers_nnunet = {max_workers_nnunet}
             device = "{device}"
