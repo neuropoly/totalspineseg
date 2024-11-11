@@ -41,7 +41,10 @@ def main():
         )
 
 
-def init_inference(data_path, quiet):
+def init_inference(
+        data_path,
+        quiet=False
+    ):
     # Datasets data
     step1_dataset = 'Dataset101_TotalSpineSeg_step1'
     step2_dataset = 'Dataset102_TotalSpineSeg_step2'

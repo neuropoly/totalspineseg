@@ -119,15 +119,15 @@ def inference(
         input_path,
         output_path,
         data_path,
-        output_iso,
-        loc_path,
-        suffix,
-        loc_suffix,
-        step1_only,
-        max_workers,
-        max_workers_nnunet,
-        device,
-        quiet
+        output_iso=False,
+        loc_path=None,
+        suffix=[''],
+        loc_suffix='',
+        step1_only=False,
+        max_workers=os.cpu_count(),
+        max_workers_nnunet=int(max(min(os.cpu_count(), psutil.virtual_memory().total / 2**30 // 8), 1)),
+        device='cuda',
+        quiet=False
     ):
     '''
     Inference function
