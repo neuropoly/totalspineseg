@@ -132,6 +132,13 @@ def inference(
     '''
     Inference function
     '''
+    # Convert data_path to Path like object
+    if isinstance(data_path, str):
+        data_path = Path(data_path)
+    else:
+        if not isinstance(data_path, Path):
+            raise ValueError('data_path should be a Path object from pathlib or a string')
+    
     # Check if the data folder exists
     if not data_path.exists():
         raise FileNotFoundError(f"The totalspineseg data folder does not exist at {data_path}.")
