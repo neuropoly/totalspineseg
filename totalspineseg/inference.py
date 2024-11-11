@@ -132,7 +132,19 @@ def inference(
     '''
     Inference function
     '''
-    # Convert data_path to Path like object
+    # Convert paths to Path like objects
+    if isinstance(input_path, str):
+        input_path = Path(input_path)
+    else:
+        if not isinstance(input_path, Path):
+            raise ValueError('input_path should be a Path object from pathlib or a string')
+
+    if isinstance(output_path, str):
+        output_path = Path(output_path)
+    else:
+        if not isinstance(output_path, Path):
+            raise ValueError('output_path should be a Path object from pathlib or a string')
+
     if isinstance(data_path, str):
         data_path = Path(data_path)
     else:
