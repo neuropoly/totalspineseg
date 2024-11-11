@@ -45,6 +45,14 @@ def init_inference(
         data_path,
         quiet=False
     ):
+    '''
+    Function used to download and install nnUNetV2 weights
+
+    :param data_path: path to the folder where weights will be stored (string or Path object)
+    :param quiet: do not print if true
+
+    :return: url to the downloaded/used paths
+    '''
     # Convert data_path to Path like object
     if isinstance(data_path, str):
         data_path = Path(data_path)
@@ -79,6 +87,7 @@ def init_inference(
             exports_folder=nnUNet_exports,
             quiet=quiet
         )
+    return [step1_zip_url, step2_zip_url]
 
 
 if __name__=='__main__':
