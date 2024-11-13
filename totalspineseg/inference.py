@@ -810,7 +810,7 @@ def inference(
     shutil.rmtree(output_path / 'input_raw', ignore_errors=True)
     
     # Return list of output paths
-    return [str(output_path)+f'/{folder}' for folder in ['input','preview','step1_canal','step1_cord','step1_levels','step1_output','step1_raw','step2_input','step2_output','step2_raw']]
+    return [str(output_path / folder) for folder in os.listdir(str(output_path))]
 
 if __name__ == '__main__':
     main()
