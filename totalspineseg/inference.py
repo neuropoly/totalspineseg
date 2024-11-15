@@ -1,10 +1,10 @@
 import os, argparse, warnings, subprocess, textwrap, torch, psutil, shutil
 from fnmatch import fnmatch
 from pathlib import Path
-from importlib.metadata import metadata
 import importlib.resources
 from tqdm import tqdm
 from totalspineseg import *
+from totalspineseg.init_inference import ZIP_URLS
 
 warnings.filterwarnings("ignore")
 
@@ -98,11 +98,15 @@ def main():
     else:
         data_path = importlib.resources.files(models)
     
+    # Default release to use
+    default_release = list(ZIP_URLS.values())[0].split('/')[-2]
+    
     # Run inference
     inference(
         input_path=input_path,
         output_path=output_path,
         data_path=data_path,
+        default_release=default_release,
         output_iso=output_iso,
         loc_path=loc_path,
         suffix=suffix,
@@ -119,6 +123,7 @@ def inference(
         input_path,
         output_path,
         data_path,
+        default_release,
         output_iso=False,
         loc_path=None,
         suffix=[''],
@@ -161,11 +166,6 @@ def inference(
     step1_dataset = 'Dataset101_TotalSpineSeg_step1'
     step2_dataset = 'Dataset102_TotalSpineSeg_step2'
 
-    # Read urls from 'pyproject.toml' to extract the release
-    # TODO Think of better way to get the release weights
-    step1_zip_url = dict([_.split(', ') for _ in metadata('totalspineseg').get_all('Project-URL')])[step1_dataset]
-    release_weights = step1_zip_url.split('/')[-2]
-
     fold = 0
 
     # Set nnUNet paths
@@ -173,9 +173,9 @@ def inference(
     nnUNet_preprocessed = data_path / 'nnUNet' / 'preprocessed'
     nnUNet_results = data_path / 'nnUNet' / 'results'
 
-    # If not both steps models are installed, use the release subfolder
+    # If not both steps models are installed, use the default release subfolder
     if not (nnUNet_results / step1_dataset).is_dir() or not (nnUNet_results / step2_dataset).is_dir():
-        nnUNet_results = nnUNet_results / release_weights
+        nnUNet_results = nnUNet_results / default_release
         # Check if weights are available
         if not (nnUNet_results / step1_dataset).is_dir() or not (nnUNet_results / step2_dataset).is_dir():
             raise FileNotFoundError('Model weights are missing, please run `totalspineseg_init` before running inference.')
@@ -203,7 +203,6 @@ def inference(
             loc_suffix = "{loc_suffix}"
             step1_only = {step1_only}
             data_dir = "{data_path}"
-            release_weights = "{release_weights}"
             max_workers = {max_workers}
             max_workers_nnunet = {max_workers_nnunet}
             device = "{device}"
