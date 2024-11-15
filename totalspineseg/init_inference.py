@@ -4,6 +4,7 @@ from importlib.metadata import metadata
 import importlib.resources
 from totalspineseg import models, install_weights
 
+ZIP_URLS = dict([meta.split(', ') for meta in metadata('totalspineseg').get_all('Project-URL') if meta.startswith('Dataset')])
 
 def main():
     parser = argparse.ArgumentParser(
