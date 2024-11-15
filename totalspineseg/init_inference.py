@@ -35,24 +35,29 @@ def main():
     else:
         data_path = importlib.resources.files(models)
 
+    # Weights ZIP_URLS dict
+    dict_urls = ZIP_URLS
+
     # Initialize inference
     init_inference(
         data_path=data_path,
+        dict_urls=dict_urls,
         quiet=quiet
         )
 
 
 def init_inference(
         data_path,
+        dict_urls,
         quiet=False
     ):
     '''
     Function used to download and install nnUNetV2 weights
 
     :param data_path: path to the folder where weights will be stored (string or Path object)
+    :param dict_urls: url dictionary containing all the weights that need to be downloaded
     :param quiet: do not print if true
 
-    :return: url to the downloaded/used paths
     '''
     # Convert data_path to Path like object
     if isinstance(data_path, str):
@@ -60,27 +65,19 @@ def init_inference(
     else:
         if not isinstance(data_path, Path):
             raise ValueError('data_path should be a Path object from pathlib or a string')
-
-    # Datasets data
-    step1_dataset = 'Dataset101_TotalSpineSeg_step1'
-    step2_dataset = 'Dataset102_TotalSpineSeg_step2'
-
-    # Read urls from 'pyproject.toml'
-    step1_zip_url = dict([_.split(', ') for _ in metadata('totalspineseg').get_all('Project-URL')])[step1_dataset]
-    step2_zip_url = dict([_.split(', ') for _ in metadata('totalspineseg').get_all('Project-URL')])[step2_dataset]
     
     # Set nnUNet paths
     nnUNet_results = data_path / 'nnUNet' / 'results'
     nnUNet_exports = data_path / 'nnUNet' / 'exports'
 
     # If not both steps models are installed, use the release subfolder
-    if not (nnUNet_results / step1_dataset).is_dir() or not (nnUNet_results / step2_dataset).is_dir():
+    if not any([(nnUNet_results / dataset).is_dir() for dataset in dict_urls.keys()]):
         # TODO Think of better way to get the release
-        weights_release = step1_zip_url.split('/')[-2]
+        weights_release = list(dict_urls.values())[0].split('/')[-2]
         nnUNet_results = nnUNet_results / weights_release
 
     # Installing the pretrained models if not already installed
-    for dataset, zip_url in [(step1_dataset, step1_zip_url), (step2_dataset, step2_zip_url)]:
+    for dataset, zip_url in dict_urls.items():
         install_weights(
             nnunet_dataset=dataset,
             zip_url=zip_url,
@@ -88,7 +85,6 @@ def init_inference(
             exports_folder=nnUNet_exports,
             quiet=quiet
         )
-    return [step1_zip_url, step2_zip_url]
 
 
 if __name__=='__main__':
