@@ -4,7 +4,7 @@ from pathlib import Path
 import importlib.resources
 from tqdm import tqdm
 from totalspineseg import *
-from totalspineseg.init_inference import ZIP_URLS
+from totalspineseg.init_inference import ZIP_URLS, init_inference
 
 warnings.filterwarnings("ignore")
 
@@ -100,6 +100,13 @@ def main():
     
     # Default release to use
     default_release = list(ZIP_URLS.values())[0].split('/')[-2]
+
+    # Install weights if not present
+    init_inference(
+        data_path=data_path,
+        dict_urls=ZIP_URLS,
+        quiet=quiet
+        )
     
     # Run inference
     inference(
