@@ -63,8 +63,12 @@ export nnUNet_results="$TOTALSPINESEG_DATA"/nnUNet/results
 export nnUNet_exports="$TOTALSPINESEG_DATA"/nnUNet/exports
 
 nnUNetTrainer=${3:-nnUNetTrainer_DASegOrd0_NoMirroring}
-nnUNetPlanner=${4:-nnUNetPlannerResEncL}
-nnUNetPlans=${5:-nnUNetResEncUNetLPlans}
+nnUNetPlanner=${4:-ExperimentPlanner}
+# Note on nnUNetPlans_small configuration:
+# To train with a small patch size, verify that the nnUNetPlans_small.json file 
+# in $nnUNet_preprocessed/Dataset10[1,2]_TotalSpineSeg_step[1,2] matches the version provided in the release.
+# Make any necessary updates to this file before starting the training process.
+nnUNetPlans=${5:-nnUNetPlans_small}
 configuration=3d_fullres
 data_identifier=nnUNetPlans_3d_fullres
 
