@@ -144,7 +144,39 @@ def inference(
     '''
     Inference function
 
-    :return: list of output folders
+    Parameters
+    ----------
+    input_path : pathlib.Path or string
+        The input folder path containing the niftii images.
+    output_path : pathlib.Path or string
+        The output folder path that will contain the predictions.
+    data_path : pathlib.Path or string
+        Folder path containing the network weights.
+    default_release : string
+        Default release used for inference.
+    output_iso : bool
+        If False, output predictions will be resampled to the original space.
+    loc_path : None or pathlib.Path/string
+        The localizer folder path containing the niftii predictions of the localizer.
+    suffix : string
+        Suffix to use for the input images
+    loc_suffix : string
+        Suffix to use for the localizer images
+    step1_only : bool
+        If True only the prediction of the first model will be computed.
+    max_workers : int
+        Max worker to run in parallel proccess, defaults to numer of available cores
+    max_workers_nnunet : int
+        Max worker to run in parallel proccess for nnUNet
+    device : 'cuda' or 'cpu'
+        Device to run the nnUNet model on
+    quiet : bool
+        If True, will reduce the amount of displayed information
+
+    Returns
+    -------
+    list of string
+        List of output folders.
     '''
     # Convert paths to Path like objects
     if isinstance(input_path, str):

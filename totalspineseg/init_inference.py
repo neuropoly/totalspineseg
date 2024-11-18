@@ -54,10 +54,19 @@ def init_inference(
     '''
     Function used to download and install nnUNetV2 weights
 
-    :param data_path: path to the folder where weights will be stored (string or Path object)
-    :param dict_urls: url dictionary containing all the weights that need to be downloaded
-    :param quiet: do not print if true
+    Parameters
+    ----------
+    data_path : pathlib.Path or string
+        Folder path containing the network weights.
+    dict_urls : dictionary
+        Url dictionary containing all the weights that need to be downloaded.
+    quiet : bool
+        If True, will reduce the amount of displayed information
 
+    Returns
+    -------
+    list of string
+        List of output folders.
     '''
     # Convert data_path to Path like object
     if isinstance(data_path, str):
