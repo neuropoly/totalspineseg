@@ -54,7 +54,7 @@ dependencies = [
 homepage = "https://github.com/neuropoly/totalspineseg"
 repository = "https://github.com/neuropoly/totalspineseg"
 Dataset101_TotalSpineSeg_step1 = "https://github.com/neuropoly/totalspineseg/releases/download/r20241115/Dataset101_TotalSpineSeg_step1_r20241115.zip"
-Dataset102_TotalSpineSeg_step2 = "https://github.com/neuropoly/totalspineseg/releases/download/r20241115/Dataset101_TotalSpineSeg_step2_r20241115.zip"
+Dataset102_TotalSpineSeg_step2 = "https://github.com/neuropoly/totalspineseg/releases/download/r20241115/Dataset102_TotalSpineSeg_step2_r20241115.zip"
 
 [project.scripts]
 totalspineseg = "totalspineseg.inference:main"
