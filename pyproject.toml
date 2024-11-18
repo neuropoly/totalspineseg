@@ -7,11 +7,7 @@ readme = "README.md"
 authors = [
     { name = "Yehuda Warszawer", email = "yehuda.warszawer@sheba.health.gov.il"},
     { name = "Nathan Molinier", email = "nathan.molinier@polymtl.ca"},
-    { name = "Jan Valosek"},
-    { name = "Emanuel Shirbint"},
-    { name = "Pierre-Louis Benveniste"},
     { name = "Anat Achiron"},
-    { name = "Arman Eshaghi"},
     { name = "Julien Cohen-Adad"},
 ]
 classifiers = [
