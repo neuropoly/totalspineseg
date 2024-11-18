@@ -310,20 +310,21 @@ def extract_levels(
         output_seg_data[tuple(idx)] = map_labels[label]
 
     # If C2-C3 and C1 are in the segmentation, set 1 and 2
-    if 3 in output_seg_data and c2_label != 0 and c1_label != 0:
+    if 3 in output_seg_data and c2_label != 0 and c1_label != 0 and all(np.isin([c1_label, c2_label], seg_data)):
         # Place 1 at the top of C2 if C1 is visible in the image
-        if c1_label in seg_data:
-            # Find the location of the C2-C3 disc
-            c2c3_index = np.unravel_index(np.argmax(output_seg_data == 3), seg_data.shape)
+        # Find the location of the C2-C3 disc
+        c2c3_index = np.unravel_index(np.argmax(output_seg_data == 3), seg_data.shape)
 
-            # Find the maximum coordinate of the vertebra C1
-            c1_coords = np.where(seg_data == c1_label)
-            c1_z_max_index = np.max(c1_coords[2])
+        # Find the maximum coordinate of the vertebra C1
+        c1_coords = np.where(seg_data == c1_label)
+        c1_z_max_index = np.max(c1_coords[2])
 
-            # Extract coordinate of the vertebrae
-            # The coordinate of 1 needs to be in the same slice as 3 but below the max index of C1
-            vert_coords = np.where(seg_data[c2c3_index[0],:,:c1_z_max_index] == c2_label)
+        # Extract coordinate of the vertebrae
+        # The coordinate of 1 needs to be in the same slice as 3 but below the max index of C1
+        vert_coords = np.where(seg_data[c2c3_index[0],:,:c1_z_max_index] == c2_label)
 
+        # Check if not empty
+        if len(vert_coords) > 1:
             # Find top pixel of the vertebrae
             argmax_z = np.argmax(vert_coords[1])
             top_vert_voxel = tuple([c2c3_index[0]]+[vert_coords[i][argmax_z] for i in range(2)])
