@@ -324,7 +324,7 @@ def extract_levels(
         vert_coords = np.where(seg_data[c2c3_index[0],:,:c1_z_max_index] == c2_label)
 
         # Check if not empty
-        if len(vert_coords) > 1:
+        if len(vert_coords[1]) > 0:
             # Find top pixel of the vertebrae
             argmax_z = np.argmax(vert_coords[1])
             top_vert_voxel = tuple([c2c3_index[0]]+[vert_coords[i][argmax_z] for i in range(2)])
