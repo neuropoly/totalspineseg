@@ -484,6 +484,19 @@ def main():
         quiet=quiet,
     )
 
+    if not quiet: print('\n' 'Generating preview images for the step 1 levels:')
+    preview_jpg_mp(
+        output_path / 'input',
+        output_path / 'preview',
+        segs_path=output_path / 'step1_levels',
+        output_suffix='_step1_levels_tags',
+        levels=True,
+        overwrite=True,
+        max_workers=max_workers,
+        quiet=quiet,
+        label_texts_right={i: f'{i}' for i in range(1, 31)},
+    )
+
     if not step1_only:
         if not quiet: print('\n' 'Copying the original images into step 2 input folder:')
         cpdir_mp(
