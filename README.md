@@ -68,7 +68,7 @@ mkdir TotalSpineSeg
 cd TotalSpineSeg
 ```
 
-3. Create and activate a virtual environment (highly recommended):
+3. Create and activate a virtual environment using one of the following options (highly recommended):
    - venv
    ```bash
    python3 -m venv venv
