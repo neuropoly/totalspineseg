@@ -69,10 +69,16 @@ cd TotalSpineSeg
 ```
 
 3. Create and activate a virtual environment (highly recommended):
-```bash
-python3 -m venv venv
-source venv/bin/activate
-```
+   - venv
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate
+   ```
+   - conda env
+   ```
+   conda create -n myenv python=3.9
+   conda activate myenv
+   ```
 
 4. Install this repository using one of the following options:
    - Git clone (for developpers)
