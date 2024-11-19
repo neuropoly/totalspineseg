@@ -106,7 +106,7 @@ To train the TotalSpineSeg model, you will need the following hardware specifica
 
 Please ensure that your system meets these requirements before proceeding with the training process.
 
-1. Make sure that the `bash` terminal is opened with the virtual environment (if used) activated (using `source <path to installation directory>/venv/bin/activate`).
+1. Make sure that the `bash` terminal is opened with the virtual environment activated (see [Installation](#installation)).
 
 2. Ensure training dependencies are installed:
 ```bash
@@ -154,7 +154,7 @@ bash "$TOTALSPINESEG"/scripts/train.sh [DATASET_ID [FOLD]]
 
 ## Inference
 
-1. Make sure that the `bash` terminal is opened with the virtual environment (if used) activated (using `source <path to installation directory>/venv/bin/activate`).
+1. Make sure that the `bash` terminal is opened with the virtual environment activated (see [Installation](#installation)).
 
 2. Install the inference weights using this command (If you did not train a new model)
 ```
