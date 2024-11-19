@@ -329,8 +329,10 @@ def extract_levels(
             argmax_z = np.argmax(vert_coords[1])
             top_vert_voxel = tuple([c2c3_index[0]]+[vert_coords[i][argmax_z] for i in range(2)])
 
-            # Set 1 to the superior voxels
-            output_seg_data[top_vert_voxel] = 1
+            # Set 1 to the superior voxels and project onto the anterior line
+            top_vert_distances_from_all_anteriorline = np.linalg.norm(top_vert_voxel - canal_anteriorline_indices[None, ...], axis=2)
+            top_vert_index_anteriorline = canal_anteriorline_indices[np.argmin(top_vert_distances_from_all_anteriorline, axis=1)]
+            output_seg_data[tuple(top_vert_index_anteriorline[0])] = 1
 
             # Set 2 to the middle voxels between C2-C3 and the superior voxels
             c1c2_index = tuple([(top_vert_voxel[i] + c2c3_index[i]) // 2 for i in range(3)])
