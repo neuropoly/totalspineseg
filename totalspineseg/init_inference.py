@@ -1,10 +1,9 @@
 import argparse, textwrap, os
 from pathlib import Path
-from importlib.metadata import metadata
 import importlib.resources
 from totalspineseg import models, install_weights
+from totalspineseg.utils.utils import ZIP_URLS
 
-ZIP_URLS = dict([meta.split(', ') for meta in metadata('totalspineseg').get_all('Project-URL') if meta.startswith('Dataset')])
 
 def main():
     parser = argparse.ArgumentParser(

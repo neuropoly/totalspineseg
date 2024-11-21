@@ -4,7 +4,7 @@ from pathlib import Path
 import importlib.resources
 from tqdm import tqdm
 from totalspineseg import *
-from totalspineseg.init_inference import ZIP_URLS, init_inference
+from totalspineseg.init_inference import init_inference
 
 warnings.filterwarnings("ignore")
 
