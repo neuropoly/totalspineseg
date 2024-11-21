@@ -1,4 +1,4 @@
-import os, argparse, warnings, subprocess, textwrap, torch, psutil, shutil
+import os, sys, argparse, warnings, subprocess, textwrap, torch, psutil, shutil
 from fnmatch import fnmatch
 from pathlib import Path
 import importlib.resources
@@ -377,8 +377,9 @@ def inference(
     checkpoint = 'checkpoint_final.pth' if (nnUNet_results / step1_dataset / f'{nnUNetTrainer}__{nnUNetPlans}__{configuration}' / f'fold_{fold}' / 'checkpoint_final.pth').is_file() else 'checkpoint_latest.pth'
 
     if not quiet: print('\n' 'Running step 1 model:')
+    ext = ".exe" if sys.platform.startswith("win32") else ""
     subprocess.run([
-        'nnUNetv2_predict',
+        f'nnUNetv2_predict{ext}',
             '-d', step1_dataset,
             '-i', str(output_path / 'input'),
             '-o', str(output_path / 'step1_raw'),
@@ -628,8 +629,9 @@ def inference(
         checkpoint = 'checkpoint_final.pth' if (nnUNet_results / step2_dataset / f'{nnUNetTrainer}__{nnUNetPlans}__{configuration}' / f'fold_{fold}' / 'checkpoint_final.pth').is_file() else 'checkpoint_latest.pth'
 
         if not quiet: print('\n' 'Running step 2 model:')
+        ext = ".exe" if sys.platform.startswith("win32") else ""
         subprocess.run([
-            'nnUNetv2_predict',
+            f'nnUNetv2_predict{ext}',
                 '-d', step2_dataset,
                 '-i', str(output_path / 'step2_input'),
                 '-o', str(output_path / 'step2_raw'),
