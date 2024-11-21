@@ -554,9 +554,24 @@ def inference(
         output_path / 'step1_levels',
         canal_labels=[1, 2],
         disc_labels=list(range(63, 68)) + list(range(71, 83)) + list(range(91, 96)) + [100],
+        c1_label=11,
+        c2_label=50,
         overwrite=True,
         max_workers=max_workers,
         quiet=quiet,
+    )
+
+    if not quiet: print('\n' 'Generating preview images for the step 1 levels:')
+    preview_jpg_mp(
+        output_path / 'input',
+        output_path / 'preview',
+        segs_path=output_path / 'step1_levels',
+        output_suffix='_step1_levels_tags',
+        levels=True,
+        overwrite=True,
+        max_workers=max_workers,
+        quiet=quiet,
+        label_texts_right={i: f'{i}' for i in range(1, 31)},
     )
 
     if not step1_only:
