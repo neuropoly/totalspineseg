@@ -38,11 +38,11 @@ def main():
     )
     parser.add_argument(
         '--store-export', type=bool, default=True,
-        help='Store exported zip file, (default=True).'
+        help='Store exported zip file, default to true.'
     )
     parser.add_argument(
         '--quiet', '-q', action="store_true", default=False,
-        help='Do not display inputs and progress bar, (defaults=False).'
+        help='Do not display inputs and progress bar, default to false. (display)'
     )
 
     # Parse the command-line arguments
