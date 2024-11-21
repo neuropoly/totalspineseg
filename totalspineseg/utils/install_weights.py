@@ -37,8 +37,12 @@ def main():
         help='Exports folder where the zipped weights will be dowloaded (Required).'
     )
     parser.add_argument(
+        '--store-export', type=bool, default=True,
+        help='Store exported zip file, (default=True).'
+    )
+    parser.add_argument(
         '--quiet', '-q', action="store_true", default=False,
-        help='Do not display inputs and progress bar, defaults to false (display).'
+        help='Do not display inputs and progress bar, (defaults=False).'
     )
 
     # Parse the command-line arguments
@@ -49,6 +53,7 @@ def main():
     zip_url = args.zip_url
     results_folder = args.results_folder
     exports_folder = args.exports_folder
+    store_export = args.store_export
     quiet = args.quiet
 
     # Print the argument values if not quiet
@@ -59,6 +64,7 @@ def main():
             zip_url = "{zip_url}"
             results_folder = "{results_folder}"
             exports_folder = "{exports_folder}"
+            store_export = "{store_export}"
             quiet = {quiet}
         '''))
 
@@ -67,6 +73,7 @@ def main():
         zip_url=zip_url,
         results_folder=results_folder,
         exports_folder=exports_folder,
+        store_export=store_export,
         quiet=quiet,
     )
 
@@ -75,6 +82,7 @@ def install_weights(
         zip_url,
         results_folder,
         exports_folder,
+        store_export=True,
         quiet=False,
     ):
     '''
@@ -112,6 +120,10 @@ def install_weights(
         # Install the pretrained model from the zip file
         os.environ['nnUNet_results'] = str(results_folder)
         subprocess.run(['nnUNetv2_install_pretrained_model_from_zip', str(zip_file)])
+
+        # Remove export
+        if not store_export:
+            os.remove(str(zip_file))
 
 if __name__ == '__main__':
     main()

@@ -48,6 +48,7 @@ def main():
 def init_inference(
         data_path,
         dict_urls,
+        store_zip=True,
         quiet=False
     ):
     '''
@@ -91,6 +92,7 @@ def init_inference(
             zip_url=zip_url,
             results_folder=nnUNet_results,
             exports_folder=nnUNet_exports,
+            store_export=store_zip,
             quiet=quiet
         )
 
