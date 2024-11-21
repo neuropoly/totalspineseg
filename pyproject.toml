@@ -1,6 +1,6 @@
 [project]
 name = "totalspineseg"
-version = "20241116"
+version = "20241121"
 requires-python = ">=3.9"
 description = "TotalSpineSeg is a tool for automatic instance segmentation and labeling of all vertebrae, intervertebral discs (IVDs), spinal cord, and spinal canal in MRI images."
 readme = "README.md"
