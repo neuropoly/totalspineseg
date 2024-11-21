@@ -18,6 +18,10 @@ def main():
         formatter_class=argparse.RawTextHelpFormatter
     )
     parser.add_argument(
+        '--store-export', action="store_false",
+        help='Store exported zip file, default to true.'
+    )
+    parser.add_argument(
         '--quiet', '-q', action="store_true",
         help='Do not display inputs and progress bar, defaults to false (display).'
     )
@@ -26,6 +30,7 @@ def main():
     args = parser.parse_args()
 
     # Get the command-line argument values
+    store_export = args.store_export
     quiet = args.quiet
 
     # Init data_path
@@ -41,6 +46,7 @@ def main():
     init_inference(
         data_path=data_path,
         dict_urls=dict_urls,
+        store_export=store_export,
         quiet=quiet
         )
 
@@ -48,7 +54,7 @@ def main():
 def init_inference(
         data_path,
         dict_urls,
-        store_zip=True,
+        store_export=True,
         quiet=False
     ):
     '''
@@ -92,7 +98,7 @@ def init_inference(
             zip_url=zip_url,
             results_folder=nnUNet_results,
             exports_folder=nnUNet_exports,
-            store_export=store_zip,
+            store_export=store_export,
             quiet=quiet
         )
 
