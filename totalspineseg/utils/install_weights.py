@@ -1,4 +1,5 @@
-import os, sys, argparse, subprocess, textwrap
+import os, argparse, textwrap
+import zipfile
 from pathlib import Path
 from urllib.request import urlretrieve
 from tqdm import tqdm
@@ -118,14 +119,20 @@ def install_weights(
         # If the pretrained model is not installed, install it from zip
         if not quiet: print(f'Installing the pretrained model from {zip_file}...')
         # Install the pretrained model from the zip file
-        os.environ['nnUNet_results'] = str(results_folder)
-        
-        ext = ".exe" if sys.platform.startswith("win32") else ""
-        subprocess.run([f'nnUNetv2_install_pretrained_model_from_zip{ext}', str(zip_file)])
+        install_model_from_zip_file(str(zip_file), extract_folder=str(results_folder))
 
         # Remove export
         if not store_export:
             os.remove(str(zip_file))
+
+
+def install_model_from_zip_file(zip_file: str, extract_folder):
+    '''
+    Based on https://github.com/MIC-DKFZ/nnUNet/blob/master/nnunetv2/model_sharing/model_import.py
+    '''
+    with zipfile.ZipFile(zip_file, 'r') as zip_ref:
+        zip_ref.extractall(extract_folder)
+
 
 if __name__ == '__main__':
     main()
