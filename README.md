@@ -88,7 +88,7 @@ cd TotalSpineSeg
    ```
    - PyPI installation (for inference only)
    ```
-   pip install totalspineseg
+   python3 -m pip install totalspineseg
    ```
 
 5. For CUDA GPU support, install **PyTorch** following the instructions on their [website](https://pytorch.org/). Be sure to add the `--upgrade` flag to your installation command to replace any existing PyTorch installation.
