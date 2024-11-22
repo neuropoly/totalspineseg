@@ -230,6 +230,24 @@ def inference(
     os.environ['nnUNet_preprocessed'] = str(nnUNet_preprocessed)
     os.environ['nnUNet_results'] = str(nnUNet_results)
 
+    # Load device
+    if isinstance(device, str):
+        assert device in ['cpu', 'cuda', 'mps'], f'-device must be either cpu, mps or cuda. Other devices are not tested/supported. Got: {device}.'
+        if device == 'cpu':
+            # let's allow torch to use hella threads
+            import multiprocessing
+            torch.set_num_threads(multiprocessing.cpu_count())
+            device = torch.device('cpu')
+        elif device == 'cuda':
+            # multithreading in torch doesn't help nnU-Net if run on GPU
+            torch.set_num_threads(1)
+            torch.set_num_interop_threads(1)
+            device = torch.device('cuda')
+        else:
+            device = torch.device('mps')
+    else:
+        assert isinstance(device, torch.device)
+
     # Print the argument values if not quiet
     if not quiet:
         print(textwrap.dedent(f'''
@@ -244,7 +262,7 @@ def inference(
             data_dir = "{data_path}"
             max_workers = {max_workers}
             max_workers_nnunet = {max_workers_nnunet}
-            device = "{device}"
+            device = "{device.type}"
         '''))
 
     if not quiet: print('\n' 'Making input dir with _0000 suffix:')
