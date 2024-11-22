@@ -14,5 +14,6 @@ from .utils.reorient_canonical import reorient_canonical_mp
 from .utils.resample import resample, resample_mp
 from .utils.transform_seg2image import transform_seg2image, transform_seg2image_mp
 from .utils.install_weights import install_weights
+from .utils.predict_nnunet import predict_nnunet
 from .utils.utils import ZIP_URLS
 from . import models

@@ -1,4 +1,4 @@
-import os, sys, argparse, warnings, subprocess, textwrap, torch, psutil, shutil
+import os, argparse, warnings, textwrap, torch, psutil, shutil
 from fnmatch import fnmatch
 from pathlib import Path
 import importlib.resources
@@ -394,23 +394,21 @@ def inference(
     # Check if the final checkpoint exists, if not use the latest checkpoint
     checkpoint = 'checkpoint_final.pth' if (nnUNet_results / step1_dataset / f'{nnUNetTrainer}__{nnUNetPlans}__{configuration}' / f'fold_{fold}' / 'checkpoint_final.pth').is_file() else 'checkpoint_latest.pth'
 
+    # Construct step 1 model folder
+    model_folder_step1 = nnUNet_results / step1_dataset / f'{nnUNetTrainer}__{nnUNetPlans}__{configuration}'
+    
     if not quiet: print('\n' 'Running step 1 model:')
-    ext = ".exe" if sys.platform.startswith("win32") else ""
-    subprocess.run([
-        f'nnUNetv2_predict{ext}',
-            '-d', step1_dataset,
-            '-i', str(output_path / 'input'),
-            '-o', str(output_path / 'step1_raw'),
-            '-f', str(fold),
-            '-c', configuration,
-            '-p', nnUNetPlans,
-            '-tr', nnUNetTrainer,
-            '-npp', str(max_workers_nnunet),
-            '-nps', str(max_workers_nnunet),
-            '-chk', checkpoint,
-            '-device', device,
-            '--save_probabilities',
-    ])
+    predict_nnunet(
+        model_folder=model_folder_step1,
+        images_dir=output_path / 'input',
+        output_dir=output_path / 'step1_raw',
+        folds = str(fold),
+        save_probabilities = True,
+        checkpoint = checkpoint,
+        npp = max_workers_nnunet,
+        nps = max_workers_nnunet,
+        device = device
+    )
 
     # Remove unnecessary files from output folder
     (output_path / 'step1_raw' / 'dataset.json').unlink(missing_ok=True)
@@ -661,22 +659,20 @@ def inference(
         # Check if the final checkpoint exists, if not use the latest checkpoint
         checkpoint = 'checkpoint_final.pth' if (nnUNet_results / step2_dataset / f'{nnUNetTrainer}__{nnUNetPlans}__{configuration}' / f'fold_{fold}' / 'checkpoint_final.pth').is_file() else 'checkpoint_latest.pth'
 
+        # Construct step 2 model folder
+        model_folder_step2 = nnUNet_results / step2_dataset / f'{nnUNetTrainer}__{nnUNetPlans}__{configuration}'
+
         if not quiet: print('\n' 'Running step 2 model:')
-        ext = ".exe" if sys.platform.startswith("win32") else ""
-        subprocess.run([
-            f'nnUNetv2_predict{ext}',
-                '-d', step2_dataset,
-                '-i', str(output_path / 'step2_input'),
-                '-o', str(output_path / 'step2_raw'),
-                '-f', str(fold),
-                '-c', configuration,
-                '-p', nnUNetPlans,
-                '-tr', nnUNetTrainer,
-                '-npp', str(max_workers_nnunet),
-                '-nps', str(max_workers_nnunet),
-                '-chk', checkpoint,
-                '-device', device
-        ])
+        predict_nnunet(
+            model_folder=model_folder_step2,
+            images_dir=output_path / 'step2_input',
+            output_dir=output_path / 'step2_raw',
+            folds = str(fold),
+            checkpoint = checkpoint,
+            npp = max_workers_nnunet,
+            nps = max_workers_nnunet,
+            device = device
+        )
 
         # Remove unnecessary files from output folder
         (output_path / 'step2_raw' / 'dataset.json').unlink(missing_ok=True)
