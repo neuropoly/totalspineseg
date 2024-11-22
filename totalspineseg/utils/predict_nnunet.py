@@ -2,6 +2,7 @@ import argparse, textwrap
 from pathlib import Path
 from nnunetv2.utilities.file_path_utilities import get_output_folder
 from nnunetv2.inference.predict_from_raw_data import nnUNetPredictor
+import torch
 
 def main():
     # Description and arguments
@@ -149,6 +150,22 @@ def main():
             verbose = "{verbose}"
             disable_progress_bar = "{disable_progress_bar}"
         '''))
+    
+    # Load device
+    if isinstance(device, str):
+        assert device in ['cpu', 'cuda', 'mps'], f'-device must be either cpu, mps or cuda. Other devices are not tested/supported. Got: {device}.'
+        if device == 'cpu':
+            # let's allow torch to use hella threads
+            import multiprocessing
+            torch.set_num_threads(multiprocessing.cpu_count())
+            device = torch.device('cpu')
+        elif device == 'cuda':
+            # multithreading in torch doesn't help nnU-Net if run on GPU
+            torch.set_num_threads(1)
+            torch.set_num_interop_threads(1)
+            device = torch.device('cuda')
+        else:
+            device = torch.device('mps')
 
     predict_nnunet(
         model_folder = model_folder,
