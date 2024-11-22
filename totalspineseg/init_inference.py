@@ -39,13 +39,10 @@ def main():
     else:
         data_path = importlib.resources.files(models)
 
-    # Weights ZIP_URLS dict
-    dict_urls = ZIP_URLS
-
     # Initialize inference
     init_inference(
         data_path=data_path,
-        dict_urls=dict_urls,
+        dict_urls=ZIP_URLS,
         store_export=store_export,
         quiet=quiet
         )
@@ -53,7 +50,7 @@ def main():
 
 def init_inference(
         data_path,
-        dict_urls,
+        dict_urls=ZIP_URLS,
         store_export=True,
         quiet=False
     ):
