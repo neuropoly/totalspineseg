@@ -482,7 +482,7 @@ def inference(
             quiet=quiet,
         )
 
-    if not quiet: print('\n' 'Filling spinal cancal label to include all non cord spinal canal:')
+    if not quiet: print('\n' 'Filling spinal canal label to include all non cord spinal canal:')
     # This will put the spinal canal label in all the voxels between the canal and the cord.
     fill_canal_mp(
         output_path / 'step1_output',
@@ -751,7 +751,7 @@ def inference(
                 quiet=quiet,
             )
 
-        if not quiet: print('\n' 'Filling spinal cancal label to include all non cord spinal canal:')
+        if not quiet: print('\n' 'Filling spinal canal label to include all non cord spinal canal:')
         # This will put the spinal canal label in all the voxels between the canal and the cord.
         fill_canal_mp(
             output_path / 'step2_output',
