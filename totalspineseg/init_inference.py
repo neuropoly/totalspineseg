@@ -4,13 +4,6 @@ import importlib.resources
 from totalspineseg import models, install_weights
 from totalspineseg.utils.utils import ZIP_URLS
 
-# This is just to silence nnUNet warnings. These variables should have no purpose/effect.
-# There are sadly no other workarounds at the moment, see:
-# https://github.com/MIC-DKFZ/nnUNet/blob/227d68e77f00ec8792405bc1c62a88ddca714697/nnunetv2/paths.py#L21
-os.environ['nnUNet_raw'] = "./nnUNet_raw"
-os.environ['nnUNet_preprocessed'] = "./nnUNet_preprocessed"
-os.environ['nnUNet_results'] = "./nnUNet_results"
-
 def main():
     parser = argparse.ArgumentParser(
         description=textwrap.dedent('''
