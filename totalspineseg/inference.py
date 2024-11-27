@@ -207,9 +207,7 @@ def inference(
 
     fold = 0
 
-    # Set nnUNet paths
-    nnUNet_raw = data_path / 'nnUNet' / 'raw'
-    nnUNet_preprocessed = data_path / 'nnUNet' / 'preprocessed'
+    # Set nnUNet results path
     nnUNet_results = data_path / 'nnUNet' / 'results'
 
     # If not both steps models are installed, use the default release subfolder
@@ -218,17 +216,6 @@ def inference(
         # Check if weights are available
         if not (nnUNet_results / step1_dataset).is_dir() or not (nnUNet_results / step2_dataset).is_dir():
             raise FileNotFoundError('Model weights are missing, please run `totalspineseg_init` before running inference.')
-
-    # Create the nnUNet directories if they do not exist
-    nnUNet_raw.mkdir(parents=True, exist_ok=True)
-    nnUNet_preprocessed.mkdir(parents=True, exist_ok=True)
-
-    # Set nnUNet environment variables
-    os.environ['nnUNet_def_n_proc'] = str(max_workers_nnunet)
-    os.environ['nnUNet_n_proc_DA'] = str(max_workers_nnunet)
-    os.environ['nnUNet_raw'] = str(nnUNet_raw)
-    os.environ['nnUNet_preprocessed'] = str(nnUNet_preprocessed)
-    os.environ['nnUNet_results'] = str(nnUNet_results)
 
     # Load device
     if isinstance(device, str):
