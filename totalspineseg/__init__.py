@@ -15,5 +15,7 @@ from .utils.resample import resample, resample_mp
 from .utils.transform_seg2image import transform_seg2image, transform_seg2image_mp
 from .utils.install_weights import install_weights
 from .utils.predict_nnunet import predict_nnunet
-from .utils.utils import ZIP_URLS
+from .utils.utils import ZIP_URLS, VERSION
 from . import models
+
+__version__ = VERSION
