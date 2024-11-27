@@ -348,7 +348,7 @@ def inference(
             },
         )
 
-    if not quiet: print('\n' 'Converting 4D images to 3D:')
+    if not quiet: print('\n' 'Preprocessing images:')
     average4d_mp(
         output_path / 'input',
         output_path / 'input',
