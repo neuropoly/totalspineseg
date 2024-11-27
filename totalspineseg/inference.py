@@ -359,7 +359,7 @@ def inference(
         quiet=quiet,
     )
 
-    if not quiet: print('\n' 'Transforming images to canonical space:')
+    if not quiet: print('\n' 'Reorienting images to LPI(-):')
     reorient_canonical_mp(
         output_path / 'input',
         output_path / 'input',
