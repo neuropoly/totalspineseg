@@ -165,6 +165,7 @@ bash "$TOTALSPINESEG"/scripts/train.sh [DATASET_ID [FOLD]]
 1. Make sure that the `bash` terminal is opened with the virtual environment activated (see [Installation](#installation)).
 
 2. Run the model on a folder containing the images in .nii.gz format, or on a single .nii.gz file:
+> If you haven't trained the model, the script will automatically download the pre-trained models from the GitHub release.
 ```bash
 totalspineseg INPUT OUTPUT_FOLDER [--step1] [--iso]
 ```
