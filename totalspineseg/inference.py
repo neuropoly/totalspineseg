@@ -225,7 +225,7 @@ def inference(
         nnUNet_results = nnUNet_results / default_release
         # Check if weights are available
         if not (nnUNet_results / step1_dataset).is_dir() or not (nnUNet_results / step2_dataset).is_dir():
-            raise FileNotFoundError('Model weights are missing, please run `totalspineseg_init` before running inference.')
+            raise FileNotFoundError('Model weights are missing.')
 
     # Load device
     if isinstance(device, str):
