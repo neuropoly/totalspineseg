@@ -218,7 +218,7 @@ def predict_nnunet(
 ):
     # Check variables
     folds = [i if i == 'all' else int(i) for i in folds]
-    assert part_id < num_parts, 'Do you even read the documentation? See nnUNetv2_predict -h.'
+    assert part_id < num_parts
 
     # Create output folder if does not exists
     output_dir.mkdir(parents=True, exist_ok=True)
