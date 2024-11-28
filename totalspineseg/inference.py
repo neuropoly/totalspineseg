@@ -62,6 +62,12 @@ def main():
         help='Run only step 1 of the inference process.'
     )
     parser.add_argument(
+        '--data-dir', '-d', type=Path, default=None,
+        help=' '.join(f'''
+            The path to store the nnUNet data.
+        '''.split())
+    )
+    parser.add_argument(
         '--max-workers', '-w', type=int, default=os.cpu_count(),
         help=f'Max worker to run in parallel proccess, defaults to numer of available cores'
     )
@@ -95,7 +101,9 @@ def main():
     quiet = args.quiet
 
     # Init data_path
-    if 'TOTALSPINESEG_DATA' in os.environ:
+    if not args.data_dir is None:
+        data_path = args.data_dir
+    elif 'TOTALSPINESEG_DATA' in os.environ:
         data_path = Path(os.environ.get('TOTALSPINESEG_DATA', ''))
     else:
         data_path = importlib.resources.files(models)
