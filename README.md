@@ -35,7 +35,7 @@ For comparison, we also trained a single model (`Dataset103`) that outputs indiv
 
 ![Figure 1](https://github.com/user-attachments/assets/9017fb8e-bed5-413f-a80f-b123a97f5735)
 
-**Figure 1**: Illustration of the hybrid method for automatic segmentation of spinal structures. (A) Input MRI image (B) The Step 1 model prediction. (C)  Odd IVDs extraction from the Step1 prediction. (D) The Step 2 model prediction. (E) Final segmentation with individual labels for each vertebra and IVD.
+**Figure 1**: Illustration of the hybrid method for automatic segmentation of spinal structures. (A) Input MRI image. (B) Step 1 model prediction. (C) Odd IVDs extraction from the Step1 prediction. (D) Step 2 model prediction. (E) Final segmentation with individual labels for each vertebra and IVD.
 
 ## Datasets
 
