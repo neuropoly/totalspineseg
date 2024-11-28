@@ -82,6 +82,7 @@ cd TotalSpineSeg
 
 4. Install this repository using one of the following options:
    - Git clone (for developpers)
+   > **Note:** If you pull a new version from GitHub, make sure to rerun this command with the flag `--upgrade`
    ```bash
    git clone https://github.com/neuropoly/totalspineseg.git
    python3 -m pip install -e totalspineseg
@@ -96,6 +97,13 @@ cd TotalSpineSeg
 ```bash
 python3 -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 --upgrade
 ```
+
+6. **OPTIONAL STEP:** Define a folder where weights will be stored:
+> By default, weights will be stored in the package under `totalspineseg/models`
+ ```bash
+ mkdir data
+ export TOTALSPINESEG_DATA="$(realpath data)"
+ ```
 
 ## Training
 
@@ -156,12 +164,7 @@ bash "$TOTALSPINESEG"/scripts/train.sh [DATASET_ID [FOLD]]
 
 1. Make sure that the `bash` terminal is opened with the virtual environment activated (see [Installation](#installation)).
 
-2. Install the inference weights using this command (If you did not train a new model)
-```
-totalspineseg_init
-```
-
-3. Run the model on a folder containing the images in .nii.gz format, or on a single .nii.gz file:
+2. Run the model on a folder containing the images in .nii.gz format, or on a single .nii.gz file:
 ```bash
 totalspineseg INPUT OUTPUT_FOLDER [--step1] [--iso]
 ```
