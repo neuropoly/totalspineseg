@@ -21,6 +21,12 @@ def main():
         help='Store exported zip file, default to true.'
     )
     parser.add_argument(
+        '--data-dir', '-d', type=Path, default=None,
+        help=' '.join(f'''
+            The path to store the nnUNet data.
+        '''.split())
+    )
+    parser.add_argument(
         '--quiet', '-q', action="store_true",
         help='Do not display inputs and progress bar, defaults to false (display).'
     )
@@ -33,7 +39,9 @@ def main():
     quiet = args.quiet
 
     # Init data_path
-    if 'TOTALSPINESEG_DATA' in os.environ:
+    if not args.data_dir is None:
+        data_path = args.data_dir
+    elif 'TOTALSPINESEG_DATA' in os.environ:
         data_path = Path(os.environ.get('TOTALSPINESEG_DATA', ''))
     else:
         data_path = importlib.resources.files(models)
