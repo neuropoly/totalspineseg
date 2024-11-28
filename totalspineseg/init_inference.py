@@ -90,7 +90,7 @@ def init_inference(
     nnUNet_exports = data_path / 'nnUNet' / 'exports'
 
     # If not both steps models are installed, use the release subfolder
-    if not any([(nnUNet_results / dataset).is_dir() for dataset in dict_urls.keys()]):
+    if not all([(nnUNet_results / dataset).is_dir() for dataset in dict_urls.keys()]):
         # TODO Think of better way to get the release
         weights_release = list(dict_urls.values())[0].split('/')[-2]
         nnUNet_results = nnUNet_results / weights_release
