@@ -98,7 +98,7 @@ def main():
         help='If multiple nnUNetv2_predict exist, default is "0".'
     )
     parser.add_argument(
-        '-device', type=str, default='cuda',
+        '-device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu',
         help='Use this to set the device the inference should run with, default is "cuda".'
     )
     parser.add_argument(
