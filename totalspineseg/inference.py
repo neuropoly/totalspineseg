@@ -1,9 +1,10 @@
-import os, argparse, warnings, subprocess, textwrap, torch, psutil, shutil
+import os, argparse, warnings, textwrap, torch, psutil, shutil
 from fnmatch import fnmatch
 from pathlib import Path
-from importlib.metadata import metadata
+import importlib.resources
 from tqdm import tqdm
 from totalspineseg import *
+from totalspineseg.init_inference import init_inference
 
 warnings.filterwarnings("ignore")
 
@@ -61,10 +62,9 @@ def main():
         help='Run only step 1 of the inference process.'
     )
     parser.add_argument(
-        '--data-dir', '-d', type=Path, default=Path(os.environ.get('TOTALSPINESEG_DATA', '')), required='TOTALSPINESEG_DATA' not in os.environ,
+        '--data-dir', '-d', type=Path, default=None,
         help=' '.join(f'''
-            The path to store the nnUNet data, defaults to the TOTALSPINESEG_DATA environment variable if set.
-            If the TOTALSPINESEG_DATA environment variable is not set, the path must be provided.
+            The path to store the nnUNet data.
         '''.split())
     )
     parser.add_argument(
@@ -95,54 +95,155 @@ def main():
     suffix = args.suffix
     loc_suffix = args.loc_suffix
     step1_only = args.step1
-    data_path = args.data_dir
     max_workers = args.max_workers
     max_workers_nnunet = min(args.max_workers_nnunet, max_workers)
     device = args.device
     quiet = args.quiet
 
+    # Init data_path
+    if not args.data_dir is None:
+        data_path = args.data_dir
+    elif 'TOTALSPINESEG_DATA' in os.environ:
+        data_path = Path(os.environ.get('TOTALSPINESEG_DATA', ''))
+    else:
+        data_path = importlib.resources.files(models)
+    
+    # Default release to use
+    default_release = list(ZIP_URLS.values())[0].split('/')[-2]
+
+    # Install weights if not present
+    init_inference(
+        data_path=data_path,
+        dict_urls=ZIP_URLS,
+        quiet=quiet
+        )
+    
+    # Run inference
+    inference(
+        input_path=input_path,
+        output_path=output_path,
+        data_path=data_path,
+        default_release=default_release,
+        output_iso=output_iso,
+        loc_path=loc_path,
+        suffix=suffix,
+        loc_suffix=loc_suffix,
+        step1_only=step1_only,
+        max_workers=max_workers,
+        max_workers_nnunet=max_workers_nnunet,
+        device=device,
+        quiet=quiet
+    )
+
+
+def inference(
+        input_path,
+        output_path,
+        data_path,
+        default_release,
+        output_iso=False,
+        loc_path=None,
+        suffix=[''],
+        loc_suffix='',
+        step1_only=False,
+        max_workers=os.cpu_count(),
+        max_workers_nnunet=int(max(min(os.cpu_count(), psutil.virtual_memory().total / 2**30 // 8), 1)),
+        device='cuda',
+        quiet=False
+    ):
+    '''
+    Inference function
+
+    Parameters
+    ----------
+    input_path : pathlib.Path or string
+        The input folder path containing the niftii images.
+    output_path : pathlib.Path or string
+        The output folder path that will contain the predictions.
+    data_path : pathlib.Path or string
+        Folder path containing the network weights.
+    default_release : string
+        Default release used for inference.
+    output_iso : bool
+        If False, output predictions will be resampled to the original space.
+    loc_path : None or pathlib.Path/string
+        The localizer folder path containing the niftii predictions of the localizer.
+    suffix : string
+        Suffix to use for the input images
+    loc_suffix : string
+        Suffix to use for the localizer images
+    step1_only : bool
+        If True only the prediction of the first model will be computed.
+    max_workers : int
+        Max worker to run in parallel proccess, defaults to numer of available cores
+    max_workers_nnunet : int
+        Max worker to run in parallel proccess for nnUNet
+    device : 'cuda' or 'cpu'
+        Device to run the nnUNet model on
+    quiet : bool
+        If True, will reduce the amount of displayed information
+
+    Returns
+    -------
+    list of string
+        List of output folders.
+    '''
+    # Convert paths to Path like objects
+    if isinstance(input_path, str):
+        input_path = Path(input_path)
+    else:
+        if not isinstance(input_path, Path):
+            raise ValueError('input_path should be a Path object from pathlib or a string')
+
+    if isinstance(output_path, str):
+        output_path = Path(output_path)
+    else:
+        if not isinstance(output_path, Path):
+            raise ValueError('output_path should be a Path object from pathlib or a string')
+
+    if isinstance(data_path, str):
+        data_path = Path(data_path)
+    else:
+        if not isinstance(data_path, Path):
+            raise ValueError('data_path should be a Path object from pathlib or a string')
+    
     # Check if the data folder exists
     if not data_path.exists():
-        raise FileNotFoundError(' '.join(f'''
-            The totalspineseg data folder does not exist at {data_path},
-            if it is not the correct path, please set the TOTALSPINESEG_DATA environment variable to the correct path,
-            or use the --data-dir argument to specify the correct path.
-        '''.split()))
+        raise FileNotFoundError(f"The totalspineseg data folder does not exist at {data_path}.")
 
     # Datasets data
     step1_dataset = 'Dataset101_TotalSpineSeg_step1'
     step2_dataset = 'Dataset102_TotalSpineSeg_step2'
 
-    # Read urls from 'pyproject.toml'
-    step1_zip_url = dict([_.split(', ') for _ in metadata('totalspineseg').get_all('Project-URL')])[step1_dataset]
-    step2_zip_url = dict([_.split(', ') for _ in metadata('totalspineseg').get_all('Project-URL')])[step2_dataset]
-
     fold = 0
 
-    # Set nnUNet paths
-    nnUNet_raw = data_path / 'nnUNet' / 'raw'
-    nnUNet_preprocessed = data_path / 'nnUNet' / 'preprocessed'
+    # Set nnUNet results path
     nnUNet_results = data_path / 'nnUNet' / 'results'
-    nnUNet_exports = data_path / 'nnUNet' / 'exports'
 
-    # If not both steps models are installed, use the release subfolder
+    # If not both steps models are installed, use the default release subfolder
     if not (nnUNet_results / step1_dataset).is_dir() or not (nnUNet_results / step2_dataset).is_dir():
-        # TODO Think of better way to get the release
-        release = step1_zip_url.split('/')[-2]
-        nnUNet_results = nnUNet_results / release
+        nnUNet_results = nnUNet_results / default_release
+        # Check if weights are available
+        if not (nnUNet_results / step1_dataset).is_dir() or not (nnUNet_results / step2_dataset).is_dir():
+            raise FileNotFoundError('Model weights are missing.')
 
-    # Create the nnUNet directories if they do not exist
-    nnUNet_raw.mkdir(parents=True, exist_ok=True)
-    nnUNet_preprocessed.mkdir(parents=True, exist_ok=True)
-    nnUNet_results.mkdir(parents=True, exist_ok=True)
-    nnUNet_exports.mkdir(parents=True, exist_ok=True)
-
-    # Set nnUNet environment variables
-    os.environ['nnUNet_def_n_proc'] = str(max_workers_nnunet)
-    os.environ['nnUNet_n_proc_DA'] = str(max_workers_nnunet)
-    os.environ['nnUNet_raw'] = str(nnUNet_raw)
-    os.environ['nnUNet_preprocessed'] = str(nnUNet_preprocessed)
-    os.environ['nnUNet_results'] = str(nnUNet_results)
+    # Load device
+    if isinstance(device, str):
+        assert device in ['cpu', 'cuda', 'mps'], f'-device must be either cpu, mps or cuda. Other devices are not tested/supported. Got: {device}.'
+        if device == 'cpu':
+            # let's allow torch to use hella threads
+            import multiprocessing
+            torch.set_num_threads(multiprocessing.cpu_count())
+            device = torch.device('cpu')
+        elif device == 'cuda':
+            # multithreading in torch doesn't help nnU-Net if run on GPU
+            torch.set_num_threads(1)
+            torch.set_num_interop_threads(1)
+            device = torch.device('cuda')
+        else:
+            device = torch.device('mps')
+    else:
+        assert isinstance(device, torch.device)
 
     # Print the argument values if not quiet
     if not quiet:
@@ -158,18 +259,8 @@ def main():
             data_dir = "{data_path}"
             max_workers = {max_workers}
             max_workers_nnunet = {max_workers_nnunet}
-            device = "{device}"
+            device = "{device.type}"
         '''))
-
-    # Installing the pretrained models if not already installed
-    for dataset, zip_url in [(step1_dataset, step1_zip_url), (step2_dataset, step2_zip_url)]:
-        install_weights(
-            nnunet_dataset=dataset,
-            zip_url=zip_url,
-            results_folder=nnUNet_results,
-            exports_folder=nnUNet_exports,
-            quiet=quiet
-        )
 
     if not quiet: print('\n' 'Making input dir with _0000 suffix:')
     if input_path.name.endswith('.nii.gz'):
@@ -254,7 +345,7 @@ def main():
             },
         )
 
-    if not quiet: print('\n' 'Converting 4D images to 3D:')
+    if not quiet: print('\n' 'Preprocessing images:')
     average4d_mp(
         output_path / 'input',
         output_path / 'input',
@@ -265,7 +356,7 @@ def main():
         quiet=quiet,
     )
 
-    if not quiet: print('\n' 'Transforming images to canonical space:')
+    if not quiet: print('\n' 'Reorienting images to LPI(-):')
     reorient_canonical_mp(
         output_path / 'input',
         output_path / 'input',
@@ -300,22 +391,21 @@ def main():
     # Check if the final checkpoint exists, if not use the latest checkpoint
     checkpoint = 'checkpoint_final.pth' if (nnUNet_results / step1_dataset / f'{nnUNetTrainer}__{nnUNetPlans}__{configuration}' / f'fold_{fold}' / 'checkpoint_final.pth').is_file() else 'checkpoint_latest.pth'
 
+    # Construct step 1 model folder
+    model_folder_step1 = nnUNet_results / step1_dataset / f'{nnUNetTrainer}__{nnUNetPlans}__{configuration}'
+    
     if not quiet: print('\n' 'Running step 1 model:')
-    subprocess.run([
-        'nnUNetv2_predict',
-            '-d', step1_dataset,
-            '-i', str(output_path / 'input'),
-            '-o', str(output_path / 'step1_raw'),
-            '-f', str(fold),
-            '-c', configuration,
-            '-p', nnUNetPlans,
-            '-tr', nnUNetTrainer,
-            '-npp', str(max_workers_nnunet),
-            '-nps', str(max_workers_nnunet),
-            '-chk', checkpoint,
-            '-device', device,
-            '--save_probabilities',
-    ])
+    predict_nnunet(
+        model_folder=model_folder_step1,
+        images_dir=output_path / 'input',
+        output_dir=output_path / 'step1_raw',
+        folds = str(fold),
+        save_probabilities = True,
+        checkpoint = checkpoint,
+        npp = max_workers_nnunet,
+        nps = max_workers_nnunet,
+        device = device
+    )
 
     # Remove unnecessary files from output folder
     (output_path / 'step1_raw' / 'dataset.json').unlink(missing_ok=True)
@@ -389,7 +479,7 @@ def main():
             quiet=quiet,
         )
 
-    if not quiet: print('\n' 'Filling spinal cancal label to include all non cord spinal canal:')
+    if not quiet: print('\n' 'Filling spinal canal label to include all non cord spinal canal:')
     # This will put the spinal canal label in all the voxels between the canal and the cord.
     fill_canal_mp(
         output_path / 'step1_output',
@@ -566,21 +656,20 @@ def main():
         # Check if the final checkpoint exists, if not use the latest checkpoint
         checkpoint = 'checkpoint_final.pth' if (nnUNet_results / step2_dataset / f'{nnUNetTrainer}__{nnUNetPlans}__{configuration}' / f'fold_{fold}' / 'checkpoint_final.pth').is_file() else 'checkpoint_latest.pth'
 
+        # Construct step 2 model folder
+        model_folder_step2 = nnUNet_results / step2_dataset / f'{nnUNetTrainer}__{nnUNetPlans}__{configuration}'
+
         if not quiet: print('\n' 'Running step 2 model:')
-        subprocess.run([
-            'nnUNetv2_predict',
-                '-d', step2_dataset,
-                '-i', str(output_path / 'step2_input'),
-                '-o', str(output_path / 'step2_raw'),
-                '-f', str(fold),
-                '-c', configuration,
-                '-p', nnUNetPlans,
-                '-tr', nnUNetTrainer,
-                '-npp', str(max_workers_nnunet),
-                '-nps', str(max_workers_nnunet),
-                '-chk', checkpoint,
-                '-device', device
-        ])
+        predict_nnunet(
+            model_folder=model_folder_step2,
+            images_dir=output_path / 'step2_input',
+            output_dir=output_path / 'step2_raw',
+            folds = str(fold),
+            checkpoint = checkpoint,
+            npp = max_workers_nnunet,
+            nps = max_workers_nnunet,
+            device = device
+        )
 
         # Remove unnecessary files from output folder
         (output_path / 'step2_raw' / 'dataset.json').unlink(missing_ok=True)
@@ -659,7 +748,7 @@ def main():
                 quiet=quiet,
             )
 
-        if not quiet: print('\n' 'Filling spinal cancal label to include all non cord spinal canal:')
+        if not quiet: print('\n' 'Filling spinal canal label to include all non cord spinal canal:')
         # This will put the spinal canal label in all the voxels between the canal and the cord.
         fill_canal_mp(
             output_path / 'step2_output',
@@ -767,9 +856,27 @@ def main():
                 max_workers=max_workers,
                 quiet=quiet,
             )
+    # Print all the output paths
+    if not quiet: print('\nResults of iterative labeling algorithm for step 1:')
+    if not quiet: print(f'{str(output_path)}/step1_output',)
+
+    if not quiet: print('\nSpinal cord soft segmentations:')
+    if not quiet: print(f'{str(output_path)}/step1_cord',)
+
+    if not quiet: print('\nSpinal canal soft segmentations:')
+    if not quiet: print(f'{str(output_path)}/step1_canal',)
+
+    if not quiet: print('\nSingle voxel in canal centerline at each intervertebral disc level:')
+    if not quiet: print(f'{str(output_path)}/step1_levels',)
+
+    if not quiet and not step1_only: print('\nSegmentation and labeling of the vertebrae, discs, spinal cord and spinal canal:')
+    if not quiet and not step1_only: print(f'{str(output_path)}/step2_output',)
 
     # Remove the input_raw folder
     shutil.rmtree(output_path / 'input_raw', ignore_errors=True)
+    
+    # Return list of output paths
+    return [str(output_path / folder) for folder in os.listdir(str(output_path))]
 
 if __name__ == '__main__':
     main()

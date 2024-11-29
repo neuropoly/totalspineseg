@@ -1,17 +1,13 @@
 [project]
 name = "totalspineseg"
-version = "20241005"
+version = "20241129"
 requires-python = ">=3.9"
 description = "TotalSpineSeg is a tool for automatic instance segmentation and labeling of all vertebrae, intervertebral discs (IVDs), spinal cord, and spinal canal in MRI images."
 readme = "README.md"
 authors = [
     { name = "Yehuda Warszawer", email = "yehuda.warszawer@sheba.health.gov.il"},
-    { name = "Nathan Molinier"},
-    { name = "Jan Valosek"},
-    { name = "Emanuel Shirbint"},
-    { name = "Pierre-Louis Benveniste"},
+    { name = "Nathan Molinier", email = "nathan.molinier@polymtl.ca"},
     { name = "Anat Achiron"},
-    { name = "Arman Eshaghi"},
     { name = "Julien Cohen-Adad"},
 ]
 classifiers = [
@@ -21,9 +17,6 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Scientific/Engineering :: Image Recognition",
     "Topic :: Scientific/Engineering :: Medical Science Apps.",
-    "Topic :: Scientific/Engineering :: MRI Images.",
-    "Topic :: Scientific/Engineering :: Spinal Cord.",
-    "Topic :: Scientific/Engineering :: Spine.",
 ]
 keywords = [
     'deep learning',
@@ -53,18 +46,19 @@ dependencies = [
     # https://github.com/MIC-DKFZ/nnUNet/issues/2480
     # --verify_dataset_integrity not working in nnunetv2==2.4.2 do we need to update this when fixed
     # https://github.com/MIC-DKFZ/nnUNet/issues/2144
-    "nnunetv2==2.4.2",
+    "nnunetv2<=2.4.2",
     "psutil",
 ]
 
 [project.urls]
 homepage = "https://github.com/neuropoly/totalspineseg"
 repository = "https://github.com/neuropoly/totalspineseg"
-Dataset101_TotalSpineSeg_step1 = "https://github.com/neuropoly/totalspineseg/releases/download/r20241005/Dataset101_TotalSpineSeg_step1_r20241005.zip"
-Dataset102_TotalSpineSeg_step2 = "https://github.com/neuropoly/totalspineseg/releases/download/r20241005/Dataset102_TotalSpineSeg_step2_r20241005.zip"
+Dataset101_TotalSpineSeg_step1 = "https://github.com/neuropoly/totalspineseg/releases/download/r20241115/Dataset101_TotalSpineSeg_step1_r20241115.zip"
+Dataset102_TotalSpineSeg_step2 = "https://github.com/neuropoly/totalspineseg/releases/download/r20241115/Dataset102_TotalSpineSeg_step2_r20241115.zip"
 
 [project.scripts]
 totalspineseg = "totalspineseg.inference:main"
+totalspineseg_init = "totalspineseg.init_inference:main"
 totalspineseg_cpdir = "totalspineseg.utils.cpdir:main"
 totalspineseg_fill_canal = "totalspineseg.utils.fill_canal:main"
 totalspineseg_augment = "totalspineseg.utils.augment:main"
@@ -81,6 +75,7 @@ totalspineseg_extract_soft = "totalspineseg.utils.extract_soft:main"
 totalspineseg_extract_levels = "totalspineseg.utils.extract_levels:main"
 totalspineseg_extract_alternate = "totalspineseg.utils.extract_alternate:main"
 totalspineseg_install_weights = "totalspineseg.utils.install_weights:main"
+totalspineseg_predict_nnunet = "totalspineseg.utils.predict_nnunet:main"
 
 [build-system]
 requires = ["pip>=23", "setuptools>=67"]
