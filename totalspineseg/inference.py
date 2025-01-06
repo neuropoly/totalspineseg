@@ -19,6 +19,8 @@ def main():
             Examples:
             totalspineseg input.nii.gz output_folder
             totalspineseg input.nii.gz output_folder --loc output_folder_loc/step2_output/localizer.nii.gz
+            totalspineseg input.nii output_folder
+            totalspineseg input.nii output_folder --loc output_folder_loc/step2_output/localizer.nii
             totalspineseg input_folder output_folder
             totalspineseg input_folder output_folder --step1
             totalspineseg input_folder output_folder --loc output_folder_loc/step2_output
@@ -29,7 +31,7 @@ def main():
     )
     parser.add_argument(
         'input', type=Path,
-        help='The input folder containing the .nii.gz images to run the model on, or a single .nii.gz image.'
+        help='The input folder containing the .nii.gz (or .nii) images to run the model on, or a single .nii.gz (or .nii) image.'
     )
     parser.add_argument(
         'output', type=Path,
@@ -42,7 +44,7 @@ def main():
     parser.add_argument(
         '--loc', '-l', type=Path, default=None,
         help=' '.join(f'''
-            Folder containing localizers segmentations or a single .nii.gz localizer segmentation to use for detecting first vertebrae and disc if C1 and C2-C3 disc or the Sacrum and L5-S disc not found in the image, Optional.
+            Folder containing localizers segmentations or a single .nii.gz (or .nii) localizer segmentation to use for detecting first vertebrae and disc if C1 and C2-C3 disc or the Sacrum and L5-S disc not found in the image, Optional.
             This is the output of the model applied on localizer images. It can be the output of step 2, or step 1 if you only want to run step 1 (step1 flag).
             The algorithm will use the localizers' segmentations to detect the matching vertebrae and discs. The localizer and the image must be aligned.
             Matching will based on the majority of the voxels of the first vertebra or disc in the localizer, that intersect with image.
