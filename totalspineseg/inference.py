@@ -265,10 +265,23 @@ def inference(
         '''))
 
     if not quiet: print('\n' 'Making input dir with _0000 suffix:')
-    if input_path.name.endswith('.nii.gz'):
+    if not input_path.is_dir():
         # If the input is a single file, copy it to the input_raw folder
         (output_path / 'input_raw').mkdir(parents=True, exist_ok=True)
-        shutil.copy(input_path, output_path / 'input_raw' / input_path.name.replace('.nii.gz', '_0000.nii.gz'))
+
+        # Create destination path
+        dst_path = output_path / 'input_raw' / input_path.name.replace('.nii', '_0000.nii')
+
+        # Check suffixes
+        if "".join(input_path.suffixes) == ".nii.gz":
+            # Copy file
+            shutil.copy(input_path, dst_path)
+        elif "".join(input_path.suffixes) == ".nii":
+            # Compress file                    
+            src_img = nib.load(input_path)
+            nib.save(src_img, dst_path)
+        else:
+            raise ValueError(f"Unknown file type: {''.join(input_path.suffixes)}, please use niftii files")
     else:
         # If the input is a folder, copy the files to the input_raw folder
         cpdir_mp(
