@@ -274,9 +274,10 @@ def inference(
         cpdir_mp(
             input_path,
             output_path / 'input_raw',
-            pattern=sum([[f'*{s}.nii.gz', f'sub-*/anat/*{s}.nii.gz'] for s in suffix], []),
+            pattern=sum([[f'*{s}.nii.gz', f'sub-*/anat/*{s}.nii.gz', f'*{s}.nii', f'sub-*/anat/*{s}.nii'] for s in suffix], []),
             flat=True,
             replace={'.nii.gz': '_0000.nii.gz'},
+            compress=True,
             overwrite=True,
             max_workers=max_workers,
             quiet=quiet,
