@@ -270,16 +270,15 @@ def inference(
         # If the input is a single file, copy it to the input_raw folder
         (output_path / 'input_raw').mkdir(parents=True, exist_ok=True)
 
-        # Create destination path
-        dst_path = output_path / 'input_raw' / input_path.name.replace('.nii', '_0000.nii')
-
         # Check suffixes
         if "".join(input_path.suffixes) == ".nii.gz":
             # Copy file
+            dst_path = output_path / 'input_raw' / input_path.name.replace('.nii.gz', '_0000.nii.gz')
             shutil.copy(input_path, dst_path)
         elif "".join(input_path.suffixes) == ".nii":
             # Compress file                    
             src_img = nib.load(input_path)
+            dst_path = output_path / 'input_raw' / input_path.name.replace('.nii', '_0000.nii.gz')
             nib.save(src_img, dst_path)
         else:
             raise ValueError(f"Unknown file type: {''.join(input_path.suffixes)}, please use niftii files")
@@ -329,7 +328,7 @@ def inference(
                 image_suffix = next((_ for _ in suffix if fnmatch(image.name, f'*{_}_0000.nii.gz')), '')
                 loc = next((_ for _ in locs if fnmatch(image.name, _.name.replace(f'{loc_suffix}.nii', f'{image_suffix}_0000.nii'))), None)
             if loc:
-                dst_loc = output_path / 'localizers' / image.name.replace('_0000.nii.gz', f'.nii.gz')
+                dst_loc = output_path / 'localizers' / image.name.replace('_0000.nii.gz', '.nii.gz')
                 if "".join(loc.suffixes) == ".nii":
                     # Compress loc                    
                     src_loc = nib.load(loc)
