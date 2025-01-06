@@ -265,18 +265,18 @@ def inference(
         '''))
 
     if not quiet: print('\n' 'Making input dir with _0000 suffix:')
-    if input_path.name.endswith('.nii.gz'):
+    if input_path.name.endswith('.nii.gz') or input_path.name.endswith('.nii'):
         # If the input is a single file, copy it to the input_raw folder
         (output_path / 'input_raw').mkdir(parents=True, exist_ok=True)
-        shutil.copy(input_path, output_path / 'input_raw' / input_path.name.replace('.nii.gz', '_0000.nii.gz'))
+        shutil.copy(input_path, output_path / 'input_raw' / input_path.name.replace('.nii', '_0000.nii'))
     else:
         # If the input is a folder, copy the files to the input_raw folder
         cpdir_mp(
             input_path,
             output_path / 'input_raw',
-            pattern=sum([[f'*{s}.nii.gz', f'sub-*/anat/*{s}.nii.gz'] for s in suffix], []),
+            pattern=sum([[f'*{s}.nii', f'sub-*/anat/*{s}.nii', f'*{s}.nii.gz', f'sub-*/anat/*{s}.nii.gz'] for s in suffix], []),
             flat=True,
-            replace={'.nii.gz': '_0000.nii.gz'},
+            replace={'.nii': '_0000.nii'},
             overwrite=True,
             max_workers=max_workers,
             quiet=quiet,
@@ -298,20 +298,23 @@ def inference(
         (output_path / 'localizers').mkdir(parents=True, exist_ok=True)
 
         # List all localizers in the localizers folder
-        locs = list(loc_path.glob(f'*{loc_suffix}.nii.gz')) + list(loc_path.glob(f'sub-*/anat/*{loc_suffix}.nii.gz'))
+        locs = list(loc_path.glob(f'*{loc_suffix}.nii.gz'))
+        + list(loc_path.glob(f'sub-*/anat/*{loc_suffix}.nii.gz')) 
+        + list(loc_path.glob(f'*{loc_suffix}.nii')) 
+        + list(loc_path.glob(f'sub-*/anat/*{loc_suffix}.nii'))
 
         # Copy the localizers to the output folder
-        images = list((output_path / 'input').glob('*_0000.nii.gz'))
+        images = list((output_path / 'input').glob('*_0000.nii*'))
         for image in tqdm(images, disable=quiet):
-            if loc_path.name.endswith('.nii.gz'):
+            if loc_path.name.endswith('.nii.gz') or loc_path.name.endswith('.nii'):
                 # If the localizers are in a single file, copy it to the localizers folder
                 loc = loc_path
             else:
                 # If the localizers are in a folder, find the matching localizer for the image
-                image_suffix = next((_ for _ in suffix if fnmatch(image.name, f'*{_}_0000.nii.gz')), '')
-                loc = next((_ for _ in locs if fnmatch(image.name, _.name.replace(f'{loc_suffix}.nii.gz', f'{image_suffix}_0000.nii.gz'))), None)
+                image_suffix = next((_ for _ in suffix if fnmatch(image.name, f'*{_}_0000.nii*')), '')
+                loc = next((_ for _ in locs if fnmatch(image.name, _.name.replace(f'{loc_suffix}.nii', f'{image_suffix}_0000.nii'))), None)
             if loc:
-                shutil.copy(loc, output_path / 'localizers' / image.name.replace('_0000.nii.gz', f'.nii.gz'))
+                shutil.copy(loc, output_path / 'localizers' / image.name.replace('_0000.nii', '.nii'))
 
         if not quiet: print('\n' 'Generating preview images for the localizers:')
         preview_jpg_mp(
@@ -594,7 +597,7 @@ def inference(
         cpdir_mp(
             output_path / 'input',
             output_path / 'step2_input',
-            pattern=['*_0000.nii.gz'],
+            pattern=['*_0000.nii*'],
             overwrite=True,
             max_workers=max_workers,
             quiet=quiet,
@@ -649,8 +652,8 @@ def inference(
         )
 
         # Remove images without the 2'nd channel
-        for f in (output_path / 'step2_input').glob('*_0000.nii.gz'):
-            if not f.with_name(f.name.replace('_0000.nii.gz', '_0001.nii.gz')).exists():
+        for f in (output_path / 'step2_input').glob('*_0000.nii*'):
+            if not f.with_name(f.name.replace('_0000.nii', '_0001.nii')).exists():
                 f.unlink(missing_ok=True)
 
         # Get the nnUNet parameters from the results folder
@@ -679,7 +682,7 @@ def inference(
         (output_path / 'step2_raw' / 'predict_from_raw_data_args.json').unlink(missing_ok=True)
 
         # Remove the raw files from step 2 to save space
-        for f in (output_path / 'step2_input').glob('*_0000.nii.gz'):
+        for f in (output_path / 'step2_input').glob('*_0000.nii*'):
             f.unlink(missing_ok=True)
 
         if not quiet: print('\n' 'Generating preview images for step 2:')
