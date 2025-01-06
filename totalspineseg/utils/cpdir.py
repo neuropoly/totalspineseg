@@ -1,5 +1,6 @@
 import sys, argparse, textwrap, re
 import multiprocessing as mp
+import nibabel as nib
 from pathlib import Path
 from tqdm.contrib.concurrent import process_map
 from functools import partial
@@ -48,6 +49,12 @@ def main():
         '''.split())
     )
     parser.add_argument(
+        '--compress', '-c', type=bool, default=False,
+        help=' '.join(f'''
+            Compress files into gzip in destination folder (default is false).
+        '''.split())
+    )
+    parser.add_argument(
         '--tries', '-n', type=int, default=10,
         help='Number of times to try copying the file in case of failure (default is 10).'
     )
@@ -73,6 +80,7 @@ def main():
     pattern = args.pattern
     flat = args.flat
     replace = dict(args.replace)
+    compress = args.compress
     num_tries = args.tries
     overwrite = args.overwrite
     max_workers = args.max_workers
@@ -87,6 +95,7 @@ def main():
             pattern = {pattern}
             flat = {flat}
             replace = {replace}
+            compress = {compress}
             tries = {num_tries}
             overwrite = {overwrite}
             max_workers = {max_workers}
@@ -99,6 +108,7 @@ def main():
         pattern=pattern,
         flat=flat,
         replace=replace,
+        compress=compress,
         num_tries=num_tries,
         overwrite=overwrite,
         max_workers=max_workers,
@@ -111,6 +121,7 @@ def cpdir_mp(
         pattern=['**/*'],
         flat=False,
         replace={},
+        compress=False,
         num_tries=1,
         overwrite=False,
         max_workers=mp.cpu_count(),
@@ -126,9 +137,9 @@ def cpdir_mp(
     src_path_list = [_ for __ in [list(src_path.glob(p)) for p in pattern] for _ in __ if _.is_file()]
 
     if flat:
-        dst_path_list = [dst_path / _.name for _ in src_path_list]
+        dst_path_list = [dst_path / _.name.replace('.nii', '.nii.gz') if _.name.endswith('.nii') and compress else dst_path / _.name for _ in src_path_list]
     else:
-        dst_path_list = [dst_path / _.relative_to(src_path) for _ in src_path_list]
+        dst_path_list = [dst_path / _.relative_to(src_path).replace('.nii', '.nii.gz') if _.name.endswith('.nii') and compress else dst_path / _.relative_to(src_path) for _ in src_path_list]
 
     # Replace all regex patterns in replace list
     for p, r in replace.items():
@@ -166,19 +177,25 @@ def _cpdir(
     # Try copying up to num_tries times
     for attempt in range(num_tries):
         try:
-            # Copy the file
-            shutil.copy2(src_path, dst_path)
-            # Check if destination file exists before accessing its size
-            if dst_path.exists() and src_path.stat().st_size == dst_path.stat().st_size:
-                # Successful copy
-                break
+            if "".join(dst_path.suffixes) != "".join(src_path.suffixes):
+                # Compressing the destination file                    
+                src_img = nib.load(src_path)
+                nib.save(src_img, dst_path)
+                assert dst_path.exists(), 'Error during gzip compression'
             else:
-                # File sizes do not match or dst_path does not exist
-                if attempt == num_tries - 1:
-                    print(f"Warning: File sizes do not match after copying {src_path} to {dst_path}")
+                # Copy the file
+                shutil.copy2(src_path, dst_path)
+                # Check if destination file exists before accessing its size
+                if dst_path.exists() and src_path.stat().st_size == dst_path.stat().st_size:
+                    # Successful copy
+                    break
                 else:
-                    # Delete the destination file before retrying
-                    dst_path.unlink(missing_ok=True)
+                    # File sizes do not match or dst_path does not exist
+                    if attempt == num_tries - 1:
+                        print(f"Warning: File sizes do not match after copying {src_path} to {dst_path}")
+                    else:
+                        # Delete the destination file before retrying
+                        dst_path.unlink(missing_ok=True)
         except OSError as e:
             # Catch OSError
             if attempt == num_tries - 1:
