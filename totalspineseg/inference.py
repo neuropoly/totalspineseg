@@ -312,10 +312,8 @@ def inference(
         (output_path / 'localizers').mkdir(parents=True, exist_ok=True)
 
         # List all localizers in the localizers folder
-        locs = list(loc_path.glob(f'*{loc_suffix}.nii.gz')) 
-        + list(loc_path.glob(f'*{loc_suffix}.nii')) 
-        + list(loc_path.glob(f'sub-*/anat/*{loc_suffix}.nii.gz'))
-        + list(loc_path.glob(f'sub-*/anat/*{loc_suffix}.nii'))
+        locs = list(loc_path.glob(f'*{loc_suffix}.nii.gz')) + list(loc_path.glob(f'*{loc_suffix}.nii')) \
+        + list(loc_path.glob(f'sub-*/anat/*{loc_suffix}.nii.gz')) + list(loc_path.glob(f'sub-*/anat/*{loc_suffix}.nii'))
 
         # Copy the localizers to the output folder
         images = list((output_path / 'input').glob('*_0000.nii.gz'))
