@@ -164,7 +164,7 @@ bash "$TOTALSPINESEG"/scripts/train.sh [DATASET_ID [FOLD]]
 
 1. Make sure that the `bash` terminal is opened with the virtual environment activated (see [Installation](#installation)).
 
-2. Run the model on a folder containing the images in .nii.gz format, or on a single .nii.gz file:
+2. Run the model on a folder containing niftii images (`.nii.gz` or `.nii`), or on a single niftii file:
 > If you haven't trained the model, the script will automatically download the pre-trained models from the GitHub release.
 ```bash
 totalspineseg INPUT OUTPUT_FOLDER [--step1] [--iso]
@@ -199,7 +199,7 @@ output_folder/
 **Important Note:** While TotalSpineSeg provides spinal cord segmentation, it is not intended to replace validated methods for cross-sectional area (CSA) analysis. The spinal cord segmentation from TotalSpineSeg has not been validated for CSA measurements, nor has it been tested on cases involving spinal cord compressions, MS lesions, or other spinal cord abnormalities. For accurate CSA analysis, we strongly recommend using the validated algorithms available in the [Spinal Cord Toolbox](https://spinalcordtoolbox.com/user_section/tutorials/segmentation.html).
 
 Key points:
-- All segmentations in NIfTI (.nii.gz) format
+- All segmentations in NIfTI format (`.nii.gz`)
 - Preview images in JPEG format
 - step1_levels: single voxel in canal centerline at each IVD level, numbered from C1 (1 above C1, 2 above C2, etc.)
 - step2_output: final labeled vertebrae, discs, cord, and canal
