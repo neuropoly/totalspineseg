@@ -25,11 +25,11 @@ Please also cite nnU-Net since our work is heavily based on it:
 
 ## Model Description
 
-TotalSpineSeg uses a hybrid approach that integrates nnU-Net with an iterative algorithm for instance segmentation and labeling of vertebrae, intervertebral discs (IVDs), spinal cord, and spinal canal. The process involves two main steps:
+TotalSpineSeg uses an hybrid approach that integrates nnU-Net with an iterative algorithm for instance segmentation and labeling of vertebrae, intervertebral discs (IVDs), spinal cord, and spinal canal. The process involves two main steps:
 
-**Step 1**: An nnU-Net model (`Dataset101`) was trained to identify nine classes in total. This includes four main classes: spinal cord, spinal canal, IVDs, and vertebrae. Additionally, it identifies four specific IVDs: C2-C3, C7-T1, T12-L1, and L5-S, which represent key anatomical landmarks along the spine, as well as the C1 vertebra to determine whether the MRI images include C1 (Figure 1B). The output segmentation was processed using an iterative algorithm to extract individual IVDs (Figure 1C), from which the odd IVDs segmentation was extracted (Figure 1D).
+**Step 1**: An nnU-Net model (`Dataset101`) is used to identify nine classes in total. This includes four semantic classes: spinal cord, spinal canal, IVDs, and vertebrae and five landmark classes: C2-C3, C7-T1, T12-L1, and L5-S, which represent key IVDs along the spine, as well as the C1 vertebra to determine whether the MRI images cover C1 (Figure 1B). The output segmentation is then processed using an iterative algorithm to map individual IVDs, from which odd IVDs segmentation are extracted (Figure 1C).
 
-**Step 2:** A second nnU-Net model (`Dataset102`) was trained to identify ten classes in total. This includes five main classes: spinal cord, spinal canal, IVDs, odd vertebrae, and even vertebrae. Additionally, it identifies four specific IVDs: C2-C3, C7-T1, T12-L1, and L5-S, which represent key anatomical landmarks along the spine, as well as the sacrum (Figure 1E). This model uses two input channels: the MRI image (Figure 1A) and the odd IVDs extracted from the first step (Figure 1D). The output segmentation was processed using an algorithm that assigns individual labels to each vertebra and IVD in the final segmentation (Figure 1F).
+**Step 2:** A second nnU-Net model (`Dataset102`) is then used to identify ten classes in total. This includes five semantic classes: spinal cord, spinal canal, IVDs, odd vertebrae, and even vertebrae and five landmark classes: C2-C3, C7-T1, T12-L1, and L5-S, which represent the same key IVDs along the spine, as well as the sacrum (Figure 1D). This model uses two input channels: the MRI image (Figure 1A) and the odd IVDs extracted from the first step (Figure 1C). The output segmentation is finally processed using an algorithm that assigns individual labels to each vertebra and IVD to generate the final segmentation (Figure 1F).
 
 For comparison, we also trained a single model (`Dataset103`) that outputs individual label values for each vertebra and IVD in a single step.
 
@@ -164,7 +164,7 @@ bash "$TOTALSPINESEG"/scripts/train.sh [DATASET_ID [FOLD]]
 
 1. Make sure that the `bash` terminal is opened with the virtual environment activated (see [Installation](#installation)).
 
-2. Run the model on a folder containing the images in .nii.gz format, or on a single .nii.gz file:
+2. Run the model on a folder containing niftii images (`.nii.gz` or `.nii`), or on a single niftii file:
 > If you haven't trained the model, the script will automatically download the pre-trained models from the GitHub release.
 ```bash
 totalspineseg INPUT OUTPUT_FOLDER [--step1] [--iso]
@@ -199,7 +199,7 @@ output_folder/
 **Important Note:** While TotalSpineSeg provides spinal cord segmentation, it is not intended to replace validated methods for cross-sectional area (CSA) analysis. The spinal cord segmentation from TotalSpineSeg has not been validated for CSA measurements, nor has it been tested on cases involving spinal cord compressions, MS lesions, or other spinal cord abnormalities. For accurate CSA analysis, we strongly recommend using the validated algorithms available in the [Spinal Cord Toolbox](https://spinalcordtoolbox.com/user_section/tutorials/segmentation.html).
 
 Key points:
-- All segmentations in NIfTI (.nii.gz) format
+- All segmentations in NIfTI format (`.nii.gz`)
 - Preview images in JPEG format
 - step1_levels: single voxel in canal centerline at each IVD level, numbered from C1 (1 above C1, 2 above C2, etc.)
 - step2_output: final labeled vertebrae, discs, cord, and canal

@@ -1,5 +1,6 @@
 import os, argparse, warnings, textwrap, torch, psutil, shutil
 from fnmatch import fnmatch
+import nibabel as nib
 from pathlib import Path
 import importlib.resources
 from tqdm import tqdm
@@ -19,6 +20,8 @@ def main():
             Examples:
             totalspineseg input.nii.gz output_folder
             totalspineseg input.nii.gz output_folder --loc output_folder_loc/step2_output/localizer.nii.gz
+            totalspineseg input.nii output_folder
+            totalspineseg input.nii output_folder --loc output_folder_loc/step2_output/localizer.nii
             totalspineseg input_folder output_folder
             totalspineseg input_folder output_folder --step1
             totalspineseg input_folder output_folder --loc output_folder_loc/step2_output
@@ -29,7 +32,7 @@ def main():
     )
     parser.add_argument(
         'input', type=Path,
-        help='The input folder containing the .nii.gz images to run the model on, or a single .nii.gz image.'
+        help='The input folder containing the .nii.gz (or .nii) images to run the model on, or a single .nii.gz (or .nii) image.'
     )
     parser.add_argument(
         'output', type=Path,
@@ -42,7 +45,7 @@ def main():
     parser.add_argument(
         '--loc', '-l', type=Path, default=None,
         help=' '.join(f'''
-            Folder containing localizers segmentations or a single .nii.gz localizer segmentation to use for detecting first vertebrae and disc if C1 and C2-C3 disc or the Sacrum and L5-S disc not found in the image, Optional.
+            Folder containing localizers segmentations or a single .nii.gz (or .nii) localizer segmentation to use for detecting first vertebrae and disc if C1 and C2-C3 disc or the Sacrum and L5-S disc not found in the image, Optional.
             This is the output of the model applied on localizer images. It can be the output of step 2, or step 1 if you only want to run step 1 (step1 flag).
             The algorithm will use the localizers' segmentations to detect the matching vertebrae and discs. The localizer and the image must be aligned.
             Matching will based on the majority of the voxels of the first vertebra or disc in the localizer, that intersect with image.
@@ -263,18 +266,31 @@ def inference(
         '''))
 
     if not quiet: print('\n' 'Making input dir with _0000 suffix:')
-    if input_path.name.endswith('.nii.gz'):
+    if not input_path.is_dir():
         # If the input is a single file, copy it to the input_raw folder
         (output_path / 'input_raw').mkdir(parents=True, exist_ok=True)
-        shutil.copy(input_path, output_path / 'input_raw' / input_path.name.replace('.nii.gz', '_0000.nii.gz'))
+
+        # Check suffixes
+        if "".join(input_path.suffixes) == ".nii.gz":
+            # Copy file
+            dst_path = output_path / 'input_raw' / input_path.name.replace('.nii.gz', '_0000.nii.gz')
+            shutil.copy(input_path, dst_path)
+        elif "".join(input_path.suffixes) == ".nii":
+            # Compress file                    
+            src_img = nib.load(input_path)
+            dst_path = output_path / 'input_raw' / input_path.name.replace('.nii', '_0000.nii.gz')
+            nib.save(src_img, dst_path)
+        else:
+            raise ValueError(f"Unknown file type: {''.join(input_path.suffixes)}, please use niftii files")
     else:
         # If the input is a folder, copy the files to the input_raw folder
         cpdir_mp(
             input_path,
             output_path / 'input_raw',
-            pattern=sum([[f'*{s}.nii.gz', f'sub-*/anat/*{s}.nii.gz'] for s in suffix], []),
+            pattern=sum([[f'*{s}.nii.gz', f'sub-*/anat/*{s}.nii.gz', f'*{s}.nii', f'sub-*/anat/*{s}.nii'] for s in suffix], []),
             flat=True,
             replace={'.nii.gz': '_0000.nii.gz'},
+            compress=True,
             overwrite=True,
             max_workers=max_workers,
             quiet=quiet,
@@ -296,20 +312,28 @@ def inference(
         (output_path / 'localizers').mkdir(parents=True, exist_ok=True)
 
         # List all localizers in the localizers folder
-        locs = list(loc_path.glob(f'*{loc_suffix}.nii.gz')) + list(loc_path.glob(f'sub-*/anat/*{loc_suffix}.nii.gz'))
+        locs = list(loc_path.glob(f'*{loc_suffix}.nii.gz')) + list(loc_path.glob(f'*{loc_suffix}.nii')) \
+        + list(loc_path.glob(f'sub-*/anat/*{loc_suffix}.nii.gz')) + list(loc_path.glob(f'sub-*/anat/*{loc_suffix}.nii'))
 
         # Copy the localizers to the output folder
         images = list((output_path / 'input').glob('*_0000.nii.gz'))
         for image in tqdm(images, disable=quiet):
-            if loc_path.name.endswith('.nii.gz'):
+            if '.nii' in loc_path.suffixes:
                 # If the localizers are in a single file, copy it to the localizers folder
                 loc = loc_path
             else:
                 # If the localizers are in a folder, find the matching localizer for the image
                 image_suffix = next((_ for _ in suffix if fnmatch(image.name, f'*{_}_0000.nii.gz')), '')
-                loc = next((_ for _ in locs if fnmatch(image.name, _.name.replace(f'{loc_suffix}.nii.gz', f'{image_suffix}_0000.nii.gz'))), None)
+                loc = next((_ for _ in locs if fnmatch(image.name, _.name.replace(f'{loc_suffix}.nii', f'{image_suffix}_0000.nii'))), None)
             if loc:
-                shutil.copy(loc, output_path / 'localizers' / image.name.replace('_0000.nii.gz', f'.nii.gz'))
+                dst_loc = output_path / 'localizers' / image.name.replace('_0000.nii.gz', '.nii.gz')
+                if "".join(loc.suffixes) == ".nii":
+                    # Compress loc                    
+                    src_loc = nib.load(loc)
+                    nib.save(src_loc, dst_loc)
+                else:
+                    # Copy loc
+                    shutil.copy(loc, dst_loc)
 
         if not quiet: print('\n' 'Generating preview images for the localizers:')
         preview_jpg_mp(
