@@ -56,7 +56,7 @@ When not available, sacrum segmentations were generated using the [totalsegmenta
 ## Dependencies
 
 - `bash` terminal
-- [Python](https://www.python.org/) >= 3.9, with pip >= 23 and setuptools >= 67
+- [Python](https://www.python.org/) >= 3.10, with pip >= 23 and setuptools >= 67
 
 ## Installation
 
