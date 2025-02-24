@@ -95,7 +95,7 @@ cd TotalSpineSeg
 5. For CUDA GPU support, install **PyTorch<2.6** following the instructions on their [website](https://pytorch.org/). Be sure to add the `--upgrade` flag to your installation command to replace any existing PyTorch installation.
    Example:
 ```bash
-conda install pytorch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1  pytorch-cuda=11.8 -c pytorch -c nvidia --upgrade
+python3 -m pip install torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu118 --upgrade
 ```
 
 6. **OPTIONAL STEP:** Define a folder where weights will be stored:
