@@ -56,7 +56,7 @@ When not available, sacrum segmentations were generated using the [totalsegmenta
 ## Dependencies
 
 - `bash` terminal
-- [Python](https://www.python.org/) >= 3.9, with pip >= 23 and setuptools >= 67
+- [Python](https://www.python.org/) >= 3.10, with pip >= 23 and setuptools >= 67
 
 ## Installation
 
@@ -76,7 +76,7 @@ cd TotalSpineSeg
    ```
    - conda env
    ```
-   conda create -n myenv python=3.9
+   conda create -n myenv python=3.10
    conda activate myenv
    ```
 
@@ -92,10 +92,10 @@ cd TotalSpineSeg
    python3 -m pip install totalspineseg
    ```
 
-5. For CUDA GPU support, install **PyTorch** following the instructions on their [website](https://pytorch.org/). Be sure to add the `--upgrade` flag to your installation command to replace any existing PyTorch installation.
+5. For CUDA GPU support, install **PyTorch<2.6** following the instructions on their [website](https://pytorch.org/). Be sure to add the `--upgrade` flag to your installation command to replace any existing PyTorch installation.
    Example:
 ```bash
-python3 -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 --upgrade
+python3 -m pip install torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu118 --upgrade
 ```
 
 6. **OPTIONAL STEP:** Define a folder where weights will be stored:
