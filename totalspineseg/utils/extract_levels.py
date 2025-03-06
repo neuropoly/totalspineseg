@@ -276,12 +276,12 @@ def extract_levels(
     if len(disc_labels_in_seg) == 0:
         raise ValueError(f"No disc labels found in the segmentation.")
 
-    # Get the labels of the discs and the output labels
-    first_disk_idx = disc_labels.index(disc_labels_in_seg[0])
-    out_labels = list(range(3 + first_disk_idx, 3 + first_disk_idx + len(disc_labels_in_seg)))
+    # # Get the labels of the discs and the output labels
+    # first_disk_idx = disc_labels.index(disc_labels_in_seg[0])
+    # out_labels = list(range(3 + first_disk_idx, 3 + first_disk_idx + len(disc_labels_in_seg)))
 
-    # Filter the discs that are in the segmentation
-    map_labels = dict(zip(disc_labels_in_seg, out_labels))
+    # # Filter the discs that are in the segmentation
+    # map_labels = dict(zip(disc_labels_in_seg, out_labels))
 
     # Create mask of the discs
     mask_discs = np.isin(seg_data, disc_labels_in_seg)
@@ -307,13 +307,13 @@ def extract_levels(
 
     # Set the output labels to the closest voxel to the canal anteriorline for each disc
     for idx, label in zip(disc_labels_anteriorline_indices, disc_labels_in_seg):
-        output_seg_data[tuple(idx)] = map_labels[label]
+        output_seg_data[tuple(idx)] = label
 
     # If C2-C3 and C1 are in the segmentation, set 1 and 2
-    if 3 in output_seg_data and c2_label != 0 and c1_label != 0 and all(np.isin([c1_label, c2_label], seg_data)):
+    if 63 in output_seg_data and c2_label != 0 and c1_label != 0 and all(np.isin([c1_label, c2_label], seg_data)):
         # Place 1 at the top of C2 if C1 is visible in the image
         # Find the location of the C2-C3 disc
-        c2c3_index = np.unravel_index(np.argmax(output_seg_data == 3), seg_data.shape)
+        c2c3_index = np.unravel_index(np.argmax(output_seg_data == 63), seg_data.shape)
 
         # Find the maximum coordinate of the vertebra C1
         c1_coords = np.where(seg_data == c1_label)
@@ -332,7 +332,7 @@ def extract_levels(
             # Set 1 to the superior voxels and project onto the anterior line
             top_vert_distances_from_all_anteriorline = np.linalg.norm(top_vert_voxel - canal_anteriorline_indices[None, ...], axis=2)
             top_vert_index_anteriorline = canal_anteriorline_indices[np.argmin(top_vert_distances_from_all_anteriorline, axis=1)]
-            output_seg_data[tuple(top_vert_index_anteriorline[0])] = 1
+            output_seg_data[tuple(top_vert_index_anteriorline[0])] = 61
 
             # Set 2 to the middle voxels between C2-C3 and the superior voxels
             c1c2_index = tuple([(top_vert_voxel[i] + c2c3_index[i]) // 2 for i in range(3)])
@@ -340,7 +340,7 @@ def extract_levels(
             # Project 2 on the anterior line
             c1c2_distances_from_all_anteriorline = np.linalg.norm(c1c2_index - canal_anteriorline_indices[None, ...], axis=2)
             c1c2_index_anteriorline = canal_anteriorline_indices[np.argmin(c1c2_distances_from_all_anteriorline, axis=1)]
-            output_seg_data[tuple(c1c2_index_anteriorline[0])] = 2
+            output_seg_data[tuple(c1c2_index_anteriorline[0])] = 62
 
     output_seg = nib.Nifti1Image(output_seg_data, seg.affine, seg.header)
 
