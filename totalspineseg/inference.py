@@ -602,15 +602,30 @@ def inference(
     for f in (output_path / 'step1_raw').glob('*.npz'):
         f.unlink(missing_ok=True)
 
-    if not keep_only[0] or 'step1_levels' in keep_only:
-        if not quiet: print('\n' 'Extracting the levels of the vertebrae and IVDs from the step 1 model output:')
-        extract_levels_mp(
-            output_path / 'step1_output',
+    if not quiet: print('\n' 'Extracting the levels of the vertebrae and IVDs from the step 1 model output:')
+    extract_levels_mp(
+        output_path / 'step1_output',
+        output_path / 'step1_levels',
+        canal_labels=[1, 2],
+        disc_labels=list(range(63, 70)) + list(range(71, 90)) + list(range(91, 101)),
+        c1_label=11,
+        c2_label=50,
+        overwrite=True,
+        max_workers=max_workers,
+        quiet=quiet,
+    )
+
+    if not keep_only[0] or 'step1_vert' in keep_only:
+        if not quiet: print('\n' 'Extract vertebrae from levels:')
+        extract_vertebrae_mp(
             output_path / 'step1_levels',
-            canal_labels=[1, 2],
-            disc_labels=list(range(63, 70)) + list(range(71, 90)) + list(range(91, 101)),
-            c1_label=11,
-            c2_label=50,
+            output_path / 'step1_vert',
+            disc_dict={
+                62: 'C1C2', 63: 'C2C3', 64: 'C3C4', 65: 'C4C5', 66: 'C5C6', 67: 'C6C7', 68: 'C7C8', 69: 'C8C9',
+                71: 'C7T1', 72: 'T1T2', 73: 'T2T3', 74: 'T3T4', 75: 'T4T5', 76: 'T5T6', 77: 'T6T7',
+                78: 'T7T8', 79: 'T8T9', 80: 'T9T10', 81: 'T10T11', 82: 'T11T12', 83: 'T12T13', 84: 'T13T14', 85: 'T14T15', 86: 'T15T16', 87: 'T16T17', 88: 'T17T18', 89: 'T18T19',
+                91: 'T12L1', 92: 'L1L2', 93: 'L2L3', 94: 'L3L4', 95: 'L4L5', 96: 'L5L6', 97: 'L6L7', 98: 'L7L8', 99: 'L8S', 100: 'L5S'
+            },
             overwrite=True,
             max_workers=max_workers,
             quiet=quiet,
