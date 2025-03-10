@@ -185,7 +185,7 @@ def inference(
     step1_only : bool
         If True only the prediction of the first model will be computed.
     keep_only : list of string
-        If not empty, only the folder listed will be kept and some functions won't be computed.
+        If not empty, only the folders listed will be kept and some functions won't be computed.
     max_workers : int
         Max worker to run in parallel proccess, defaults to numer of available cores
     max_workers_nnunet : int
@@ -866,7 +866,7 @@ def inference(
         if not keep_only[0] or folder in keep_only:
             if folder in folder_dict.keys():
                 if not output_iso:
-                    if not quiet: print('\n' f'Resampling {folder} to the input images space:')
+                    if not quiet: print('\n' f'Resampling {folder} to the input space:')
                     transform_seg2image_mp(
                         output_path / 'input_raw',
                         output_path / folder,
