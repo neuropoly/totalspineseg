@@ -631,227 +631,228 @@ def inference(
         )
 
     if not step1_only:
-        if not quiet: print('\n' 'Copying the original images into step 2 input folder:')
-        cpdir_mp(
-            output_path / 'input',
-            output_path / 'step2_input',
-            pattern=['*_0000.nii.gz'],
-            overwrite=True,
-            max_workers=max_workers,
-            quiet=quiet,
-        )
-
-        if not quiet: print('\n' 'Cropping the images to the bounding box of step 1 segmentation:')
-        # This will also delete images without segmentation
-        crop_image2seg_mp(
-            output_path / 'step2_input',
-            output_path / 'step1_output',
-            output_path / 'step2_input',
-            margin=10,
-            overwrite=True,
-            max_workers=max_workers,
-            quiet=quiet,
-        )
-
-        if not quiet: print('\n' 'Transform step 1 segmentation to the cropped images space:')
-        transform_seg2image_mp(
-            output_path / 'step2_input',
-            output_path / 'step1_output',
-            output_path / 'step2_input',
-            output_seg_suffix='_0001',
-            overwrite=True,
-            max_workers=max_workers,
-            quiet=quiet,
-        )
-
-        if not quiet: print('\n' 'Mapping the IVDs labels from the step1 model output to the odd IVDs:')
-        # This will also delete labels without odd IVDs
-        extract_alternate_mp(
-            output_path / 'step2_input',
-            output_path / 'step2_input',
-            seg_suffix='_0001',
-            output_seg_suffix='_0001',
-            labels=list(range(63, 101)),
-            overwrite=True,
-            max_workers=max_workers,
-            quiet=quiet,
-        )
-
-        if not keep_only[0] or 'preview' in keep_only:
-            if not quiet: print('\n' 'Generating preview images for step 2 input:')
-            preview_jpg_mp(
+        if not keep_only[0] or 'step2_output' in keep_only:
+            if not quiet: print('\n' 'Copying the original images into step 2 input folder:')
+            cpdir_mp(
                 output_path / 'input',
-                output_path / 'preview',
-                segs_path=output_path / 'step2_input',
-                seg_suffix='_0001',
-                output_suffix='_step2_input',
+                output_path / 'step2_input',
+                pattern=['*_0000.nii.gz'],
                 overwrite=True,
                 max_workers=max_workers,
                 quiet=quiet,
             )
 
-        # Remove images without the 2'nd channel
-        for f in (output_path / 'step2_input').glob('*_0000.nii.gz'):
-            if not f.with_name(f.name.replace('_0000.nii.gz', '_0001.nii.gz')).exists():
+            if not quiet: print('\n' 'Cropping the images to the bounding box of step 1 segmentation:')
+            # This will also delete images without segmentation
+            crop_image2seg_mp(
+                output_path / 'step2_input',
+                output_path / 'step1_output',
+                output_path / 'step2_input',
+                margin=10,
+                overwrite=True,
+                max_workers=max_workers,
+                quiet=quiet,
+            )
+
+            if not quiet: print('\n' 'Transform step 1 segmentation to the cropped images space:')
+            transform_seg2image_mp(
+                output_path / 'step2_input',
+                output_path / 'step1_output',
+                output_path / 'step2_input',
+                output_seg_suffix='_0001',
+                overwrite=True,
+                max_workers=max_workers,
+                quiet=quiet,
+            )
+
+            if not quiet: print('\n' 'Mapping the IVDs labels from the step1 model output to the odd IVDs:')
+            # This will also delete labels without odd IVDs
+            extract_alternate_mp(
+                output_path / 'step2_input',
+                output_path / 'step2_input',
+                seg_suffix='_0001',
+                output_seg_suffix='_0001',
+                labels=list(range(63, 101)),
+                overwrite=True,
+                max_workers=max_workers,
+                quiet=quiet,
+            )
+
+            if not keep_only[0] or 'preview' in keep_only:
+                if not quiet: print('\n' 'Generating preview images for step 2 input:')
+                preview_jpg_mp(
+                    output_path / 'input',
+                    output_path / 'preview',
+                    segs_path=output_path / 'step2_input',
+                    seg_suffix='_0001',
+                    output_suffix='_step2_input',
+                    overwrite=True,
+                    max_workers=max_workers,
+                    quiet=quiet,
+                )
+
+            # Remove images without the 2'nd channel
+            for f in (output_path / 'step2_input').glob('*_0000.nii.gz'):
+                if not f.with_name(f.name.replace('_0000.nii.gz', '_0001.nii.gz')).exists():
+                    f.unlink(missing_ok=True)
+
+            # Get the nnUNet parameters from the results folder
+            nnUNetTrainer, nnUNetPlans, configuration = next((nnUNet_results / step2_dataset).glob('*/fold_*')).parent.name.split('__')
+            # Check if the final checkpoint exists, if not use the latest checkpoint
+            checkpoint = 'checkpoint_final.pth' if (nnUNet_results / step2_dataset / f'{nnUNetTrainer}__{nnUNetPlans}__{configuration}' / f'fold_{fold}' / 'checkpoint_final.pth').is_file() else 'checkpoint_best.pth'
+
+            # Construct step 2 model folder
+            model_folder_step2 = nnUNet_results / step2_dataset / f'{nnUNetTrainer}__{nnUNetPlans}__{configuration}'
+
+            if not quiet: print('\n' 'Running step 2 model:')
+            predict_nnunet(
+                model_folder=model_folder_step2,
+                images_dir=output_path / 'step2_input',
+                output_dir=output_path / 'step2_raw',
+                folds = str(fold),
+                checkpoint = checkpoint,
+                npp = max_workers_nnunet,
+                nps = max_workers_nnunet,
+                device = device
+            )
+
+            # Remove unnecessary files from output folder
+            (output_path / 'step2_raw' / 'dataset.json').unlink(missing_ok=True)
+            (output_path / 'step2_raw' / 'plans.json').unlink(missing_ok=True)
+            (output_path / 'step2_raw' / 'predict_from_raw_data_args.json').unlink(missing_ok=True)
+
+            # Remove the raw files from step 2 to save space
+            for f in (output_path / 'step2_input').glob('*_0000.nii.gz'):
                 f.unlink(missing_ok=True)
 
-        # Get the nnUNet parameters from the results folder
-        nnUNetTrainer, nnUNetPlans, configuration = next((nnUNet_results / step2_dataset).glob('*/fold_*')).parent.name.split('__')
-        # Check if the final checkpoint exists, if not use the latest checkpoint
-        checkpoint = 'checkpoint_final.pth' if (nnUNet_results / step2_dataset / f'{nnUNetTrainer}__{nnUNetPlans}__{configuration}' / f'fold_{fold}' / 'checkpoint_final.pth').is_file() else 'checkpoint_best.pth'
+            if not keep_only[0] or 'preview' in keep_only:
+                if not quiet: print('\n' 'Generating preview images for step 2:')
+                preview_jpg_mp(
+                    output_path / 'input',
+                    output_path / 'preview',
+                    segs_path=output_path / 'step2_raw',
+                    output_suffix='_step2_raw',
+                    overwrite=True,
+                    max_workers=max_workers,
+                    quiet=quiet,
+                )
 
-        # Construct step 2 model folder
-        model_folder_step2 = nnUNet_results / step2_dataset / f'{nnUNetTrainer}__{nnUNetPlans}__{configuration}'
+            if not quiet: print('\n' 'Extracting the largest connected component:')
+            largest_component_mp(
+                output_path / 'step2_raw',
+                output_path / 'step2_output',
+                binarize=True,
+                dilate=5,
+                overwrite=True,
+                max_workers=max_workers,
+                quiet=quiet,
+            )
 
-        if not quiet: print('\n' 'Running step 2 model:')
-        predict_nnunet(
-            model_folder=model_folder_step2,
-            images_dir=output_path / 'step2_input',
-            output_dir=output_path / 'step2_raw',
-            folds = str(fold),
-            checkpoint = checkpoint,
-            npp = max_workers_nnunet,
-            nps = max_workers_nnunet,
-            device = device
-        )
+            if not quiet: print('\n' 'Using an iterative algorithm to label vertebrae and IVDs:')
+            if loc_path is None:
+                iterative_label_mp(
+                    output_path / 'step2_output',
+                    output_path / 'step2_output',
+                    selected_disc_landmarks=[2, 5, 3, 4],
+                    disc_labels=[1, 2, 3, 4, 5],
+                    disc_landmark_labels=[2, 3, 4, 5],
+                    disc_landmark_output_labels=[63, 71, 91, 100],
+                    vertebrae_labels=[7, 8, 9],
+                    vertebrae_landmark_output_labels=[13, 21, 41, 50],
+                    vertebrae_extra_labels=[6],
+                    canal_labels=[10],
+                    canal_output_label=2,
+                    cord_labels=[11],
+                    cord_output_label=1,
+                    sacrum_labels=[9],
+                    sacrum_output_label=50,
+                    overwrite=True,
+                    max_workers=max_workers,
+                    quiet=quiet,
+                )
+            else:
+                iterative_label_mp(
+                    output_path / 'step2_output',
+                    output_path / 'step2_output',
+                    locs_path=output_path / 'localizers',
+                    selected_disc_landmarks=[2, 5],
+                    disc_labels=[1, 2, 3, 4, 5],
+                    disc_landmark_labels=[2, 3, 4, 5],
+                    disc_landmark_output_labels=[63, 71, 91, 100],
+                    vertebrae_labels=[7, 8, 9],
+                    vertebrae_landmark_output_labels=[13, 21, 41, 50],
+                    vertebrae_extra_labels=[6],
+                    loc_disc_labels=list(range(63, 101)),
+                    canal_labels=[10],
+                    canal_output_label=2,
+                    cord_labels=[11],
+                    cord_output_label=1,
+                    sacrum_labels=[9],
+                    sacrum_output_label=50,
+                    overwrite=True,
+                    max_workers=max_workers,
+                    quiet=quiet,
+                )
 
-        # Remove unnecessary files from output folder
-        (output_path / 'step2_raw' / 'dataset.json').unlink(missing_ok=True)
-        (output_path / 'step2_raw' / 'plans.json').unlink(missing_ok=True)
-        (output_path / 'step2_raw' / 'predict_from_raw_data_args.json').unlink(missing_ok=True)
+            if not quiet: print('\n' 'Filling spinal canal label to include all non cord spinal canal:')
+            # This will put the spinal canal label in all the voxels between the canal and the cord.
+            fill_canal_mp(
+                output_path / 'step2_output',
+                output_path / 'step2_output',
+                canal_label=2,
+                cord_label=1,
+                largest_canal=True,
+                largest_cord=True,
+                overwrite=True,
+                max_workers=max_workers,
+                quiet=quiet,
+            )
 
-        # Remove the raw files from step 2 to save space
-        for f in (output_path / 'step2_input').glob('*_0000.nii.gz'):
-            f.unlink(missing_ok=True)
-
-        if not keep_only[0] or 'preview' in keep_only:
-            if not quiet: print('\n' 'Generating preview images for step 2:')
-            preview_jpg_mp(
+            if not quiet: print('\n' 'Transforming labels to input images space:')
+            transform_seg2image_mp(
                 output_path / 'input',
-                output_path / 'preview',
-                segs_path=output_path / 'step2_raw',
-                output_suffix='_step2_raw',
-                overwrite=True,
-                max_workers=max_workers,
-                quiet=quiet,
-            )
-
-        if not quiet: print('\n' 'Extracting the largest connected component:')
-        largest_component_mp(
-            output_path / 'step2_raw',
-            output_path / 'step2_output',
-            binarize=True,
-            dilate=5,
-            overwrite=True,
-            max_workers=max_workers,
-            quiet=quiet,
-        )
-
-        if not quiet: print('\n' 'Using an iterative algorithm to label vertebrae and IVDs:')
-        if loc_path is None:
-            iterative_label_mp(
                 output_path / 'step2_output',
                 output_path / 'step2_output',
-                selected_disc_landmarks=[2, 5, 3, 4],
-                disc_labels=[1, 2, 3, 4, 5],
-                disc_landmark_labels=[2, 3, 4, 5],
-                disc_landmark_output_labels=[63, 71, 91, 100],
-                vertebrae_labels=[7, 8, 9],
-                vertebrae_landmark_output_labels=[13, 21, 41, 50],
-                vertebrae_extra_labels=[6],
-                canal_labels=[10],
-                canal_output_label=2,
-                cord_labels=[11],
-                cord_output_label=1,
-                sacrum_labels=[9],
-                sacrum_output_label=50,
-                overwrite=True,
-                max_workers=max_workers,
-                quiet=quiet,
-            )
-        else:
-            iterative_label_mp(
-                output_path / 'step2_output',
-                output_path / 'step2_output',
-                locs_path=output_path / 'localizers',
-                selected_disc_landmarks=[2, 5],
-                disc_labels=[1, 2, 3, 4, 5],
-                disc_landmark_labels=[2, 3, 4, 5],
-                disc_landmark_output_labels=[63, 71, 91, 100],
-                vertebrae_labels=[7, 8, 9],
-                vertebrae_landmark_output_labels=[13, 21, 41, 50],
-                vertebrae_extra_labels=[6],
-                loc_disc_labels=list(range(63, 101)),
-                canal_labels=[10],
-                canal_output_label=2,
-                cord_labels=[11],
-                cord_output_label=1,
-                sacrum_labels=[9],
-                sacrum_output_label=50,
                 overwrite=True,
                 max_workers=max_workers,
                 quiet=quiet,
             )
 
-        if not quiet: print('\n' 'Filling spinal canal label to include all non cord spinal canal:')
-        # This will put the spinal canal label in all the voxels between the canal and the cord.
-        fill_canal_mp(
-            output_path / 'step2_output',
-            output_path / 'step2_output',
-            canal_label=2,
-            cord_label=1,
-            largest_canal=True,
-            largest_cord=True,
-            overwrite=True,
-            max_workers=max_workers,
-            quiet=quiet,
-        )
+            if not keep_only[0] or 'preview' in keep_only:
+                if not quiet: print('\n' 'Generating preview images for the final output:')
+                preview_jpg_mp(
+                    output_path / 'input',
+                    output_path / 'preview',
+                    segs_path=output_path / 'step2_output',
+                    output_suffix='_step2_output',
+                    overwrite=True,
+                    max_workers=max_workers,
+                    quiet=quiet,
+                )
 
-        if not quiet: print('\n' 'Transforming labels to input images space:')
-        transform_seg2image_mp(
-            output_path / 'input',
-            output_path / 'step2_output',
-            output_path / 'step2_output',
-            overwrite=True,
-            max_workers=max_workers,
-            quiet=quiet,
-        )
-
-        if not keep_only[0] or 'preview' in keep_only:
-            if not quiet: print('\n' 'Generating preview images for the final output:')
-            preview_jpg_mp(
-                output_path / 'input',
-                output_path / 'preview',
-                segs_path=output_path / 'step2_output',
-                output_suffix='_step2_output',
-                overwrite=True,
-                max_workers=max_workers,
-                quiet=quiet,
-            )
-
-        if not keep_only[0] or 'preview' in keep_only:
-            if not quiet: print('\n' 'Generating preview images for the final output with tags:')
-            preview_jpg_mp(
-                output_path / 'input',
-                output_path / 'preview',
-                segs_path=output_path / 'step2_output',
-                output_suffix='_step2_output_tags',
-                overwrite=True,
-                max_workers=max_workers,
-                quiet=quiet,
-                label_texts_right={
-                    11: 'C1', 12: 'C2', 13: 'C3', 14: 'C4', 15: 'C5', 16: 'C6', 17: 'C7',
-                    21: 'T1', 22: 'T2', 23: 'T3', 24: 'T4', 25: 'T5', 26: 'T6', 27: 'T7',
-                    28: 'T8', 29: 'T9', 30: 'T10', 31: 'T11', 32: 'T12',
-                    41: 'L1', 42: 'L2', 43: 'L3', 44: 'L4', 45: 'L5', 46: 'L6',
-                },
-                label_texts_left={
-                    50: 'Sacrum', 63: 'C2C3', 64: 'C3C4', 65: 'C4C5', 66: 'C5C6', 67: 'C6C7',
-                    71: 'C7T1', 72: 'T1T2', 73: 'T2T3', 74: 'T3T4', 75: 'T4T5', 76: 'T5T6', 77: 'T6T7',
-                    78: 'T7T8', 79: 'T8T9', 80: 'T9T10', 81: 'T10T11', 82: 'T11T12',
-                    91: 'T12L1', 92: 'L1L2', 93: 'L2L3', 94: 'L3L4', 95: 'L4L5', 96: 'L5L6', 100: 'L5S'
-                },
-            )
+            if not keep_only[0] or 'preview' in keep_only:
+                if not quiet: print('\n' 'Generating preview images for the final output with tags:')
+                preview_jpg_mp(
+                    output_path / 'input',
+                    output_path / 'preview',
+                    segs_path=output_path / 'step2_output',
+                    output_suffix='_step2_output_tags',
+                    overwrite=True,
+                    max_workers=max_workers,
+                    quiet=quiet,
+                    label_texts_right={
+                        11: 'C1', 12: 'C2', 13: 'C3', 14: 'C4', 15: 'C5', 16: 'C6', 17: 'C7',
+                        21: 'T1', 22: 'T2', 23: 'T3', 24: 'T4', 25: 'T5', 26: 'T6', 27: 'T7',
+                        28: 'T8', 29: 'T9', 30: 'T10', 31: 'T11', 32: 'T12',
+                        41: 'L1', 42: 'L2', 43: 'L3', 44: 'L4', 45: 'L5', 46: 'L6',
+                    },
+                    label_texts_left={
+                        50: 'Sacrum', 63: 'C2C3', 64: 'C3C4', 65: 'C4C5', 66: 'C5C6', 67: 'C6C7',
+                        71: 'C7T1', 72: 'T1T2', 73: 'T2T3', 74: 'T3T4', 75: 'T4T5', 76: 'T5T6', 77: 'T6T7',
+                        78: 'T7T8', 79: 'T8T9', 80: 'T9T10', 81: 'T10T11', 82: 'T11T12',
+                        91: 'T12L1', 92: 'L1L2', 93: 'L2L3', 94: 'L3L4', 95: 'L4L5', 96: 'L5L6', 100: 'L5S'
+                    },
+                )
 
     # Keep and resample output data
     folder_list = [f for f in os.listdir(str(output_path)) if not f.startswith('input')]
