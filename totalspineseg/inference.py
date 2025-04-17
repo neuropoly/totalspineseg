@@ -1,5 +1,6 @@
 import os, argparse, warnings, textwrap, torch, psutil, shutil
 from fnmatch import fnmatch
+import multiprocessing as mp
 import nibabel as nib
 from pathlib import Path
 import importlib.resources
@@ -75,6 +76,10 @@ def main():
         '''.split())
     )
     parser.add_argument(
+        '--no-stalling', action="store_true", default=False,
+        help='Set multiprocessing method to "forkserver" to avoid deadlock issues, default to False.'
+    )
+    parser.add_argument(
         '--max-workers', '-w', type=int, default=os.cpu_count(),
         help=f'Max worker to run in parallel proccess, defaults to numer of available cores'
     )
@@ -115,6 +120,10 @@ def main():
         data_path = Path(os.environ.get('TOTALSPINESEG_DATA', ''))
     else:
         data_path = importlib.resources.files(models)
+    
+    # Change multiprocessing method if specified
+    if args.no_stalling:
+        mp.set_start_method('forkserver', force=True)
     
     # Default release to use
     default_release = list(ZIP_URLS.values())[0].split('/')[-2]
