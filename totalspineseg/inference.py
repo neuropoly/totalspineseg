@@ -290,11 +290,11 @@ def inference(
         (output_path / 'input_raw').mkdir(parents=True, exist_ok=True)
 
         # Check suffixes
-        if "".join(input_path.suffixes) == ".nii.gz":
+        if input_path.name.endswith(".nii.gz"):
             # Copy file
             dst_path = output_path / 'input_raw' / input_path.name.replace('.nii.gz', '_0000.nii.gz')
             shutil.copy(input_path, dst_path)
-        elif "".join(input_path.suffixes) == ".nii":
+        elif input_path.suffix == ".nii":
             # Compress file                    
             src_img = nib.load(input_path)
             dst_path = output_path / 'input_raw' / input_path.name.replace('.nii', '_0000.nii.gz')
