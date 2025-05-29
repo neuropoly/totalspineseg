@@ -65,6 +65,10 @@ def main():
         help='Run only step 1 of the inference process.'
     )
     parser.add_argument(
+        '--disable-tta', action='store_true',
+        help='Disable nnunet test time augmentation: decreases the computation time at the cost of slightly lower performances.'
+    )
+    parser.add_argument(
         '--data-dir', '-d', type=Path, default=None,
         help=' '.join(f'''
             The path to store the nnUNet data.
@@ -98,6 +102,7 @@ def main():
     suffix = args.suffix
     loc_suffix = args.loc_suffix
     step1_only = args.step1
+    disable_tta = args.disable_tta
     max_workers = args.max_workers
     max_workers_nnunet = min(args.max_workers_nnunet, max_workers)
     device = args.device
@@ -132,6 +137,7 @@ def main():
         suffix=suffix,
         loc_suffix=loc_suffix,
         step1_only=step1_only,
+        disable_tta=disable_tta,
         max_workers=max_workers,
         max_workers_nnunet=max_workers_nnunet,
         device=device,
@@ -149,6 +155,7 @@ def inference(
         suffix=[''],
         loc_suffix='',
         step1_only=False,
+        disable_tta=False,
         max_workers=os.cpu_count(),
         max_workers_nnunet=int(max(min(os.cpu_count(), psutil.virtual_memory().total / 2**30 // 8), 1)),
         device='cuda',
@@ -424,6 +431,7 @@ def inference(
         images_dir=output_path / 'input',
         output_dir=output_path / 'step1_raw',
         folds = str(fold),
+        disable_tta = disable_tta,
         save_probabilities = True,
         checkpoint = checkpoint,
         npp = max_workers_nnunet,
@@ -689,6 +697,7 @@ def inference(
             images_dir=output_path / 'step2_input',
             output_dir=output_path / 'step2_raw',
             folds = str(fold),
+            disable_tta = disable_tta,
             checkpoint = checkpoint,
             npp = max_workers_nnunet,
             nps = max_workers_nnunet,
