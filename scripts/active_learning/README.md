@@ -16,7 +16,7 @@ These refinement will be done using existing contrasts specific deep learning mo
 To improve the canal segmentations, the model [sc_canal_t2](https://spinalcordtoolbox.com/stable/user_section/command-line/deepseg/sc_canal_t2.html) available inside the spinalcord toolbox was used. The following steps present the process step by step:
 > Note: This model is limited to T2w images
 
-1. [Install](https://github.com/spinalcordtoolbox/spinalcordtoolbox?tab=readme-ov-file#installation) the spinalcordtoolbox.
+1. Install the [spinalcordtoolbox](https://github.com/spinalcordtoolbox/spinalcordtoolbox?tab=readme-ov-file#installation).
 2. Install the canal segmentation model
 ```bash
 sct_deepseg sc_canal_t2 -install
