@@ -1,34 +1,48 @@
 # Use an active learning strategy to improve the ground truths
 
-This README explains the steps that were performed to improve the quality of the ground truths segmentations used to train TotalSpineSeg. The used scripts were designed to work on [BIDS datasets](https://bids-specification.readthedocs.io/en/stable/).
+This README explains the steps that were performed to improve the quality of the ground truths segmentations used to train TotalSpineSeg.
 
 ## Original ground truths limitation
-> For more information about the training, see https://www.researchgate.net/publication/389881289_TotalSpineSeg_Robust_Spine_Segmentation_with_Landmark-Based_Labeling_in_MRI
+> For more information about the training, see https://www.researchgate.net/publication/389881289_TotalSpineSeg_Robust_Spine_Segmentation_with_Landmark-Based_Labeling_in_MRI 
 
-Given the time consuming task of manual segmentation of the different classes segmented by TotalSpineSeg: spinal cord, spinal canal, vertebrae and intervertebral discs, the [PAM50 atlas](https://pubmed.ncbi.nlm.nih.gov/29061527/) was registered using the intervertebral discs in the native space of all the scans showing the cervical and/or the thoracic region and was cosidered as the ground truth segmentation. But due to varying anatomies this atlas was not perfectly aligned with every subject space. The problem is that these slight anatomical inconsistencies do appear on the final trained model predictions and are often associated with over/under segmentations of the anatomical structures. This is the case for models trained prior to `r20250224` (included). 
+Due to the time-consuming nature of manually segmenting the anatomical structures identified by TotalSpineSeg namely the spinal cord, spinal canal, vertebrae, and intervertebral discs, the [PAM50 atlas](https://pubmed.ncbi.nlm.nih.gov/29061527/) was registered to the native space of each scan that included the cervical and/or thoracic regions to serve as ground truth segmentation. However, because of inter-subject anatomical variability, the atlas did not perfectly align with every subject anatomy. These subtle misalignments introduced inconsistencies that propagated into the model’s predictions, often resulting in over- or under-segmentation of certain structures. This issue affects models trained up to and including release `r20250224`.
 
-Due to the time-consuming nature of manually segmenting the anatomical structures identified by TotalSpineSeg namely the spinal cord, spinal canal, vertebrae, and intervertebral discs, the PAM50 atlas was registered to the native space of each scan that included the cervical and/or thoracic regions to serve as ground truth segmentation. However, because of inter-subject anatomical variability, the atlas did not perfectly align with every subject anatomy. These subtle misalignments introduced inconsistencies that propagated into the model’s predictions, often resulting in over- or under-segmentation of certain structures. This issue affects models trained up to and including release r20250224.
+## Refinement strategy
 
-## Strategy
+These refinement will be done using existing contrasts specific deep learning models and manual corrections of the predictions.
 
-### Automatic refinement
+### Canal segmentations
 
-To improve the ground truths segmentations rapidly, [nnInteractive](https://github.com/MIC-DKFZ/nnInteractive) will be used. Datasets will be assumed to follow BIDS convention.
+To improve the canal segmentations, the model [sc_canal_t2](https://spinalcordtoolbox.com/stable/user_section/command-line/deepseg/sc_canal_t2.html) available inside the spinalcord toolbox was used. The following steps present the process step by step:
+> Note: This model is limited to T2w images
 
-1. Install TotalSpineSeg in an environment
-> See main README.md
+1. [Install](https://github.com/spinalcordtoolbox/spinalcordtoolbox?tab=readme-ov-file#installation) the spinalcordtoolbox.
+2. Install the canal segmentation model
+```bash
+sct_deepseg sc_canal_t2 -install
+```
+3. Run the model on niftii images
+```bash
+sct_deepseg sc_canal_t2 -i img.nii.gz -o canal.nii.gz
+```
 
-2. Install [nnInteractive](https://github.com/MIC-DKFZ/nnInteractive) in another environment
+### Spine segmentations
 
-3. Update the script `refine_bids.sh`:
-    - update custom variables (`BIDS_FOLDER` and `TOTALSPINESEG` path)
-    - update environment activation and deactivation with newly setup environment
+To improve the vertebrae and discs segmentations, the model [spineps](https://github.com/Hendrik-code/spineps) was used. The following steps present the process step by step:
+> Note: The release [1.3.0](https://github.com/Hendrik-code/spineps/releases/tag/v1.3.0) was used here.
 
-4. Run `refine_bids.sh`
+1. Install [spineps](https://github.com/Hendrik-code/spineps?tab=readme-ov-file#installation-ubuntu)
+2. Run the model on niftii images
+```bash
+spineps sample -ignore_bids_filter -ignore_inference_compatibility -i img.nii.gz -model_semantic t2w -model_instance instance -der_name spineps_folder
+```
 
-###  Manual segmentation
+Because the version [1.3.0](https://github.com/Hendrik-code/spineps/releases/tag/v1.3.0) of SPINEPS only provides instance segmentations (vertebrae/discs are unlabeled). TotalSpineSeg `r20250224` was also used on the same images to have access to the labels,
+and the canal segmentations were also used to remove segmented voxels of vertebrae and discs from the canal region. These last steps were performed using this last script.
 
-Manual segmentation may be needed afterwards.
+```bash
+python spineps_refine -spineps spineps_folder -totalspineseg step2_output -canal canal_folder -ofolder labels_refined
+```
 
 
 
