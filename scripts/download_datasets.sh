@@ -25,7 +25,7 @@ TOTALSPINESEG="$(realpath "${TOTALSPINESEG:-totalspineseg}")"
 TOTALSPINESEG_DATA="$(realpath "${TOTALSPINESEG_DATA:-data}")"
 
 # Fetch path to data list
-data_json="$TOTALSPINESEG/totalspineseg/resources/data/retrain_tss.json"
+data_json="$TOTALSPINESEG/totalspineseg/resources/data/training_data.json"
 
 # Set the paths to the BIDS data folders
 bids="$TOTALSPINESEG_DATA"/bids
