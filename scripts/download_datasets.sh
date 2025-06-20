@@ -4,7 +4,6 @@
 #   git@data.neuro.polymtl.ca:datasets/whole-spine.git
 #   git@data.neuro.polymtl.ca:datasets/spider-challenge-2023.git
 #   git@github.com:spine-generic/data-multi-subject.git
-#   git@github.com:spine-generic/data-single-subject.git
 
 # BASH SETTINGS
 # ======================================================================================================================
@@ -21,9 +20,12 @@ trap "echo Caught Keyboard Interrupt within script. Exiting now.; exit" INT
 # SCRIPT STARTS HERE
 # ======================================================================================================================
 
-# set TOTALSPINESEG and TOTALSPINESEG_DATA if not set
+# Set TOTALSPINESEG and TOTALSPINESEG_DATA if not set
 TOTALSPINESEG="$(realpath "${TOTALSPINESEG:-totalspineseg}")"
 TOTALSPINESEG_DATA="$(realpath "${TOTALSPINESEG_DATA:-data}")"
+
+# Fetch path to data list
+data_json="$TOTALSPINESEG/totalspineseg/resources/data/retrain_tss.json"
 
 # Set the paths to the BIDS data folders
 bids="$TOTALSPINESEG_DATA"/bids
@@ -34,36 +36,53 @@ CURR_DIR="$(realpath .)"
 cd "$bids"
 
 datasets=(
-    git@data.neuro.polymtl.ca:datasets/whole-spine.git
+    git@data.neuro.polymtl.ca:p118739/whole-spine-mirror.git # TODO: Update link to whole spine
     git@data.neuro.polymtl.ca:datasets/spider-challenge-2023.git
     git@github.com:spine-generic/data-multi-subject.git
-    git@github.com:spine-generic/data-single-subject.git
 )
 
-# Loop over datasets and download them
-for ds in ${datasets[@]}; do
+branches=(
+    nm/add_spine_and_canal
+    nm/update_some_labels
+    nm/add_spine_and_canal
+)
+
+# Clone datasets and checkout on the right branch
+for i in "${!datasets[@]}"; do
+    ds=${datasets[i]}
+    branch=${branches[i]}
     dsn=$(basename $ds .git)
 
     # Clone the dataset from the specified repository
-    git clone $ds
+    git clone "$ds"
 
     # Enter the dataset directory
-    cd $dsn
+    cd "$dsn"
 
-    # Remove all files and folders not in this formats:
-    #   .*
-    #   sub-*/anat/sub-*_{T1,T2,T2star,MTS}.nii.gz
-    #   derivatives/labels_iso/sub-*/anat/sub-*_{T1w,T2w,T2star,MTS}_space-resampled_{label-spine_dseg,label-SC_seg,label-canal_seg}.nii.gz
-    find . ! -path '.' ! -path './.*' \
-        ! -regex '^\./sub-[^/]*\(/anat\(/sub-[^/]*_\(T1w\|T2w\|T2star\|MTS\)\.nii\.gz\)?\)?$' \
-        ! -regex '^\./derivatives\(/labels_iso\(/sub-[^/]*\(/anat\(/sub-[^/]*_\(T1w\|T2w\|T2star\|MTS\)_space-resampled_\(label-spine_dseg\|label-SC_seg\|label-canal_seg\)\.nii\.gz\)?\)?\)?\)?$' \
-        -delete
-
-    # Ddownload the necessary files from git-annex
-    git annex get
+    # Checkout on the branch
+    git checkout "$branch"
 
     # Move back to the parent directory to process the next dataset
     cd ..
+done
+
+# Rename whole-spine
+# TODO: remove this step in the future
+mv whole-spine-mirror whole-spine
+
+keys=(
+    IMAGE
+    LABEL_SPINE
+    LABEL_CORD
+    LABEL_CANAL
+)
+
+# Download necessary data from git annex
+for key in "${keys[@]}"; do
+    for path in $(jq -r ".TRAINING | .[].$key" "$data_json"); do
+        IFS='/' read -r rep_path rel_path <<< "$path"
+        echo git -C "$rep_path" annex get "$rel_path"
+    done
 done
 
 # Return to the original working directory
