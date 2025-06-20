@@ -81,7 +81,7 @@ keys=(
 for key in "${keys[@]}"; do
     for path in $(jq -r ".TRAINING | .[].$key" "$data_json"); do
         IFS='/' read -r rep_path rel_path <<< "$path"
-        echo git -C "$rep_path" annex get "$rel_path"
+        git -C "$rep_path" annex get "$rel_path"
     done
 done
 
