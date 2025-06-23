@@ -29,10 +29,6 @@ trap "echo Caught Keyboard Interrupt within script. Exiting now.; exit" INT
 # Set the datasets to work with - default is 101 102
 if [[ -z $1 || $1 == 101 || $1 == all || $1 == -* ]]; then PREP_101=1; else PREP_101=0; fi
 if [[ -z $1 || $1 == 102 || $1 == all || $1 == -* ]]; then PREP_102=1; else PREP_102=0; fi
-if [[ $1 == 103 || $1 == all ]]; then PREP_103=1; else PREP_103=0; fi
-
-# Set the augmentations to generate - default is to generate augmentations
-if [[ $1 == -noaug || $2 == -noaug ]]; then NOAUG=1; else NOAUG=0; fi
 
 # set TOTALSPINESEG and TOTALSPINESEG_DATA if not set
 TOTALSPINESEG="$(realpath "${TOTALSPINESEG:-totalspineseg}")"
@@ -156,13 +152,4 @@ if [ $PREP_102 -eq 1 ]; then
     totalspineseg_map_labels -m "$resources"/labels_maps/nnunet_step2.json -s "$nnUNet_raw"/$SRC_DATASET/labelsTs -o "$nnUNet_raw"/Dataset102_TotalSpineSeg_step2/labelsTs -r -w $JOBS
     # Copy the dataset.json file and update the number of training samples
     jq --arg numTraining "$(ls "$nnUNet_raw"/Dataset102_TotalSpineSeg_step2/labelsTr | wc -l)" '.numTraining = ($numTraining|tonumber)' "$resources"/datasets/dataset_step2.json > "$nnUNet_raw"/Dataset102_TotalSpineSeg_step2/dataset.json
-fi
-
-if [ $PREP_103 -eq 1 ]; then
-    echo "Generate nnUNet dataset 103 (full)"
-    totalspineseg_cpdir "$nnUNet_raw"/$SRC_DATASET "$nnUNet_raw"/Dataset103_TotalSpineSeg_full -p "imagesT*/*.nii.gz" -r -w $JOBS
-    totalspineseg_map_labels -m "$resources"/labels_maps/nnunet_full.json -s "$nnUNet_raw"/$SRC_DATASET/labelsTr -o "$nnUNet_raw"/Dataset103_TotalSpineSeg_full/labelsTr -r -w $JOBS
-    totalspineseg_map_labels -m "$resources"/labels_maps/nnunet_full.json -s "$nnUNet_raw"/$SRC_DATASET/labelsTs -o "$nnUNet_raw"/Dataset103_TotalSpineSeg_full/labelsTs -r -w $JOBS
-    # Copy the dataset.json file and update the number of training samples
-    jq --arg numTraining "$(ls "$nnUNet_raw"/Dataset103_TotalSpineSeg_full/labelsTr | wc -l)" '.numTraining = ($numTraining|tonumber)' "$resources"/datasets/dataset_full.json > "$nnUNet_raw"/Dataset103_TotalSpineSeg_full/dataset.json
 fi
