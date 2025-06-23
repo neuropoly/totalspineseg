@@ -75,7 +75,7 @@ for img in $(jq -r ".TRAINING | .[].IMAGE" "$data_json");do img_name=$(basename 
 # Reorient images to canonical space
 echo "Transform images to canonical space"
 totalspineseg_reorient_canonical -i "$nnUNet_raw"/$SRC_DATASET/imagesTr -o "$nnUNet_raw"/$SRC_DATASET/imagesTr -r -w $JOBS
-totalspineseg_reorient_canonical -i "$nnUNet_raw"/$SRC_DATASET/labelsTr -o "$nnUNet_raw"/$SRC_DATASET/labelsTr -r -w $JOBS
+totalspineseg_reorient_canonical -i "$nnUNet_raw"/$SRC_DATASET/labelsTr -o "$nnUNet_raw"/$SRC_DATASET/labelsTr --image-suffix "" --output-image-suffix "" -r -w $JOBS
 
 # Map canal and SC onto label-spine_dseg file
 echo "Adding label-canal_seg and label-SC_seg to label-spine_dseg"
@@ -108,6 +108,11 @@ cp $(jq -r ".TESTING | .[].LABEL_CANAL" "$data_json") "$nnUNet_raw"/$SRC_DATASET
 
 # Copy images and add nnUNet suffix _0000
 for img in $(jq -r ".TESTING | .[].IMAGE" "$data_json");do img_name=$(basename ${img/.nii.gz/_0000.nii.gz}); cp "$img" "$nnUNet_raw"/$SRC_DATASET/imagesTs/"$img_name";done
+
+# Reorient images to canonical space
+echo "Transform images to canonical space"
+totalspineseg_reorient_canonical -i "$nnUNet_raw"/$SRC_DATASET/imagesTr -o "$nnUNet_raw"/$SRC_DATASET/imagesTr -r -w $JOBS
+totalspineseg_reorient_canonical -i "$nnUNet_raw"/$SRC_DATASET/labelsTr -o "$nnUNet_raw"/$SRC_DATASET/labelsTr --image-suffix "" --output-image-suffix "" -r -w $JOBS
 
 # Map canal and SC onto label-spine_dseg file for testing
 echo "Adding label-canal_seg and label-SC_seg to label-spine_dseg"
