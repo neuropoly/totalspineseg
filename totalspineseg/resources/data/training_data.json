@@ -1414,6 +1414,12 @@
             "LABEL_CANAL": "spider-challenge-2023/derivatives/labels/sub-197/anat/sub-197_acq-lowresSag_T2w_label-canal_seg.nii.gz"
         },
         {
+            "IMAGE": "data-multi-subject/sub-brnoUhb06/anat/sub-brnoUhb06_T2w.nii.gz",
+            "LABEL_SPINE": "data-multi-subject/derivatives/labels/sub-brnoUhb06/anat/sub-brnoUhb06_T2w_label-spine_dseg.nii.gz",
+            "LABEL_CORD": "data-multi-subject/derivatives/labels/sub-brnoUhb06/anat/sub-brnoUhb06_T2w_label-SC_seg.nii.gz",
+            "LABEL_CANAL": "data-multi-subject/derivatives/labels/sub-brnoUhb06/anat/sub-brnoUhb06_T2w_label-canal_seg.nii.gz"
+        },
+        {
             "IMAGE": "data-multi-subject/sub-nwu01/anat/sub-nwu01_T2w.nii.gz",
             "LABEL_SPINE": "data-multi-subject/derivatives/labels/sub-nwu01/anat/sub-nwu01_T2w_label-spine_dseg.nii.gz",
             "LABEL_CORD": "data-multi-subject/derivatives/labels/sub-nwu01/anat/sub-nwu01_T2w_label-SC_seg.nii.gz",
@@ -2666,6 +2672,12 @@
             "LABEL_SPINE": "spider-challenge-2023/derivatives/labels/sub-067/anat/sub-067_acq-lowresSag_T1w_label-spine_dseg.nii.gz",
             "LABEL_CORD": "spider-challenge-2023/derivatives/labels/sub-067/anat/sub-067_acq-lowresSag_T1w_label-SC_seg.nii.gz",
             "LABEL_CANAL": "spider-challenge-2023/derivatives/labels/sub-067/anat/sub-067_acq-lowresSag_T1w_label-canal_seg.nii.gz"
+        },
+        {
+            "IMAGE": "data-multi-subject/sub-brnoUhb07/anat/sub-brnoUhb07_T2w.nii.gz",
+            "LABEL_SPINE": "data-multi-subject/derivatives/labels/sub-brnoUhb07/anat/sub-brnoUhb07_T2w_label-spine_dseg.nii.gz",
+            "LABEL_CORD": "data-multi-subject/derivatives/labels/sub-brnoUhb07/anat/sub-brnoUhb07_T2w_label-SC_seg.nii.gz",
+            "LABEL_CANAL": "data-multi-subject/derivatives/labels/sub-brnoUhb07/anat/sub-brnoUhb07_T2w_label-canal_seg.nii.gz"
         },
         {
             "IMAGE": "spider-challenge-2023/sub-195/anat/sub-195_acq-lowresSag_T1w.nii.gz",
