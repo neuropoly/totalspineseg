@@ -82,17 +82,24 @@ echo "Adding label-canal_seg and label-SC_seg to label-spine_dseg"
 totalspineseg_map_labels -m 1:2 -s "$nnUNet_raw"/$SRC_DATASET/labelsTr -o "$nnUNet_raw"/$SRC_DATASET/labelsTr  --update-segs-dir "$nnUNet_raw"/$SRC_DATASET/labelsTr --seg-suffix "_label-canal_seg" --output-seg-suffix "_label-spine_dseg" --update-seg-suffix "_label-spine_dseg" -r -w $JOBS
 totalspineseg_map_labels -m 1:1 -s "$nnUNet_raw"/$SRC_DATASET/labelsTr -o "$nnUNet_raw"/$SRC_DATASET/labelsTr  --update-segs-dir "$nnUNet_raw"/$SRC_DATASET/labelsTr --seg-suffix "_label-SC_seg" --output-seg-suffix "_label-spine_dseg" --update-seg-suffix "_label-spine_dseg" -r -w $JOBS
 
+echo "Removing SC and canal label from folder"
+rm "$nnUNet_raw"/$SRC_DATASET/labelsTr/*_label-SC_seg.nii.gz
+rm "$nnUNet_raw"/$SRC_DATASET/labelsTr/*_label-canal_seg.nii.gz
+
+echo "Renaming labels"
+for label in "$nnUNet_raw"/$SRC_DATASET/labelsTr/*;do mv "$label" ${label/_label-spine_dseg/};done
+
 echo "Resample images to 1x1x1mm"
 totalspineseg_resample -i "$nnUNet_raw"/$SRC_DATASET/imagesTr -o "$nnUNet_raw"/$SRC_DATASET/imagesTr -r -w $JOBS
 
 echo "Transform labels to images space"
 totalspineseg_transform_seg2image -i "$nnUNet_raw"/$SRC_DATASET/imagesTr -s "$nnUNet_raw"/$SRC_DATASET/labelsTr -o "$nnUNet_raw"/$SRC_DATASET/labelsTr -r -w $JOBS
 
+### Prepare TEST set
+
 echo "Creating test folders"
 mkdir -p "$nnUNet_raw"/$SRC_DATASET/imagesTs
 mkdir -p "$nnUNet_raw"/$SRC_DATASET/labelsTs
-
-### Prepare TEST set
 
 # Copy test data in nnUNet_raw folder
 cp $(jq -r ".TESTING | .[].LABEL_SPINE" "$data_json") "$nnUNet_raw"/$SRC_DATASET/labelsTs
@@ -106,6 +113,13 @@ for img in $(jq -r ".TESTING | .[].IMAGE" "$data_json");do img_name=$(basename $
 echo "Adding label-canal_seg and label-SC_seg to label-spine_dseg"
 totalspineseg_map_labels -m 1:2 -s "$nnUNet_raw"/$SRC_DATASET/labelsTs -o "$nnUNet_raw"/$SRC_DATASET/labelsTs  --update-segs-dir "$nnUNet_raw"/$SRC_DATASET/labelsTs --seg-suffix "_label-canal_seg" --output-seg-suffix "_label-spine_dseg" --update-seg-suffix "_label-spine_dseg" -r -w $JOBS
 totalspineseg_map_labels -m 1:1 -s "$nnUNet_raw"/$SRC_DATASET/labelsTs -o "$nnUNet_raw"/$SRC_DATASET/labelsTs  --update-segs-dir "$nnUNet_raw"/$SRC_DATASET/labelsTs --seg-suffix "_label-SC_seg" --output-seg-suffix "_label-spine_dseg" --update-seg-suffix "_label-spine_dseg" -r -w $JOBS
+
+echo "Removing SC and canal label from folder"
+rm "$nnUNet_raw"/$SRC_DATASET/labelsTs/*_label-SC_seg.nii.gz
+rm "$nnUNet_raw"/$SRC_DATASET/labelsTs/*_label-canal_seg.nii.gz
+
+echo "Renaming labels"
+for label in "$nnUNet_raw"/$SRC_DATASET/labelsTs/*;do mv "$label" ${label/_label-spine_dseg/};done
 
 echo "Resample images to 1x1x1mm"
 totalspineseg_resample -i "$nnUNet_raw"/$SRC_DATASET/imagesTs -o "$nnUNet_raw"/$SRC_DATASET/imagesTs -r -w $JOBS
@@ -142,3 +156,6 @@ if [ $PREP_102 -eq 1 ]; then
     # Copy the dataset.json file and update the number of training samples
     jq --arg numTraining "$(ls "$nnUNet_raw"/Dataset102_TotalSpineSeg_step2/labelsTr | wc -l)" '.numTraining = ($numTraining|tonumber)' "$resources"/datasets/dataset_step2.json > "$nnUNet_raw"/Dataset102_TotalSpineSeg_step2/dataset.json
 fi
+
+# Move back
+cd "$CURR_DIR"
