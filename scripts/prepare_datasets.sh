@@ -70,7 +70,7 @@ cp $(jq -r ".TRAINING | .[].LABEL_CORD" "$data_json") "$nnUNet_raw"/$SRC_DATASET
 cp $(jq -r ".TRAINING | .[].LABEL_CANAL" "$data_json") "$nnUNet_raw"/$SRC_DATASET/labelsTr
 
 # Copy images and add nnUNet suffix _0000
-for img in $(jq -r ".TRAINING | .[].IMAGE" "$data_json");do img_name=$(basename ${img/.nii.gz/_0000.nii.gz}); cp "$img" "$nnUNet_raw"/$SRC_DATASET/imagesTr/"$img_name"
+for img in $(jq -r ".TRAINING | .[].IMAGE" "$data_json");do img_name=$(basename ${img/.nii.gz/_0000.nii.gz}); cp "$img" "$nnUNet_raw"/$SRC_DATASET/imagesTr/"$img_name";done
 
 # Reorient images to canonical space
 echo "Transform images to canonical space"
@@ -100,7 +100,7 @@ cp $(jq -r ".TESTING | .[].LABEL_CORD" "$data_json") "$nnUNet_raw"/$SRC_DATASET/
 cp $(jq -r ".TESTING | .[].LABEL_CANAL" "$data_json") "$nnUNet_raw"/$SRC_DATASET/labelsTs
 
 # Copy images and add nnUNet suffix _0000
-for img in $(jq -r ".TESTING | .[].IMAGE" "$data_json");do img_name=$(basename ${img/.nii.gz/_0000.nii.gz}); cp "$img" "$nnUNet_raw"/$SRC_DATASET/imagesTs/"$img_name"
+for img in $(jq -r ".TESTING | .[].IMAGE" "$data_json");do img_name=$(basename ${img/.nii.gz/_0000.nii.gz}); cp "$img" "$nnUNet_raw"/$SRC_DATASET/imagesTs/"$img_name";done
 
 # Map canal and SC onto label-spine_dseg file for testing
 echo "Adding label-canal_seg and label-SC_seg to label-spine_dseg"
