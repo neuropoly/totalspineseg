@@ -28,7 +28,7 @@ trap "echo Caught Keyboard Interrupt within script. Exiting now.; exit" INT
 
 # Set the datasets to work with - default is 101 102
 DATASETS=${1:-101 102}
-if [ "$DATASETS" == all ]; then DATASETS=(101 102 103); fi
+if [ "$DATASETS" == all ]; then DATASETS=(101 102); fi
 
 # Set the fold to work with - default is 0
 FOLD=${2:-0}
