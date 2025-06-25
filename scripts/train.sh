@@ -62,7 +62,7 @@ export nnUNet_preprocessed="$TOTALSPINESEG_DATA"/nnUNet/preprocessed
 export nnUNet_results="$TOTALSPINESEG_DATA"/nnUNet/results
 export nnUNet_exports="$TOTALSPINESEG_DATA"/nnUNet/exports
 
-nnUNetTrainer=${3:-nnUNetTrainer_DASegOrd0_NoMirroring}
+nnUNetTrainer=${3:-nnUNetTrainerDAExt}
 nnUNetPlanner=${4:-ExperimentPlanner}
 nnUNetPlans=${5:-nnUNetPlans}
 configuration=3d_fullres
@@ -84,6 +84,10 @@ echo "DEVICE=${DEVICE}"
 echo "DATASETS=${DATASETS[@]}"
 echo "FOLD=${FOLD}"
 echo ""
+
+# Copy nnUNetTrainerDAExt in nnUNet package under nnUNetTrainer section
+nnunet_path=$(python -c "import nnunetv2;print(nnunetv2.__path__[0])")
+cp "$TOTALSPINESEG"/totalspineseg/trainer/nnUNetTrainerDAExt.py "$nnunet_path"/training/nnUNetTrainer/
 
 for d in ${DATASETS[@]}; do
     # Get the dataset name
