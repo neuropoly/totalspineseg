@@ -42,11 +42,7 @@ dependencies = [
     "pillow",
     "nilearn",
     "SimpleITK",
-    # We use nnunetv2==2.4.2 for nnUNetTrainer_DASegOrd0_NoMirroring
-    # https://github.com/MIC-DKFZ/nnUNet/issues/2480
-    # --verify_dataset_integrity not working in nnunetv2==2.4.2 do we need to update this when fixed
-    # https://github.com/MIC-DKFZ/nnUNet/issues/2144
-    "nnunetv2<=2.4.2",
+    "nnunetv2",
     "psutil",
 ]
 
