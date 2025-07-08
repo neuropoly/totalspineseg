@@ -3,7 +3,8 @@ import multiprocessing as mp
 from tqdm.contrib.concurrent import process_map
 from functools import partial
 import numpy as np
-from skimage import measure, transform
+from skimage import measure, transform, io, morphology
+from scipy import ndimage as ndi
 import math
 from scipy import interpolate
 import platform
@@ -147,7 +148,7 @@ def measure_seg(seg_path, mapping):
                 seg_foramen.data = np.isin(seg.data, [mapping[struc], mapping[struc]+1]).astype(int)
                 seg_foramen.data[seg.data == mapping[f'{top_vert}-{bottom_vert}']] = 2 # Set disc value to 2
 
-                metrics[structure_name] = measure_foramens(seg_foramen=seg_foramen, canal_centerline=centerline)
+                metrics[structure_name] = measure_foramens(name=structure_name, seg_foramen=seg_foramen, canal_centerline=centerline, pr=pr)
 
 
 def measure_disc(seg_disc):
@@ -237,7 +238,7 @@ def measure_canal(seg_canal):
 
     return shape_properties, centerline
 
-def measure_foramens(seg_foramen, canal_centerline):
+def measure_foramens(seg_foramen, canal_centerline, pr):
     '''
     seg_foramen contains:
     - a segmentation of the top and bottom vertebrae equal to 1
@@ -306,15 +307,19 @@ def measure_foramens(seg_foramen, canal_centerline):
     n /= np.linalg.norm(n)
     dot_product = np.dot(coords-canal_pos, n)
 
+    # Distinguish left-from-right
     pos_coords = dot_product>0
-    pos_seg = coords[pos_coords]
-    neg_seg = coords[~pos_coords]
+    if n[0] > 0: # Oriented from right to left
+        halfs = {"left": coords[pos_coords], "right":coords[~pos_coords]}
+    else:
+        halfs = {"right": coords[pos_coords], "left":coords[~pos_coords]}
 
     # Project foramens
-    for half in [pos_seg, neg_seg]:
+    foramen_areas = {}
+    for side, coords in halfs.items():
         # Project coords in vw plane
-        x_coords = np.dot(pos_seg, v)
-        y_coords = np.dot(pos_seg, w(u1, u2, best_theta))
+        x_coords = np.dot(coords, v)
+        y_coords = np.dot(coords, w(u1, u2, best_theta))
 
         # Center the image onto the segmentation
         x_coords = x_coords - np.min(x_coords)
@@ -328,16 +333,35 @@ def measure_foramens(seg_foramen, canal_centerline):
         img = np.zeros((np.max(x_coords), np.max(y_coords)))
         for x, y in zip(x_coords, y_coords):
             img[x-1, y-1]=1
-        print()
+        
+        # Inverse image
+        labeled_bg = morphology.remove_small_objects(~img.astype(bool), min_size=64)
 
+        # Padd image to connect exterior components
+        labeled_bg = np.pad(labeled_bg, pad_width=(5,5), mode='constant', constant_values=1)
 
+        # Label all component and extract regions
+        labeled_img, _ = ndi.label(labeled_bg)
+        regions = measure.regionprops(labeled_img)
+                
+        # Select second biggest region assuming it is the foramen
+        areas = [region.area for region in regions]
+        
+        # Save foramens
+        if len(areas) > 1:
+            foramen_region = regions[np.argsort(areas)[-2]]
+            foramen_mask = labeled_img == foramen_region.label
+        else:
+            import cv2
+            cv2.imwrite("foramen_error.png", img*255)
+            raise ValueError('Error with foramen, possibly not closed shape. See foramen_error.png')
 
+        # Calculate foramen area
+        pixel_surface = pr**2
+        foramen_area = np.argwhere(foramen_mask > 0).shape[0]*pixel_surface #mm2
+        foramen_areas[side] = foramen_area
+    return foramen_areas
 
-    print()
-
-
-
-    return
 
 def grade_discs():
     return
