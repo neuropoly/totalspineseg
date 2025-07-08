@@ -148,7 +148,7 @@ def measure_seg(seg_path, mapping):
                 seg_foramen.data = np.isin(seg.data, [mapping[struc], mapping[struc]+1]).astype(int)
                 seg_foramen.data[seg.data == mapping[f'{top_vert}-{bottom_vert}']] = 2 # Set disc value to 2
 
-                metrics[structure_name] = measure_foramens(name=structure_name, seg_foramen=seg_foramen, canal_centerline=centerline, pr=pr)
+                metrics[structure_name] = measure_foramens(seg_foramen=seg_foramen, canal_centerline=centerline, pr=pr)
 
 
 def measure_disc(seg_disc):
@@ -309,7 +309,7 @@ def measure_foramens(seg_foramen, canal_centerline, pr):
 
     # Distinguish left-from-right
     pos_coords = dot_product>0
-    if n[0] > 0: # Oriented from right to left
+    if n[0] > 0: # Oriented from right to left RPI
         halfs = {"left": coords[pos_coords], "right":coords[~pos_coords]}
     else:
         halfs = {"right": coords[pos_coords], "left":coords[~pos_coords]}
@@ -343,12 +343,11 @@ def measure_foramens(seg_foramen, canal_centerline, pr):
         # Label all component and extract regions
         labeled_img, _ = ndi.label(labeled_bg)
         regions = measure.regionprops(labeled_img)
-                
-        # Select second biggest region assuming it is the foramen
-        areas = [region.area for region in regions]
         
         # Save foramens
+        areas = [region.area for region in regions]
         if len(areas) > 1:
+            # Select second biggest region assuming it is the foramen
             foramen_region = regions[np.argsort(areas)[-2]]
             foramen_mask = labeled_img == foramen_region.label
         else:
