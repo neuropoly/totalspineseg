@@ -182,14 +182,14 @@ class nnUNetTrainerDAExt(nnUNetTrainer):
         ))
         transforms.append(RandomTransform(
             SimulateLowResolutionTransform(
-                scale=(0.5, 1),
-                synchronize_channels=False,
-                synchronize_axes=True,
-                ignore_axes=ignore_axes,
+                scale=(0.3, 1),
+                synchronize_channels=True,
+                synchronize_axes=False,
+                ignore_axes=(),
                 allowed_channels=None,
                 p_per_channel=0.5
-            ), apply_probability=0.25
-        ))
+            ), apply_probability=0.20
+        )) ## Updated loss
         transforms.append(RandomTransform(
             GammaTransform(
                 gamma=BGContrast((0.7, 1.5)),
