@@ -26,7 +26,7 @@ from batchgenerators.utilities.file_and_folder_operations import load_json
 
 import torch
 
-from totalspineseg.trainer.transforms.transforms import ConvTransform, HistogramEqualTransform, FunctionTransform, ImageFromSegTransform, RedistributeTransform, ArtifactTransform, SpatialCustomTransform
+from totalspineseg.trainer.transforms.transforms import ConvTransform, HistogramEqualTransform, FunctionTransform, ImageFromSegTransform, RedistributeTransform, ArtifactTransform, SpatialCustomTransform, ShapeTransform
 
 class nnUNetTrainerDAExt(nnUNetTrainer):
     
@@ -93,6 +93,14 @@ class nnUNetTrainerDAExt(nnUNetTrainer):
             RedistributeTransform(
                 retain_stats=retain_stats
             ), apply_probability=0.5
+        ))
+
+        ## Shape transforms
+        transforms.append(RandomTransform(
+            ShapeTransform(
+                shape_min=1, 
+                ignore_axes=(1,2)
+            ), apply_probability=0.4
         ))
         
         ## Artifacts generation

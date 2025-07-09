@@ -621,4 +621,44 @@ def aug_anisotropy(img, seg, downsampling=7):
     gc.collect()  # Force garbage collection
     return img_out, seg_out
 
+### Shape transform
+
+class ShapeTransform(ImageOnlyTransform):
+    def __init__(self, shape_min=1, ignore_axes=()):
+        '''
+        shape_min: minimal shape size along allowed axis
+        '''
+        super().__init__()
+        self.shape_min = shape_min
+        self.ignore_axes = ignore_axes
+
+    def get_parameters(self, **data_dict) -> dict:
+        return {
+            'shape_min': self.shape_min,
+            'ignore_axes': self.ignore_axes
+        }
+    
+    def apply(self, data_dict: dict, **params) -> dict:
+        if data_dict.get('image') is not None and data_dict.get('segmentation') is not None:
+            data_dict['image'], data_dict['segmentation'] = self._apply_to_image(data_dict['image'], data_dict['segmentation'], **params)
+        return data_dict
+
+    def _apply_to_image(self, img: torch.Tensor, seg: torch.Tensor, **params) -> torch.Tensor:
+        # Compute random shape
+        img_shape = img.shape[1:]
+        new_shape = [random.randint(params["shape_min"], s) if i not in params["ignore_axes"] else s for i,s in enumerate(img_shape)]
+
+        # Find image center
+        img_center = [s//2 for s in img_shape]
+
+        # Compute start and end crop indices per axis
+        starts = [max(0, c - ns // 2) for c, ns in zip(img_center, new_shape)]
+        ends = [start + ns for start, ns in zip(starts, new_shape)]
+
+        # Crop using advanced slicing
+        slices = tuple(slice(start, end) for start, end in zip(starts, ends))
+        img_cropped = img[(slice(None), *slices)]  # Keep channel dim intact
+        seg_cropped = seg[(slice(None), *slices)]
+        return img_cropped, seg_cropped
+
 
