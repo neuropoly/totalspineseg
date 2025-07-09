@@ -1,6 +1,6 @@
 [project]
 name = "totalspineseg"
-version = "20250416"
+version = "20250709"
 requires-python = ">=3.10"
 description = "TotalSpineSeg is a tool for automatic instance segmentation and labeling of all vertebrae, intervertebral discs (IVDs), spinal cord, and spinal canal in MRI images."
 readme = "README.md"
@@ -42,11 +42,7 @@ dependencies = [
     "pillow",
     "nilearn",
     "SimpleITK",
-    # We use nnunetv2==2.4.2 for nnUNetTrainer_DASegOrd0_NoMirroring
-    # https://github.com/MIC-DKFZ/nnUNet/issues/2480
-    # --verify_dataset_integrity not working in nnunetv2==2.4.2 do we need to update this when fixed
-    # https://github.com/MIC-DKFZ/nnUNet/issues/2144
-    "nnunetv2<=2.4.2",
+    "nnunetv2",
     "psutil",
 ]
 
