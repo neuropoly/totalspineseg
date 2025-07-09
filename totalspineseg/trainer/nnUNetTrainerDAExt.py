@@ -29,6 +29,10 @@ import torch
 from totalspineseg.trainer.transforms.transforms import ConvTransform, HistogramEqualTransform, FunctionTransform, ImageFromSegTransform, RedistributeTransform, ArtifactTransform, SpatialCustomTransform, ShapeTransform
 
 class nnUNetTrainerDAExt(nnUNetTrainer):
+    def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
+                 device: torch.device = torch.device('cuda')):
+        super().__init__(plans, configuration, fold, dataset_json, device)
+        self.save_every = 10
     
     @staticmethod
     def get_training_transforms(
