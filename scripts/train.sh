@@ -63,7 +63,7 @@ export nnUNet_results="$TOTALSPINESEG_DATA"/nnUNet/results
 export nnUNet_exports="$TOTALSPINESEG_DATA"/nnUNet/exports
 
 nnUNetTrainer=${3:-nnUNetTrainerDAExt}
-nnUNetPlanner=${4:-ExperimentPlanner} # Try with nnUNetPlannerResEncL
+nnUNetPlanner=${4:-nnUNetPlannerResEncL}
 nnUNetPlans=${5:-nnUNetPlans}
 configuration=3d_fullres
 data_identifier=nnUNetPlans_3d_fullres
