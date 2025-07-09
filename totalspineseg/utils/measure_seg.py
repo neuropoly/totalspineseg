@@ -132,7 +132,7 @@ def measure_seg(seg_path, mapping):
     #     if mapping[struc] in unique_seg and '-' in struc: # Intervertbral disc in segmentation
     #         seg_disc = zeros_like(seg)
     #         seg_disc.data = (seg.data == mapping[struc]).astype(int)
-    #         metrics[struc] = measure_disc(seg_disc=seg_disc)
+    #         metrics[struc] = measure_disc(seg_disc=seg_disc, pr=pr)
     
     # Compute metrics onto vertebrae foramens
     for struc in mapping.keys():
@@ -151,7 +151,7 @@ def measure_seg(seg_path, mapping):
                 metrics[structure_name] = measure_foramens(seg_foramen=seg_foramen, canal_centerline=centerline, pr=pr)
 
 
-def measure_disc(seg_disc):
+def measure_disc(seg_disc, pr):
     '''
     Calculate metrics from binary disc segmentation
     '''
