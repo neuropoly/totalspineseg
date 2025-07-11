@@ -1,47 +1,139 @@
-import json
+import json, os
 import multiprocessing as mp
 from tqdm.contrib.concurrent import process_map
 from functools import partial
+from pathlib import Path
 import numpy as np
 from skimage import measure, transform, io, morphology
 from scipy import ndimage as ndi
 import math
 from scipy import interpolate
 import platform
+import csv
 
 from totalspineseg.utils.image import Image, resample_nib, zeros_like
 
+warnings.filterwarnings("ignore")
 
-def extract_levels_mp(
+
+def main():
+
+    # Description and arguments
+    parser = argparse.ArgumentParser(
+        description=' '.join(f'''
+            This script processes NIfTI (Neuroimaging Informatics Technology Initiative) image and segmentation files.
+            It uses MRI scans and totalspineseg segmentations to extract metrics from the canal, the discs and vertebrae.
+        '''.split()),
+        epilog=textwrap.dedent('''
+            Examples:
+            totalspineseg_measure_seg -i images -s segmentations -o metrics
+        '''),
+        formatter_class=argparse.RawTextHelpFormatter
+    )
+    parser.add_argument(
+        '--images-dir', '-i', type=Path, required=True,
+        help='The folder where input NIfTI images files are located (required).'
+    )
+    parser.add_argument(
+        '--segs-dir', '-s', type=Path, required=True,
+        help='The folder where input NIfTI segmentation files are located (required).'
+    )
+    parser.add_argument(
+        '--ofolder', '-o', type=Path, required=True,
+        help='The folder where output metrics will be saved (required).'
+    )
+    parser.add_argument(
+        '--prefix', '-p', type=str, default='',
+        help='File prefix to work on.'
+    )
+    parser.add_argument(
+        '--image-suffix', type=str, default='_0000',
+        help='Image suffix, defaults to "_0000".'
+    )
+    parser.add_argument(
+        '--seg-suffix', type=str, default='',
+        help='Segmentation suffix, defaults to "".'
+    )
+    parser.add_argument(
+        '--max-workers', '-w', type=int, default=mp.cpu_count(),
+        help='Max worker to run in parallel proccess, defaults to multiprocessing.cpu_count().'
+    )
+    parser.add_argument(
+        '--quiet', '-q', action="store_true", default=False,
+        help='Do not display inputs and progress bar, defaults to false (display).'
+    )
+
+    # Parse the command-line arguments
+    args = parser.parse_args()
+
+    # Get the command-line argument values
+    images_path = args.images_dir
+    segs_path = args.segs_dir
+    ofolder = args.ofolder
+    prefix = args.prefix
+    image_suffix = args.image_suffix
+    seg_suffix = args.seg_suffix
+    max_workers = args.max_workers
+    quiet = args.quiet
+
+    # Print the argument values if not quiet
+    if not quiet:
+        print(textwrap.dedent(f'''
+            Running {Path(__file__).stem} with the following params:
+            images_path = "{images_path}"
+            segs_path = "{segs_path}"
+            ofolder = "{ofolder}"
+            prefix = "{prefix}"
+            image_suffix = "{image_suffix}"
+            seg_suffix = "{seg_suffix}"
+            max_workers = {max_workers}
+            quiet = {quiet}
+        '''))
+
+    measure_seg_mp(
+        images_path=images_path,
+        segs_path=segs_path,
+        ofolder_path=ofolder,
+        prefix=prefix,
+        image_suffix=image_suffix,
+        seg_suffix=seg_suffix,
+        max_workers=max_workers,
+        quiet=quiet,
+    )
+
+def measure_seg_mp(
+        images_path,
         segs_path,
-        output_segs_path,
+        ofolder_path,
         prefix='',
+        image_suffix='_0000',
         seg_suffix='',
         mapping_path='',
-        overwrite=False,
         max_workers=mp.cpu_count(),
         quiet=False,
     ):
     '''
     Wrapper function to handle multiprocessing.
     '''
+    images_path = Path(images_path)
     segs_path = Path(segs_path)
-    output_segs_path = Path(output_segs_path)
+    ofolder_path = Path(ofolder_path)
 
-    glob_pattern = f'{prefix}*{seg_suffix}.nii.gz'
+    glob_pattern = f'{prefix}*{image_suffix}.nii.gz'
 
     # Process the NIfTI image and segmentation files
-    seg_path_list = list(segs_path.glob(glob_pattern))
-    output_seg_path_list = [output_segs_path / _.relative_to(segs_path).parent / _.name.replace(f'{seg_suffix}.nii.gz', f'{output_seg_suffix}.nii.gz') for _ in seg_path_list]
+    image_path_list = list(images_path.glob(glob_pattern))
+    seg_path_list = [segs_path / _.relative_to(images_path).parent / _.name.replace(f'{image_suffix}.nii.gz', f'{seg_suffix}.nii.gz') for _ in image_path_list]
+    
+    # Load mapping 
+    with open(mapping_path, 'r') as file:
+        mapping = json.load(file)
 
     process_map(
         partial(
-            _extract_levels,
-            canal_labels=canal_labels,
-            disc_labels=disc_labels,
-            c1_label=c1_label,
-            c2_label=c2_label,
-            overwrite=overwrite,
+            _measure_seg,
+            ofolder_path=ofolder_path,
+            mapping=mapping,
         ),
         seg_path_list,
         output_seg_path_list,
@@ -50,52 +142,45 @@ def extract_levels_mp(
         disable=quiet,
     )
 
-def _extract_levels(
+def _measure_seg(
+        img_path,
         seg_path,
-        output_seg_path,
-        canal_labels=[],
-        disc_labels=[],
-        c1_label=0,
-        c2_label=0,
-        overwrite=False,
+        ofolder_path,
+        mapping
     ):
     '''
     Wrapper function to handle IO.
     '''
-    seg_path = Path(seg_path)
-    output_seg_path = Path(output_seg_path)
-
-    # If the output image already exists and we are not overriding it, return
-    if not overwrite and output_seg_path.exists():
-        return
-
     # Load image and segmentation
-    img = Image(img_path).change_orientation('RPI')
-    seg = Image(seg_path).change_orientation('RPI')
+    img = Image(str(img_path)).change_orientation('RPI')
+    seg = Image(str(seg_path)).change_orientation('RPI')
 
     try:
-        output_seg = measure_seg(
+        metrics = measure_seg(
             img=img,
             seg=seg,
             mapping=mapping,
         )
     except ValueError as e:
-        output_seg_path.is_file() and output_seg_path.unlink()
         print(f'Error: {seg_path}, {e}')
         return
+    
+    # Create output folder if does not exists
+    ofolder_path = Path(ofolder_path)
+    ofolder_path.mkdir(parents=True, exist_ok=True)
 
-    # Ensure correct segmentation dtype, affine and header
-    output_seg = nib.Nifti1Image(
-        np.asanyarray(output_seg.dataobj).round().astype(np.uint8),
-        output_seg.affine, output_seg.header
-    )
-    output_seg.set_data_dtype(np.uint8)
-    output_seg.set_qform(output_seg.affine)
-    output_seg.set_sform(output_seg.affine)
+    # Save csv files
+    img_name=Path(str(seg_path)).name.replace('.nii.gz', '')
+    for struc in metrics.keys():
+        csv_name = f'{img_name}_{struc}.csv'
+        csv_path = ofolder_path / csv_name
+        fieldnames=list(metrics[struc][0].keys())
+        with open(str(csv_path), mode='w', newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            for row in metrics[struc]:
+                writer.writerow(row)
 
-    # Make sure output directory exists and save the segmentation
-    output_seg_path.parent.mkdir(parents=True, exist_ok=True)
-    nib.save(output_seg, output_seg_path)
 
 
 def measure_seg(img, seg, mapping):
@@ -118,19 +203,45 @@ def measure_seg(img, seg, mapping):
     seg_canal.data = np.isin(seg.data, [mapping['CSF'], mapping['SC']]).astype(int)
 
     # Init dictionary with metrics
-    metrics = {'canal':{}, 'discs':{}, 'foramens':{}}
+    metrics = {'canal':{}, 'discs':[], 'foramens':[]}
 
     # Compute metrics onto canal segmentation
-    metrics['canal'], centerline = measure_canal(seg_canal)
+    properties, centerline = measure_canal(seg_canal)
+    rows = []
+    for i in range(len(properties[list(properties.keys())[0]])):
+        row = {
+            "structure": "canal",
+            "index": i
+            }
+        for key in properties.keys():
+            row[key] = properties[key][i]
+        rows.append(row)
+    metrics['canal'] = rows
 
     # Compute metrics onto intervertebral discs
+    rows = []
     for struc in mapping.keys():
         if mapping[struc] in unique_seg and '-' in struc: # Intervertbral disc in segmentation
             seg_disc = zeros_like(seg)
             seg_disc.data = (seg.data == mapping[struc]).astype(int)
-            metrics['discs'][struc] = measure_disc(seg_disc=seg_disc, pr=pr)
+            properties = measure_disc(seg_disc=seg_disc, pr=pr)
+
+            # Create a row per position/thickness point
+            for i, (pos, thick) in enumerate(zip(properties['position'], properties['thickness'])):
+                row = {
+                    "structure": "disc",
+                    "name": struc,
+                    "index": i,
+                    "position_x": pos[0],
+                    "position_y": pos[1],
+                    "thickness": thick,
+                    "volume": properties['volume'] if i == 0 else ""  # only once per disc
+                }
+                rows.append(row)
+    metrics['discs'] = rows
     
     # Compute metrics onto vertebrae foramens
+    rows = []
     for struc in mapping.keys():
         if mapping[struc] in unique_seg  and (10 < mapping[struc] < 50): # Vertebrae
             if mapping[struc]+1 in unique_seg: # two adjacent vertebrae
@@ -144,8 +255,16 @@ def measure_seg(img, seg, mapping):
                 seg_foramen.data = np.isin(seg.data, [mapping[struc], mapping[struc]+1]).astype(int)
                 seg_foramen.data[seg.data == mapping[f'{top_vert}-{bottom_vert}']] = 2 # Set disc value to 2
 
-                metrics['foramens'][structure_name] = measure_foramens(seg_foramen=seg_foramen, canal_centerline=centerline, pr=pr)
-                print()
+                # Compute properties
+                properties = measure_foramens(seg_foramen=seg_foramen, canal_centerline=centerline, pr=pr)
+                row = {
+                    "structure": "foramen",
+                    "name": structure_name,
+                    "right_surface": properties['areas']['right'],
+                    "left_surface": properties['areas']['left']
+                }
+                rows.append(row)
+    metrics['foramens'] = rows
     return metrics
 
 
@@ -360,7 +479,11 @@ def measure_foramens(seg_foramen, canal_centerline, pr):
         pixel_surface = pr**2
         foramen_area = np.argwhere(foramen_mask > 0).shape[0]*pixel_surface #mm2
         foramen_areas[side] = foramen_area
-    return foramen_areas
+
+        properties = {
+            "areas":foramen_areas
+        }
+    return properties
 
 
 def grade_discs():
@@ -616,10 +739,11 @@ def _find_AP_and_RL_diameter(major_axis, minor_axis, orientation, dim):
 if __name__ == '__main__':
     img_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/measure-discs/img/sub-016_acq-isotropic_T2w.nii.gz'
     seg_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/measure-discs/out/step2_output/sub-016_acq-isotropic_T2w.nii.gz'
-    
+    ofolder_path = 'test'
+
     # Load totalspineseg mapping
     with open('totalspineseg/resources/labels_maps/tss_map.json', 'r') as file:
         mapping = json.load(file)
     
     # Run measure_seg
-    measure_seg(img_path, seg_path, mapping)
+    _measure_seg(img_path, seg_path, ofolder_path, mapping)
