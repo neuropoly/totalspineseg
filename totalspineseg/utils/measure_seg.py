@@ -12,102 +12,98 @@ import platform
 from totalspineseg.utils.image import Image, resample_nib, zeros_like
 
 
-# def extract_levels_mp(
-#         segs_path,
-#         output_segs_path,
-#         prefix='',
-#         seg_suffix='',
-#         mapping_path='',
-#         overwrite=False,
-#         max_workers=mp.cpu_count(),
-#         quiet=False,
-#     ):
-#     '''
-#     Wrapper function to handle multiprocessing.
-#     '''
-#     segs_path = Path(segs_path)
-#     output_segs_path = Path(output_segs_path)
+def extract_levels_mp(
+        segs_path,
+        output_segs_path,
+        prefix='',
+        seg_suffix='',
+        mapping_path='',
+        overwrite=False,
+        max_workers=mp.cpu_count(),
+        quiet=False,
+    ):
+    '''
+    Wrapper function to handle multiprocessing.
+    '''
+    segs_path = Path(segs_path)
+    output_segs_path = Path(output_segs_path)
 
-#     glob_pattern = f'{prefix}*{seg_suffix}.nii.gz'
+    glob_pattern = f'{prefix}*{seg_suffix}.nii.gz'
 
-#     # Process the NIfTI image and segmentation files
-#     seg_path_list = list(segs_path.glob(glob_pattern))
-#     output_seg_path_list = [output_segs_path / _.relative_to(segs_path).parent / _.name.replace(f'{seg_suffix}.nii.gz', f'{output_seg_suffix}.nii.gz') for _ in seg_path_list]
+    # Process the NIfTI image and segmentation files
+    seg_path_list = list(segs_path.glob(glob_pattern))
+    output_seg_path_list = [output_segs_path / _.relative_to(segs_path).parent / _.name.replace(f'{seg_suffix}.nii.gz', f'{output_seg_suffix}.nii.gz') for _ in seg_path_list]
 
-#     process_map(
-#         partial(
-#             _extract_levels,
-#             canal_labels=canal_labels,
-#             disc_labels=disc_labels,
-#             c1_label=c1_label,
-#             c2_label=c2_label,
-#             overwrite=overwrite,
-#         ),
-#         seg_path_list,
-#         output_seg_path_list,
-#         max_workers=max_workers,
-#         chunksize=1,
-#         disable=quiet,
-#     )
+    process_map(
+        partial(
+            _extract_levels,
+            canal_labels=canal_labels,
+            disc_labels=disc_labels,
+            c1_label=c1_label,
+            c2_label=c2_label,
+            overwrite=overwrite,
+        ),
+        seg_path_list,
+        output_seg_path_list,
+        max_workers=max_workers,
+        chunksize=1,
+        disable=quiet,
+    )
 
-# def _extract_levels(
-#         seg_path,
-#         output_seg_path,
-#         canal_labels=[],
-#         disc_labels=[],
-#         c1_label=0,
-#         c2_label=0,
-#         overwrite=False,
-#     ):
-#     '''
-#     Wrapper function to handle IO.
-#     '''
-#     seg_path = Path(seg_path)
-#     output_seg_path = Path(output_seg_path)
+def _extract_levels(
+        seg_path,
+        output_seg_path,
+        canal_labels=[],
+        disc_labels=[],
+        c1_label=0,
+        c2_label=0,
+        overwrite=False,
+    ):
+    '''
+    Wrapper function to handle IO.
+    '''
+    seg_path = Path(seg_path)
+    output_seg_path = Path(output_seg_path)
 
-#     # If the output image already exists and we are not overriding it, return
-#     if not overwrite and output_seg_path.exists():
-#         return
+    # If the output image already exists and we are not overriding it, return
+    if not overwrite and output_seg_path.exists():
+        return
 
-#     # Load segmentation
-#     seg = nib.load(seg_path)
+    # Load image and segmentation
+    img = Image(img_path).change_orientation('RPI')
+    seg = Image(seg_path).change_orientation('RPI')
 
-#     try:
-#         output_seg = extract_levels(
-#             seg,
-#             canal_labels=canal_labels,
-#             disc_labels=disc_labels,
-#             c1_label=c1_label,
-#             c2_label=c2_label,
-#         )
-#     except ValueError as e:
-#         output_seg_path.is_file() and output_seg_path.unlink()
-#         print(f'Error: {seg_path}, {e}')
-#         return
+    try:
+        output_seg = measure_seg(
+            img=img,
+            seg=seg,
+            mapping=mapping,
+        )
+    except ValueError as e:
+        output_seg_path.is_file() and output_seg_path.unlink()
+        print(f'Error: {seg_path}, {e}')
+        return
 
-#     # Ensure correct segmentation dtype, affine and header
-#     output_seg = nib.Nifti1Image(
-#         np.asanyarray(output_seg.dataobj).round().astype(np.uint8),
-#         output_seg.affine, output_seg.header
-#     )
-#     output_seg.set_data_dtype(np.uint8)
-#     output_seg.set_qform(output_seg.affine)
-#     output_seg.set_sform(output_seg.affine)
+    # Ensure correct segmentation dtype, affine and header
+    output_seg = nib.Nifti1Image(
+        np.asanyarray(output_seg.dataobj).round().astype(np.uint8),
+        output_seg.affine, output_seg.header
+    )
+    output_seg.set_data_dtype(np.uint8)
+    output_seg.set_qform(output_seg.affine)
+    output_seg.set_sform(output_seg.affine)
 
-#     # Make sure output directory exists and save the segmentation
-#     output_seg_path.parent.mkdir(parents=True, exist_ok=True)
-#     nib.save(output_seg, output_seg_path)
+    # Make sure output directory exists and save the segmentation
+    output_seg_path.parent.mkdir(parents=True, exist_ok=True)
+    nib.save(output_seg, output_seg_path)
 
 
-def measure_seg(seg_path, mapping):
+def measure_seg(img, seg, mapping):
     '''
     Compute morphometric measurements of the spinal canal, the intervertebral discs and the neural foramen
     '''
     # Create reverse mapping:
     rev_mapping = {v:k for k,v in mapping.items()}
-
-    # Load segmentation
-    seg = Image(seg_path).change_orientation('RPI')
 
     # Fetch unique segmentation values
     unique_seg = np.unique(seg.data)
@@ -122,17 +118,17 @@ def measure_seg(seg_path, mapping):
     seg_canal.data = np.isin(seg.data, [mapping['CSF'], mapping['SC']]).astype(int)
 
     # Init dictionary with metrics
-    metrics = {}
+    metrics = {'canal':{}, 'discs':{}, 'foramens':{}}
 
     # Compute metrics onto canal segmentation
     metrics['canal'], centerline = measure_canal(seg_canal)
 
     # Compute metrics onto intervertebral discs
-    # for struc in mapping.keys():
-    #     if mapping[struc] in unique_seg and '-' in struc: # Intervertbral disc in segmentation
-    #         seg_disc = zeros_like(seg)
-    #         seg_disc.data = (seg.data == mapping[struc]).astype(int)
-    #         metrics[struc] = measure_disc(seg_disc=seg_disc, pr=pr)
+    for struc in mapping.keys():
+        if mapping[struc] in unique_seg and '-' in struc: # Intervertbral disc in segmentation
+            seg_disc = zeros_like(seg)
+            seg_disc.data = (seg.data == mapping[struc]).astype(int)
+            metrics['discs'][struc] = measure_disc(seg_disc=seg_disc, pr=pr)
     
     # Compute metrics onto vertebrae foramens
     for struc in mapping.keys():
@@ -148,7 +144,9 @@ def measure_seg(seg_path, mapping):
                 seg_foramen.data = np.isin(seg.data, [mapping[struc], mapping[struc]+1]).astype(int)
                 seg_foramen.data[seg.data == mapping[f'{top_vert}-{bottom_vert}']] = 2 # Set disc value to 2
 
-                metrics[structure_name] = measure_foramens(seg_foramen=seg_foramen, canal_centerline=centerline, pr=pr)
+                metrics['foramens'][structure_name] = measure_foramens(seg_foramen=seg_foramen, canal_centerline=centerline, pr=pr)
+                print()
+    return metrics
 
 
 def measure_disc(seg_disc, pr):
@@ -168,8 +166,13 @@ def measure_disc(seg_disc, pr):
     # Extract disc volume
     voxel_volume = pr**3
     volume = coords.shape[0]*voxel_volume # mm3
-    
-    return
+
+    properties = {
+        'position': position,
+        'thickness': thickness,
+        'volume': volume
+    }
+    return properties
 
 def measure_canal(seg_canal):
     '''
@@ -205,36 +208,36 @@ def measure_canal(seg_canal):
 
     # Loop across the S-I slices
     shape_properties = {key: np.full(nz, np.nan, dtype=np.double) for key in property_list}
-    # for iz in range(min_z_index, max_z_index + 1):
-    #     current_patch = seg_canal.data[:, :, iz]
-    #     # Extract tangent vector to the centerline (i.e. its derivative)
-    #     tangent_vect = np.array([deriv[iz][0] * px, deriv[iz][1] * py, pz])
-    #     # Compute the angle about AP axis between the centerline and the normal vector to the slice
-    #     angle_AP_rad = math.atan2(tangent_vect[0], tangent_vect[2])
-    #     # Compute the angle about RL axis between the centerline and the normal vector to the slice
-    #     angle_RL_rad = math.atan2(tangent_vect[1], tangent_vect[2])
-    #     # Apply affine transformation to account for the angle between the centerline and the normal to the patch
-    #     tform = transform.AffineTransform(scale=(np.cos(angle_RL_rad), np.cos(angle_AP_rad)))
-    #     # Convert to float64, to avoid problems in image indexation causing issues when applying transform.warp
-    #     current_patch = current_patch.astype(np.float64)
-    #     current_patch_scaled = transform.warp(current_patch,
-    #                                             tform.inverse,
-    #                                             output_shape=current_patch.shape,
-    #                                             order=1,
-    #                                             )
-    #     # Calculate shape metrics
-    #     shape_property = _properties2d(current_patch_scaled, [px, py])
+    for iz in range(min_z_index, max_z_index + 1):
+        current_patch = seg_canal.data[:, :, iz]
+        # Extract tangent vector to the centerline (i.e. its derivative)
+        tangent_vect = np.array([deriv[iz][0] * px, deriv[iz][1] * py, pz])
+        # Compute the angle about AP axis between the centerline and the normal vector to the slice
+        angle_AP_rad = math.atan2(tangent_vect[0], tangent_vect[2])
+        # Compute the angle about RL axis between the centerline and the normal vector to the slice
+        angle_RL_rad = math.atan2(tangent_vect[1], tangent_vect[2])
+        # Apply affine transformation to account for the angle between the centerline and the normal to the patch
+        tform = transform.AffineTransform(scale=(np.cos(angle_RL_rad), np.cos(angle_AP_rad)))
+        # Convert to float64, to avoid problems in image indexation causing issues when applying transform.warp
+        current_patch = current_patch.astype(np.float64)
+        current_patch_scaled = transform.warp(current_patch,
+                                                tform.inverse,
+                                                output_shape=current_patch.shape,
+                                                order=1,
+                                                )
+        # Calculate shape metrics
+        shape_property = _properties2d(current_patch_scaled, [px, py])
 
-    #     if shape_property is not None:
-    #         # Add custom fields
-    #         shape_property['angle_AP'] = angle_AP_rad * 180.0 / math.pi
-    #         shape_property['angle_RL'] = angle_RL_rad * 180.0 / math.pi
-    #         shape_property['length'] = pz / (np.cos(angle_AP_rad) * np.cos(angle_RL_rad))
-    #         # Loop across properties and assign values for function output
-    #         for property_name in property_list:
-    #             shape_properties[property_name][iz] = shape_property[property_name]
-    #     else:
-    #         print(f'Warning: error with slice {iz}.')
+        if shape_property is not None:
+            # Add custom fields
+            shape_property['angle_AP'] = angle_AP_rad * 180.0 / math.pi
+            shape_property['angle_RL'] = angle_RL_rad * 180.0 / math.pi
+            shape_property['length'] = pz / (np.cos(angle_AP_rad) * np.cos(angle_RL_rad))
+            # Loop across properties and assign values for function output
+            for property_name in property_list:
+                shape_properties[property_name][iz] = shape_property[property_name]
+        else:
+            print(f'Warning: error with slice {iz}.')
 
     return shape_properties, centerline
 
@@ -351,8 +354,6 @@ def measure_foramens(seg_foramen, canal_centerline, pr):
             foramen_region = regions[np.argsort(areas)[-2]]
             foramen_mask = labeled_img == foramen_region.label
         else:
-            import cv2
-            cv2.imwrite("foramen_error.png", img*255)
             raise ValueError('Error with foramen, possibly not closed shape. See foramen_error.png')
 
         # Calculate foramen area
@@ -569,10 +570,51 @@ def _properties2d(image, dim):
         'orientation': orientation,
         'solidity': solidity,  # convexity measure
     }
-
     return properties
 
+
+def fix_orientation(orientation):
+    """
+    Copied from https://github.com/spinalcordtoolbox/spinalcordtoolbox/blob/master/spinalcordtoolbox/process_seg.py
+    
+    Re-map orientation from skimage.regionprops from [-pi/2,pi/2] to [0,90] and rotate by 90deg because image axis
+    are inverted
+    """
+    orientation_new = orientation * 180.0 / math.pi
+    if 360 <= abs(orientation_new) <= 540:
+        orientation_new = 540 - abs(orientation_new)
+    if 180 <= abs(orientation_new) <= 360:
+        orientation_new = 360 - abs(orientation_new)
+    if 90 <= abs(orientation_new) <= 180:
+        orientation_new = 180 - abs(orientation_new)
+    return abs(orientation_new)
+
+
+def _find_AP_and_RL_diameter(major_axis, minor_axis, orientation, dim):
+    """
+    Copied from https://github.com/spinalcordtoolbox/spinalcordtoolbox/blob/master/spinalcordtoolbox/process_seg.py
+
+    This script checks the orientation of the and assigns the major/minor axis to the appropriate dimension, right-
+    left (RL) or antero-posterior (AP). It also multiplies by the pixel size in mm.
+    :param major_axis: major ellipse axis length calculated by regionprops
+    :param minor_axis: minor ellipse axis length calculated by regionprops
+    :param orientation: orientation in degree. Ranges between [0, 90]
+    :param dim: pixel size in mm.
+    :return: diameter_AP, diameter_RL
+    """
+    if 0 <= orientation < 45.0:
+        diameter_AP = minor_axis
+        diameter_RL = major_axis
+    else:
+        diameter_AP = major_axis
+        diameter_RL = minor_axis
+    # Adjust with pixel size
+    diameter_AP *= dim[0]
+    diameter_RL *= dim[1]
+    return diameter_AP, diameter_RL
+
 if __name__ == '__main__':
+    img_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/measure-discs/img/sub-016_acq-isotropic_T2w.nii.gz'
     seg_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/measure-discs/out/step2_output/sub-016_acq-isotropic_T2w.nii.gz'
     
     # Load totalspineseg mapping
@@ -580,4 +622,4 @@ if __name__ == '__main__':
         mapping = json.load(file)
     
     # Run measure_seg
-    measure_seg(seg_path, mapping)
+    measure_seg(img_path, seg_path, mapping)
