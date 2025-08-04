@@ -90,7 +90,7 @@ class ConvTransform(ImageOnlyTransform):
         '''
         We expect (C, X, Y) or (C, X, Y, Z) shaped inputs for image and seg
         '''
-        for c in range(img.shape[0]):
+        for c in range(1): # Works on the first channel only
             if params['retain_stats']:
                 orig_mean = torch.mean(img[c])
                 orig_std = torch.std(img[c])
@@ -124,7 +124,7 @@ class HistogramEqualTransform(ImageOnlyTransform):
         }
     
     def _apply_to_image(self, img: torch.Tensor, **params) -> torch.Tensor:
-        for c in range(img.shape[0]):
+        for c in range(1):  # Works on the first channel only
             if params['retain_stats']:
                 orig_mean = torch.mean(img[c])
                 orig_std = torch.std(img[c])
@@ -169,7 +169,7 @@ class FunctionTransform(ImageOnlyTransform):
         }
     
     def _apply_to_image(self, img: torch.Tensor, **params) -> torch.Tensor:
-        for c in range(img.shape[0]):
+        for c in range(1):  # Works on the first channel only
             if params['retain_stats']:
                 orig_mean = torch.mean(img[c])
                 orig_std = torch.std(img[c])
@@ -317,7 +317,7 @@ class RedistributeTransform(BasicTransform):
         return data_dict
 
     def _apply_to_image(self, img: torch.Tensor, seg: torch.Tensor, **params) -> torch.Tensor:
-        for c in range(img.shape[0]): 
+        for c in range(1):  # Works on the first channel only
             img[c], seg[c] = aug_redistribute_seg(img[c], seg[c], classes=params['classes'], in_seg=params['in_seg'], retain_stats=params['retain_stats'])
         return img, seg
 
@@ -462,74 +462,134 @@ class ArtifactTransform(BasicTransform):
         return img, seg
 
 def aug_motion(img, seg):
-    subject = tio.RandomMotion()(tio.Subject(
-        image=tio.ScalarImage(tensor=img),
-        seg=tio.LabelMap(tensor=seg)
-    ))
-    img_out, seg_out = subject.image.data, subject.seg.data
+    if img.shape[0] == 2: # Step2: channel 1 --> image / channel 2 --> odd discs segmentation
+        subject = tio.RandomMotion()(tio.Subject(
+            image=tio.ScalarImage(tensor=img[0]),
+            discs=tio.LabelMap(tensor=img[1]),
+            seg=tio.LabelMap(tensor=seg)
+        ))
+        img_out = torch.stack((subject.image.data, subject.discs.data), axis=0)
+        seg_out = subject.seg.data
+    else:
+        subject = tio.RandomMotion()(tio.Subject(
+            image=tio.ScalarImage(tensor=img),
+            seg=tio.LabelMap(tensor=seg)
+        ))
+        img_out, seg_out = subject.image.data, subject.seg.data
     del subject
     gc.collect()  # Force garbage collection
     return img_out, seg_out
 
 def aug_ghosting(img, seg):
-    subject = tio.RandomGhosting()(tio.Subject(
-        image=tio.ScalarImage(tensor=img),
-        seg=tio.LabelMap(tensor=seg)
-    ))
-    img_out, seg_out = subject.image.data, subject.seg.data
+    if img.shape[0] == 2: # Step2: channel 1 --> image / channel 2 --> odd discs segmentation
+        subject = tio.RandomGhosting()(tio.Subject(
+            image=tio.ScalarImage(tensor=img[0]),
+            discs=tio.LabelMap(tensor=img[1]),
+            seg=tio.LabelMap(tensor=seg)
+        ))
+        img_out = torch.stack((subject.image.data, subject.discs.data), axis=0)
+        seg_out = subject.seg.data
+    else:
+        subject = tio.RandomGhosting()(tio.Subject(
+            image=tio.ScalarImage(tensor=img),
+            seg=tio.LabelMap(tensor=seg)
+        ))
+        img_out, seg_out = subject.image.data, subject.seg.data
     del subject
     gc.collect()  # Force garbage collection
     return img_out, seg_out
 
 def aug_spike(img, seg):
-    subject = tio.RandomSpike(intensity=(1, 2))(tio.Subject(
-        image=tio.ScalarImage(tensor=img),
-        seg=tio.LabelMap(tensor=seg)
-    ))
-    img_out, seg_out = subject.image.data, subject.seg.data
+    if img.shape[0] == 2: # Step2: channel 1 --> image / channel 2 --> odd discs segmentation
+        subject = tio.RandomSpike(intensity=(1, 2))(tio.Subject(
+            image=tio.ScalarImage(tensor=img[0]),
+            discs=tio.LabelMap(tensor=img[1]),
+            seg=tio.LabelMap(tensor=seg)
+        ))
+        img_out = torch.stack((subject.image.data, subject.discs.data), axis=0)
+        seg_out = subject.seg.data
+    else:
+        subject = tio.RandomSpike(intensity=(1, 2))(tio.Subject(
+            image=tio.ScalarImage(tensor=img),
+            seg=tio.LabelMap(tensor=seg)
+        ))
+        img_out, seg_out = subject.image.data, subject.seg.data
     del subject
     gc.collect()  # Force garbage collection
     return img_out, seg_out
 
 def aug_bias_field(img, seg):
-    subject = tio.RandomBiasField()(tio.Subject(
-        image=tio.ScalarImage(tensor=img),
-        seg=tio.LabelMap(tensor=seg)
-    ))
-    img_out, seg_out = subject.image.data, subject.seg.data
+    if img.shape[0] == 2: # Step2: channel 1 --> image / channel 2 --> odd discs segmentation
+        subject = tio.RandomBiasField()(tio.Subject(
+            image=tio.ScalarImage(tensor=img[0]),
+            discs=tio.LabelMap(tensor=img[1]),
+            seg=tio.LabelMap(tensor=seg)
+        ))
+        img_out = torch.stack((subject.image.data, subject.discs.data), axis=0)
+        seg_out = subject.seg.data
+    else:
+        subject = tio.RandomBiasField()(tio.Subject(
+            image=tio.ScalarImage(tensor=img),
+            seg=tio.LabelMap(tensor=seg)
+        ))
+        img_out, seg_out = subject.image.data, subject.seg.data
     del subject
     gc.collect()  # Force garbage collection
     return img_out, seg_out
 
 def aug_blur(img, seg):
-    subject = tio.RandomBlur()(tio.Subject(
-        image=tio.ScalarImage(tensor=img),
-        seg=tio.LabelMap(tensor=seg)
-    ))
-    img_out, seg_out = subject.image.data, subject.seg.data
+    if img.shape[0] == 2: # Step2: channel 1 --> image / channel 2 --> odd discs segmentation
+        subject = tio.RandomBlur()(tio.Subject(
+            image=tio.ScalarImage(tensor=img[0]),
+            discs=tio.LabelMap(tensor=img[1]),
+            seg=tio.LabelMap(tensor=seg)
+        ))
+        img_out = torch.stack((subject.image.data, subject.discs.data), axis=0)
+        seg_out = subject.seg.data
+    else:
+        subject = tio.RandomBlur()(tio.Subject(
+            image=tio.ScalarImage(tensor=img),
+            seg=tio.LabelMap(tensor=seg)
+        ))
+        img_out, seg_out = subject.image.data, subject.seg.data
     del subject
     gc.collect()  # Force garbage collection
     return img_out, seg_out
 
 def aug_noise(img, seg):
-    original_mean, original_std = img.mean(), img.std()
-    img = (img - original_mean) / original_std
-    subject = tio.RandomNoise()(tio.Subject(
-        image=tio.ScalarImage(tensor=img),
-        seg=tio.LabelMap(tensor=seg)
-    ))
-    img = img  * original_std + original_mean
-    img_out, seg_out = subject.image.data, subject.seg.data
+    if img.shape[0] == 2: # Step2: channel 1 --> image / channel 2 --> odd discs segmentation
+        subject = tio.RandomNoise()(tio.Subject(
+            image=tio.ScalarImage(tensor=img[0]),
+            discs=tio.LabelMap(tensor=img[1]),
+            seg=tio.LabelMap(tensor=seg)
+        ))
+        img_out = torch.stack((subject.image.data, subject.discs.data), axis=0)
+        seg_out = subject.seg.data
+    else:
+        subject = tio.RandomNoise()(tio.Subject(
+            image=tio.ScalarImage(tensor=img),
+            seg=tio.LabelMap(tensor=seg)
+        ))
+        img_out, seg_out = subject.image.data, subject.seg.data
     del subject
     gc.collect()  # Force garbage collection
     return img_out, seg_out
 
 def aug_swap(img, seg):
-    subject = tio.RandomSwap()(tio.Subject(
-        image=tio.ScalarImage(tensor=img),
-        seg=tio.LabelMap(tensor=seg)
-    ))
-    img_out, seg_out = subject.image.data, subject.seg.data
+    if img.shape[0] == 2: # Step2: channel 1 --> image / channel 2 --> odd discs segmentation
+        subject = tio.RandomSwap()(tio.Subject(
+            image=tio.ScalarImage(tensor=img[0]),
+            discs=tio.LabelMap(tensor=img[1]),
+            seg=tio.LabelMap(tensor=seg)
+        ))
+        img_out = torch.stack((subject.image.data, subject.discs.data), axis=0)
+        seg_out = subject.seg.data
+    else:
+        subject = tio.RandomSwap()(tio.Subject(
+            image=tio.ScalarImage(tensor=img),
+            seg=tio.LabelMap(tensor=seg)
+        ))
+        img_out, seg_out = subject.image.data, subject.seg.data
     del subject
     gc.collect()  # Force garbage collection
     return img_out, seg_out
@@ -582,41 +642,77 @@ class SpatialCustomTransform(BasicTransform):
         return img, seg
 
 def aug_flip(img, seg):
-    subject = tio.RandomFlip(axes=('LR',))(tio.Subject(
-        image=tio.ScalarImage(tensor=img),
-        seg=tio.LabelMap(tensor=seg)
-    ))
-    img_out, seg_out = subject.image.data, subject.seg.data
+    if img.shape[0] == 2: # Step2: channel 1 --> image / channel 2 --> odd discs segmentation
+        subject = tio.RandomFlip(axes=('LR',))(tio.Subject(
+            image=tio.ScalarImage(tensor=img[0]),
+            discs=tio.LabelMap(tensor=img[1]),
+            seg=tio.LabelMap(tensor=seg)
+        ))
+        img_out = torch.stack((subject.image.data, subject.discs.data), axis=0)
+        seg_out = subject.seg.data
+    else:
+        subject = tio.RandomFlip(axes=('LR',))(tio.Subject(
+            image=tio.ScalarImage(tensor=img),
+            seg=tio.LabelMap(tensor=seg)
+        ))
+        img_out, seg_out = subject.image.data, subject.seg.data
     del subject
     gc.collect()  # Force garbage collection
     return img_out, seg_out
 
 def aug_affine(img, seg):
-    subject = tio.RandomAffine()(tio.Subject(
-        image=tio.ScalarImage(tensor=img),
-        seg=tio.LabelMap(tensor=seg)
-    ))
-    img_out, seg_out = subject.image.data, subject.seg.data
+    if img.shape[0] == 2: # Step2: channel 1 --> image / channel 2 --> odd discs segmentation
+        subject = tio.RandomAffine()(tio.Subject(
+            image=tio.ScalarImage(tensor=img[0]),
+            discs=tio.LabelMap(tensor=img[1]),
+            seg=tio.LabelMap(tensor=seg)
+        ))
+        img_out = torch.stack((subject.image.data, subject.discs.data), axis=0)
+        seg_out = subject.seg.data
+    else:
+        subject = tio.RandomAffine()(tio.Subject(
+            image=tio.ScalarImage(tensor=img),
+            seg=tio.LabelMap(tensor=seg)
+        ))
+        img_out, seg_out = subject.image.data, subject.seg.data
     del subject
     gc.collect()  # Force garbage collection
     return img_out, seg_out
 
 def aug_elastic(img, seg):
-    subject = tio.RandomElasticDeformation(max_displacement=40)(tio.Subject(
-        image=tio.ScalarImage(tensor=img),
-        seg=tio.LabelMap(tensor=seg)
-    ))
-    img_out, seg_out = subject.image.data, subject.seg.data
+    if img.shape[0] == 2: # Step2: channel 1 --> image / channel 2 --> odd discs segmentation
+        subject = tio.RandomElasticDeformation(max_displacement=40)(tio.Subject(
+            image=tio.ScalarImage(tensor=img[0]),
+            discs=tio.LabelMap(tensor=img[1]),
+            seg=tio.LabelMap(tensor=seg)
+        ))
+        img_out = torch.stack((subject.image.data, subject.discs.data), axis=0)
+        seg_out = subject.seg.data
+    else:
+        subject = tio.RandomElasticDeformation(max_displacement=40)(tio.Subject(
+            image=tio.ScalarImage(tensor=img),
+            seg=tio.LabelMap(tensor=seg)
+        ))
+        img_out, seg_out = subject.image.data, subject.seg.data
     del subject
     gc.collect()  # Force garbage collection
     return img_out, seg_out
 
 def aug_anisotropy(img, seg, downsampling=7):
-    subject = tio.RandomAnisotropy(downsampling=downsampling)(tio.Subject(
-        image=tio.ScalarImage(tensor=img),
-        seg=tio.LabelMap(tensor=seg, axis=0)
-    ))
-    img_out, seg_out = subject.image.data, subject.seg.data
+    if img.shape[0] == 2: # Step2: channel 1 --> image / channel 2 --> odd discs segmentation
+        subject = tio.RandomAnisotropy(downsampling=downsampling)(tio.Subject(
+            image=tio.ScalarImage(tensor=img[0]),
+            discs=tio.LabelMap(tensor=img[1]),
+            seg=tio.LabelMap(tensor=seg)
+        ))
+        img_out = torch.stack((subject.image.data, subject.discs.data), axis=0)
+        seg_out = subject.seg.data
+    else:
+        subject = tio.RandomAnisotropy(downsampling=downsampling)(tio.Subject(
+            image=tio.ScalarImage(tensor=img),
+            seg=tio.LabelMap(tensor=seg, axis=0)
+        ))
+        img_out, seg_out = subject.image.data, subject.seg.data
     del subject
     gc.collect()  # Force garbage collection
     return img_out, seg_out
