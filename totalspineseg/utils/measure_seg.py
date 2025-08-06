@@ -707,8 +707,9 @@ def _properties2d(canal, spine, dim):
     RL_mask = w_mask*canal_bin
     RL_coords = np.argwhere(RL_mask)
     projections = np.dot(RL_coords, w(u1,u2,theta_max))  # Project onto vector
-    diameter_RL = projections.max() - projections.min() # RL length = max - min projection
-    
+    # Compute area
+    area = np.sum(canal_bin) * dim[0] * dim[1]
+
     # Compute eccentricity
     eccentricity = np.sqrt(1 - AP_length**2/RL_length**2)
 
