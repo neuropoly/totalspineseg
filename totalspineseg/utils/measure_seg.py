@@ -698,7 +698,7 @@ def _properties2d(canal, spine, dim):
     AP_mask = v_mask*canal_bin
     AP_coords = np.argwhere(AP_mask)
     projections = np.dot(AP_coords, v(u1,u2,theta_max))  # Project onto vector
-    diameter_AP = projections.max() - projections.min() # AP length = max - min projection
+    diameter_AP = (projections.max() - projections.min())*dim[0] # AP length = max - min projection
     
     # Compute RL diameter along w 
     def w(u1, u2, theta): 
@@ -707,6 +707,8 @@ def _properties2d(canal, spine, dim):
     RL_mask = w_mask*canal_bin
     RL_coords = np.argwhere(RL_mask)
     projections = np.dot(RL_coords, w(u1,u2,theta_max))  # Project onto vector
+    diameter_RL = (projections.max() - projections.min())*dim[1] # RL length = max - min projection
+    
     # Compute area
     area = np.sum(canal_bin) * dim[0] * dim[1]
 
