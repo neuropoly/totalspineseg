@@ -8,8 +8,10 @@ from skimage import measure, transform, io, morphology
 from scipy import ndimage as ndi
 import math
 from scipy import interpolate
+import scipy
 import platform
 import csv
+import warnings
 
 from totalspineseg.utils.image import Image, resample_nib, zeros_like
 
@@ -181,8 +183,6 @@ def _measure_seg(
             for row in metrics[struc]:
                 writer.writerow(row)
 
-
-
 def measure_seg(img, seg, mapping):
     '''
     Compute morphometric measurements of the spinal canal, the intervertebral discs and the neural foramen
@@ -202,11 +202,15 @@ def measure_seg(img, seg, mapping):
     seg_canal = zeros_like(seg)
     seg_canal.data = np.isin(seg.data, [mapping['CSF'], mapping['SC']]).astype(int)
 
+    # Extract binary segmentation
+    seg_bin = zeros_like(seg)
+    seg_bin.data = seg.data != 0
+
     # Init dictionary with metrics
     metrics = {'canal':{}, 'discs':[], 'foramens':[]}
 
     # Compute metrics onto canal segmentation
-    properties, centerline = measure_canal(seg_canal)
+    properties, centerline = measure_canal(seg_canal, seg_bin)
     rows = []
     for i in range(len(properties[list(properties.keys())[0]])):
         row = {
@@ -267,7 +271,6 @@ def measure_seg(img, seg, mapping):
     metrics['foramens'] = rows
     return metrics
 
-
 def measure_disc(seg_disc, pr):
     '''
     Calculate metrics from binary disc segmentation
@@ -293,24 +296,28 @@ def measure_disc(seg_disc, pr):
     }
     return properties
 
-def measure_canal(seg_canal):
+def measure_canal(seg_canal, seg_bin):
     '''
     Based on https://github.com/spinalcordtoolbox/spinalcordtoolbox/blob/master/spinalcordtoolbox/process_seg.py
 
-    Extract canal metrics based on canal binary segmentation
     Expected orientation is RPI
+
+    Extract canal metrics using:
+    - canal segmentation
+    - spine segmentation
     '''
     # List properties
-    property_list = ['area',
-                     'angle_AP',
-                     'angle_RL',
-                     'diameter_AP',
-                     'diameter_RL',
-                     'eccentricity',
-                     'orientation',
-                     'solidity',
-                     'length'
-                     ]
+    property_list = [
+        'area',
+        'angle_AP',
+        'angle_RL',
+        'diameter_AP',
+        'diameter_RL',
+        'eccentricity',
+        'orientation',
+        'solidity',
+        'length'
+    ]
 
     # Fetch dimensions from image.
     nx, ny, nz, nt, px, py, pz, pt = seg_canal.dim
@@ -328,7 +335,8 @@ def measure_canal(seg_canal):
     # Loop across the S-I slices
     shape_properties = {key: np.full(nz, np.nan, dtype=np.double) for key in property_list}
     for iz in range(min_z_index, max_z_index + 1):
-        current_patch = seg_canal.data[:, :, iz]
+        patch_canal = seg_canal.data[:, :, iz]
+        patch_spine = seg_bin.data[:, :, iz]
         # Extract tangent vector to the centerline (i.e. its derivative)
         tangent_vect = np.array([deriv[iz][0] * px, deriv[iz][1] * py, pz])
         # Compute the angle about AP axis between the centerline and the normal vector to the slice
@@ -338,14 +346,22 @@ def measure_canal(seg_canal):
         # Apply affine transformation to account for the angle between the centerline and the normal to the patch
         tform = transform.AffineTransform(scale=(np.cos(angle_RL_rad), np.cos(angle_AP_rad)))
         # Convert to float64, to avoid problems in image indexation causing issues when applying transform.warp
-        current_patch = current_patch.astype(np.float64)
-        current_patch_scaled = transform.warp(current_patch,
-                                                tform.inverse,
-                                                output_shape=current_patch.shape,
-                                                order=1,
-                                                )
+        patch_canal = patch_canal.astype(np.float64)
+        patch_spine = patch_spine.astype(np.float64)
+        patch_canal_scaled = transform.warp(
+            patch_canal,
+            tform.inverse,
+            output_shape=patch_canal.shape,
+            order=1,
+        )
+        patch_spine_scaled = transform.warp(
+            patch_spine,
+            tform.inverse,
+            output_shape=patch_spine.shape,
+            order=1,
+        )
         # Calculate shape metrics
-        shape_property = _properties2d(current_patch_scaled, [px, py])
+        shape_property = _properties2d(patch_canal_scaled, patch_spine_scaled, [px, py])
 
         if shape_property is not None:
             # Add custom fields
@@ -484,7 +500,6 @@ def measure_foramens(seg_foramen, canal_centerline, pr):
             "areas":foramen_areas
         }
     return properties
-
 
 def grade_discs():
     return
@@ -628,113 +643,151 @@ def bspline(x, y, xref, smooth, deg_bspline=3, pz=1):
     y_fit_der = interpolate.splev(xref, tck, der=1)
     return y_fit, y_fit_der
 
-
-def _properties2d(image, dim):
+def _properties2d(canal, spine, dim):
     """
-    Copied from https://github.com/spinalcordtoolbox/spinalcordtoolbox/blob/master/spinalcordtoolbox/process_seg.py
-
     Compute shape property of the input 2D image. Accounts for partial volume information.
-    :param image: 2D input image in uint8 or float (weighted for partial volume) that has a single object.
+    :param canal: 2D input canal image in uint8 or float (weighted for partial volume) that has a single object.
+    :param spine: 2D input spine/canal image in uint8 or float (weighted for partial volume) that has a single object.
     :param dim: [px, py]: Physical dimension of the image (in mm). X,Y respectively correspond to AP,RL.
     :return:
     """
     upscale = 5  # upscale factor for resampling the input image (for better precision)
     pad = 3  # padding used for cropping
     # Check if slice is empty
-    if np.all(image < 1e-6):
+    if np.all(canal < 1e-6):
         print('The slice is empty.')
         return None
     # Normalize between 0 and 1 (also check if slice is empty)
-    image_norm = (image - image.min()) / (image.max() - image.min())
+    canal_norm = (canal - canal.min()) / (canal.max() - canal.min())
+    spine_norm = (spine - spine.min()) / (spine.max() - spine.min())
+
     # Convert to float64
-    image_norm = image_norm.astype(np.float64)
-    # Binarize image using threshold at 0. Necessary input for measure.regionprops
-    image_bin = np.array(image_norm > 0.5, dtype='uint8')
-    # Get all closed binary regions from the image (normally there is only one)
-    regions = measure.regionprops(image_bin, intensity_image=image_norm)
-    # Check number of regions
-    if len(regions) > 1:
-        print('There is more than one object on this slice.')
-        return None
-    region = regions[0]
-    # Get bounding box of the object
-    minx, miny, maxx, maxy = region.bbox
-    # Use those bounding box coordinates to crop the image (for faster processing)
-    image_crop = image_norm[np.clip(minx-pad, 0, image_bin.shape[0]): np.clip(maxx+pad, 0, image_bin.shape[0]),
-                            np.clip(miny-pad, 0, image_bin.shape[1]): np.clip(maxy+pad, 0, image_bin.shape[1])]
-    # Oversample image to reach sufficient precision when computing shape metrics on the binary mask
-    image_crop_r = transform.pyramid_expand(image_crop, upscale=upscale, sigma=None, order=1)
-    # Binarize image using threshold at 0. Necessary input for measure.regionprops
-    image_crop_r_bin = np.array(image_crop_r > 0.5, dtype='uint8')
-    # Get all closed binary regions from the image (normally there is only one)
-    regions = measure.regionprops(image_crop_r_bin, intensity_image=image_crop_r)
-    region = regions[0]
-    # Compute area with weighted segmentation and adjust area with physical pixel size
-    area = np.sum(image_crop_r) * dim[0] * dim[1] / upscale ** 2
-    # Compute ellipse orientation, modulo pi, in deg, and between [0, 90]
-    orientation = fix_orientation(region.orientation)
-    # Find RL and AP diameter based on major/minor axes and cord orientation=
-    [diameter_AP, diameter_RL] = \
-        _find_AP_and_RL_diameter(region.major_axis_length, region.minor_axis_length, orientation,
-                                 [i / upscale for i in dim])
-    # TODO: compute major_axis_length/minor_axis_length by summing weighted voxels along axis
+    canal_norm = canal_norm.astype(np.float64)
+    spine_norm = spine_norm.astype(np.float64)
+
+    # Binarize canal using threshold at 0.5 Necessary input for measure.regionprops
+    canal_bin = np.array(canal_norm > 0.5, dtype='uint8')
+    spine_bin = np.array(spine_norm > 0.5, dtype='uint8')
+
+    # Extract canal slice center of mass
+    canal_coords = np.nonzero(canal_bin)
+    x_mean = np.mean(canal_coords[0])
+    y_mean = np.mean(canal_coords[1])
+    canal_pos = np.array([np.round(x_mean), np.round(y_mean)])
+
+    # Take two perpendicular vectors u1 and u2
+    u1 = np.array([1, 0])
+    u2 = np.array([0, 1])
+    
+    # Define a rotating vector with an angle theta
+    def v(u1, u2, theta):
+        return np.cos(theta) * u1 + np.sin(theta) * u2
+    
+    # Count pixels on the positive side of the vector
+    spine_coords = np.argwhere(spine_bin > 0)
+    total_pixels = np.sum(spine_bin)
+    def proportion(theta):
+        return np.sum(np.dot(spine_coords-canal_pos, v(u1, u2, theta))>0)/total_pixels
+
+    # Find function maximum
+    res = scipy.optimize.minimize_scalar(lambda theta: -proportion(theta), bounds=(0, 2 * np.pi), method='bounded')
+    theta_max = res.x
+
+    # Compute AP diameter along v
+    v_mask = cylindrical_mask(shape=canal_bin.shape, p0=canal_pos, v=v(u1,u2,theta_max), radius=4) # Create cylindrical mask along v
+    AP_mask = v_mask*canal_bin
+    AP_coords = np.argwhere(AP_mask)
+    projections = np.dot(AP_coords, v(u1,u2,theta_max))  # Project onto vector
+    diameter_AP = projections.max() - projections.min() # AP length = max - min projection
+    
+    # Compute RL diameter along w 
+    def w(u1, u2, theta): 
+        return np.cos(theta) * u2 - np.sin(theta) * u1
+    w_mask = cylindrical_mask(shape=canal_bin.shape, p0=canal_pos, v=w(u1,u2,theta_max), radius=4) # Create cylindrical mask along v
+    RL_mask = w_mask*canal_bin
+    RL_coords = np.argwhere(RL_mask)
+    projections = np.dot(RL_coords, w(u1,u2,theta_max))  # Project onto vector
+    diameter_RL = projections.max() - projections.min() # RL length = max - min projection
+    
+    # Compute eccentricity
+    eccentricity = np.sqrt(1 - AP_length**2/RL_length**2)
+
+    # Compute solidity
+    solidity = compute_solidity(canal_bin)
+
+    # Compute angle between AP and patient AP
+    angle = angle_between(u2, v(u1,u2,theta_max)) # rad
+    angle = 360*angle/(2*np.pi)
+
     # Deal with https://github.com/spinalcordtoolbox/spinalcordtoolbox/issues/2307
     if any(x in platform.platform() for x in ['Darwin-15', 'Darwin-16']):
         solidity = np.nan
     else:
-        solidity = region.solidity
+        solidity = compute_solidity(canal_bin)
+    
     # Fill up dictionary
     properties = {
         'area': area,
         'diameter_AP': diameter_AP,
         'diameter_RL': diameter_RL,
-        'centroid': region.centroid,
-        'eccentricity': region.eccentricity,
-        'orientation': orientation,
+        'centroid': canal_pos,
+        'eccentricity': eccentricity,
+        'orientation': angle,
         'solidity': solidity,  # convexity measure
     }
     return properties
 
+def angle_between(u, v):
+    u = np.array(u)
+    v = np.array(v)
+    dot_product = np.dot(u, v)
+    norm_u = np.linalg.norm(u)
+    norm_v = np.linalg.norm(v)
+    # Clip to avoid numerical issues (e.g. arccos(1.0000001))
+    cos_theta = np.clip(dot_product / (norm_u * norm_v), -1.0, 1.0)
+    angle = np.arccos(cos_theta)  # in radians
+    return angle
 
-def fix_orientation(orientation):
+def cylindrical_mask(shape, p0, v, radius):
     """
-    Copied from https://github.com/spinalcordtoolbox/spinalcordtoolbox/blob/master/spinalcordtoolbox/process_seg.py
+    Create a 2D binary mask of a 'cylinder' (thick line) along vector `v` passing through `p0`.
     
-    Re-map orientation from skimage.regionprops from [-pi/2,pi/2] to [0,90] and rotate by 90deg because image axis
-    are inverted
-    """
-    orientation_new = orientation * 180.0 / math.pi
-    if 360 <= abs(orientation_new) <= 540:
-        orientation_new = 540 - abs(orientation_new)
-    if 180 <= abs(orientation_new) <= 360:
-        orientation_new = 360 - abs(orientation_new)
-    if 90 <= abs(orientation_new) <= 180:
-        orientation_new = 180 - abs(orientation_new)
-    return abs(orientation_new)
+    Args:
+        shape (tuple): Shape of the 2D image (height, width)
+        p0 (np.array): A point [y, x] the vector passes through
+        v (np.array): Direction vector [vy, vx]
+        radius (float): Cylinder radius (in pixels)
 
-
-def _find_AP_and_RL_diameter(major_axis, minor_axis, orientation, dim):
+    Returns:
+        mask (2D np.array): Binary mask with True inside the cylinder
     """
-    Copied from https://github.com/spinalcordtoolbox/spinalcordtoolbox/blob/master/spinalcordtoolbox/process_seg.py
+    h, w = shape
+    Y, X = np.meshgrid(np.arange(h), np.arange(w), indexing='ij')
+    
+    # Shift grid by point
+    dy = Y - p0[0]
+    dx = X - p0[1]
+    
+    # Normalize direction vector
+    v = v / np.linalg.norm(v)
+    
+    # Compute perpendicular distance to the line (vector projection method)
+    # Distance = ||(point - p0) - ((point - p0) · v) * v||
+    dot = dx * v[1] + dy * v[0]
+    proj_x = dot * v[1]
+    proj_y = dot * v[0]
+    perp_x = dx - proj_x
+    perp_y = dy - proj_y
+    dist = np.sqrt(perp_x**2 + perp_y**2)
+    
+    # Inside mask if distance < radius
+    mask = dist < radius
+    return mask
 
-    This script checks the orientation of the and assigns the major/minor axis to the appropriate dimension, right-
-    left (RL) or antero-posterior (AP). It also multiplies by the pixel size in mm.
-    :param major_axis: major ellipse axis length calculated by regionprops
-    :param minor_axis: minor ellipse axis length calculated by regionprops
-    :param orientation: orientation in degree. Ranges between [0, 90]
-    :param dim: pixel size in mm.
-    :return: diameter_AP, diameter_RL
-    """
-    if 0 <= orientation < 45.0:
-        diameter_AP = minor_axis
-        diameter_RL = major_axis
-    else:
-        diameter_AP = major_axis
-        diameter_RL = minor_axis
-    # Adjust with pixel size
-    diameter_AP *= dim[0]
-    diameter_RL *= dim[1]
-    return diameter_AP, diameter_RL
+def compute_solidity(mask):
+    labeled = measure.label(mask)
+    props = measure.regionprops(labeled)[0]
+    return props.solidity
 
 if __name__ == '__main__':
     img_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/measure-discs/img/sub-016_acq-isotropic_T2w.nii.gz'
