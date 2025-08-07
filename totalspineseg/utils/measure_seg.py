@@ -197,6 +197,7 @@ def measure_seg(img, seg, mapping):
     nx, ny, nz, nt, px, py, pz, pt = seg.dim
     pr = min([px, py, pz])
     seg = resample_nib(seg, new_size=[pr, pr, pr], new_size_type='mm', interpolation='nn')
+    img = resample_nib(img, new_size=[pr, pr, pr], new_size_type='mm', interpolation='linear')
 
     # Extract spinal canal from segmentation (CSF + SC)
     seg_canal = zeros_like(seg)
@@ -228,10 +229,10 @@ def measure_seg(img, seg, mapping):
         if mapping[struc] in unique_seg and '-' in struc: # Intervertbral disc in segmentation
             seg_disc = zeros_like(seg)
             seg_disc.data = (seg.data == mapping[struc]).astype(int)
-            properties = measure_disc(seg_disc=seg_disc, pr=pr)
+            properties = measure_disc(img=img, seg_disc=seg_disc, pr=pr)
 
             # Create a row per position/thickness point
-            for i, (pos, thick) in enumerate(zip(properties['position'], properties['thickness'])):
+            for i, (pos, thick, counts, bins) in enumerate(zip(properties['position'], properties['thickness'], properties['counts_signals'], properties['bins_signals'])):
                 row = {
                     "structure": "disc",
                     "name": struc,
@@ -239,6 +240,9 @@ def measure_seg(img, seg, mapping):
                     "position_x": pos[0],
                     "position_y": pos[1],
                     "thickness": thick,
+                    "counts_signals":counts,
+                    "bins_signals":bins,
+                    "center": properties['center'] if i == 0 else "",  # only once per disc
                     "volume": properties['volume'] if i == 0 else ""  # only once per disc
                 }
                 rows.append(row)
@@ -271,28 +275,32 @@ def measure_seg(img, seg, mapping):
     metrics['foramens'] = rows
     return metrics
 
-def measure_disc(seg_disc, pr):
+def measure_disc(img, seg_disc, pr):
     '''
     Calculate metrics from binary disc segmentation
     '''
     # Fetch coords from image
     coords = np.argwhere(seg_disc.data > 0)
+    values = np.array([img.data[c[0], c[1], c[2]] for c in coords])
 
     # Identify the smallest elipsoid that can fit the disc
     ellipsoid = fit_ellipsoid(coords)
 
-    # Measure thickness profile along the rotated SI axis
+    # Extract SI thickness and intensity profile
     bin_size = max(2//pr, 1) # Put 1 bin per 2 mm
-    position, thickness = compute_thickness_profile(coords, ellipsoid, bin_size=bin_size)
+    position, thickness, counts_signals, bins_signals = compute_thickness_profile(coords, values, ellipsoid, bin_size=bin_size)
 
     # Extract disc volume
     voxel_volume = pr**3
     volume = coords.shape[0]*voxel_volume # mm3
 
     properties = {
+        'center': np.round(ellipsoid['center']),
         'position': position,
         'thickness': thickness,
-        'volume': volume
+        'counts_signals': counts_signals,
+        'bins_signals': bins_signals,
+        'volume': volume,
     }
     return properties
 
@@ -535,12 +543,13 @@ def fit_ellipsoid(coords):
     }
     return ellipsoid
 
-def compute_thickness_profile(coords, ellipsoid, bin_size=1.0):
+def compute_thickness_profile(coords, values, ellipsoid, bin_size=1.0):
     """
     Measure thickness profile of the segmentation by splitting RL-AP plane into bins.
     
     Parameters:
         coords: (N, 3) array of 3D points of the segmentations
+        values: (N,) array corresponding to the voxel values in the image
         ellipsoid: dict with 'center' and 'rotation_matrix'
         bin_size: RL-AP plane resolution for thickness extraction (in voxels)
 
@@ -570,6 +579,8 @@ def compute_thickness_profile(coords, ellipsoid, bin_size=1.0):
 
     thicknesses = []
     positions = []
+    counts_signals = []
+    bins_signals = []
 
     for x in range(len(bins_RL) - 1):
         slice_mask_RL = bin_indices_RL == x
@@ -579,6 +590,7 @@ def compute_thickness_profile(coords, ellipsoid, bin_size=1.0):
             if any(slice_mask):
                 # Extract voxels in the square
                 slice_coords = rot_coords[slice_mask]
+                slice_values = values[slice_mask]
 
                 # Find max and minimum in square
                 min_SI, max_SI = slice_coords[:,2].min(), slice_coords[:,2].max()
@@ -587,7 +599,11 @@ def compute_thickness_profile(coords, ellipsoid, bin_size=1.0):
                 thicknesses.append(max_SI-min_SI)
                 positions.append([(bins_RL[x] + bins_RL[x+1]) / 2, (bins_AP[y] + bins_AP[y+1]) / 2])
 
-    return np.array(positions), np.array(thicknesses)
+                # Extract intensity histogram
+                counts, bins = np.histogram(slice_values, bins=25)
+                counts_signals.append(counts)
+                bins_signals.append(bins)
+    return np.array(positions), np.array(thicknesses), np.array(counts_signals), np.array(bins_signals)
 
 def get_centerline(seg):
     '''
