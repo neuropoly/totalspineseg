@@ -223,6 +223,22 @@ def measure_seg(img, seg, mapping):
         rows.append(row)
     metrics['canal'] = rows
 
+    # Measure CSF signal
+    seg_csf = zeros_like(seg)
+    seg_csf.data = np.isin(seg.data, [mapping['CSF']]).astype(int)
+    properties = measure_csf(img, seg_csf)
+
+    rows = []
+    for i in range(len(properties[list(properties.keys())[0]])):
+        row = {
+            "structure": "csf",
+            "index": i
+            }
+        for key in properties.keys():
+            row[key] = properties[key][i]
+        rows.append(row)
+    metrics['csf'] = rows
+
     # Compute metrics onto intervertebral discs
     rows = []
     for struc in mapping.keys():
@@ -302,6 +318,32 @@ def measure_disc(img, seg_disc, pr):
         'bins_signals': bins_signals,
         'volume': volume,
     }
+    return properties
+
+def measure_csf(img, seg_csf):
+    '''
+    Extract signal from cerebro spinal fluid (CSF)
+    '''
+    # Extract min and max index in Z direction
+    X, Y, Z = seg_csf.data.nonzero()
+    min_z_index, max_z_index = min(Z), max(Z)
+
+    # Loop across z axis
+    properties = {
+        'slice_signal':{}
+    }
+    for iz in range(min_z_index, max_z_index + 1):
+        # Extract csf coordinates in the slice
+        slice_csf = seg_csf.data[:, :, iz].astype(bool)
+
+        # Extract images values using segmentation
+        slice_values = img.data[slice_csf]
+
+        # Fetch median value
+        median_signal = np.median(slice_values)
+
+        # Save values
+        properties['slice_signal'][iz] = median_signal
     return properties
 
 def measure_canal(seg_canal, seg_bin):
