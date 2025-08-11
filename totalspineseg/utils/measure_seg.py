@@ -328,7 +328,7 @@ def measure_disc(img_data, seg_disc_data, pr):
 
     # Extract SI thickness and intensity profile
     bin_size = max(2//pr, 1) # Put 1 bin per 2 mm
-    position, thickness, counts_signals, bins_signals = compute_thickness_profile(coords, values, ellipsoid, bin_size=bin_size)
+    position, thickness, counts_signals, bins_signals = compute_thickness_profile(coords, values, ellipsoid['rotation_matrix'], bin_size=bin_size)
 
     # Extract disc volume
     voxel_volume = pr**3
