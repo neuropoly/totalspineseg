@@ -581,28 +581,28 @@ def fit_ellipsoid(coords):
     }
     return ellipsoid
 
-def compute_thickness_profile(coords, values, ellipsoid, bin_size=1.0):
+def compute_thickness_profile(coords, values, rotation_matrix, bin_size=1.0):
     """
     Measure thickness profile of the segmentation by splitting RL-AP plane into bins.
     
     Parameters:
         coords: (N, 3) array of 3D points of the segmentations
         values: (N,) array corresponding to the voxel values in the image
-        ellipsoid: dict with 'center' and 'rotation_matrix'
+        rotation_matrix: (3, 3) array corresponding to new coordinate system
         bin_size: RL-AP plane resolution for thickness extraction (in voxels)
 
     Returns:
         positions: (RL_coords, AP_coords) for each point
         thicknesses: thickness for each point in the RL-AP plane
+        counts_signals: image intensity histogram along thickness (counts)
+        bins_signals: image intensity values
     """
-    center = ellipsoid['center']
-    eigvecs = ellipsoid['rotation_matrix']
-    axis_main = eigvecs[:, 2]  # Main axis (e.g., head-foot)
-
     # Project voxel coordinates onto the axis
+    center = np.mean(coords,axis=0) 
     coords_centered = coords - center
 
     # Rotate coords_centered
+    eigvecs = rotation_matrix
     rot_coords = coords_centered @ eigvecs
 
     # Find min and max dimensions of the disc in the RL-AP plane
@@ -628,7 +628,6 @@ def compute_thickness_profile(coords, values, ellipsoid, bin_size=1.0):
             if any(slice_mask):
                 # Extract voxels in the square
                 slice_coords = rot_coords[slice_mask]
-                slice_values = values[slice_mask]
 
                 # Find max and minimum in square
                 min_SI, max_SI = slice_coords[:,2].min(), slice_coords[:,2].max()
@@ -638,10 +637,12 @@ def compute_thickness_profile(coords, values, ellipsoid, bin_size=1.0):
                 positions.append([(bins_RL[x] + bins_RL[x+1]) / 2, (bins_AP[y] + bins_AP[y+1]) / 2])
 
                 # Extract intensity histogram
+                slice_values = values[slice_mask]
                 counts, bins = np.histogram(slice_values, bins=25)
                 counts_signals.append(counts)
                 bins_signals.append(bins)
     return np.array(positions), np.array(thicknesses), np.array(counts_signals), np.array(bins_signals)
+    
 
 def get_centerline(seg):
     '''
