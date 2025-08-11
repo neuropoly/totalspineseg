@@ -964,6 +964,34 @@ def save_isometric_png(volume, filename):
     plotter.add_volume(pv.wrap(volume), cmap="viridis", opacity="sigmoid", shade=True)
     plotter.view_isometric()
     plotter.show(screenshot=filename)
+
+def crop_around_binary(volume):
+    """
+    Crop a 3D numpy array around the non-zero region and return the cropped size.
+
+    Args:
+        volume : np.ndarray
+            3D binary numpy array (bool or 0/1 values).
+
+    Returns:
+        cropped : np.ndarray
+            Cropped 3D volume.
+        bbox : tuple
+            Bounding box coordinates.
+    """
+    assert volume.ndim == 3, "Input must be a 3D array"
+
+    # Find non-zero coordinates
+    coords = np.argwhere(volume)
+    if coords.size == 0:
+        return (volume.copy(), None)
+
+    xmin, ymin, zmin = coords.min(axis=0)
+    xmax, ymax, zmax = coords.max(axis=0)
+    cropped = volume[xmin:xmax+1, ymin:ymax+1, zmin:zmax+1]
+
+    return cropped, (xmin, xmax, ymin, ymax, zmin, zmax)
+
 if __name__ == '__main__':
     img_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/measure-discs/img/sub-016_acq-isotropic_T2w.nii.gz'
     seg_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/measure-discs/out/step2_output/sub-016_acq-isotropic_T2w.nii.gz'
