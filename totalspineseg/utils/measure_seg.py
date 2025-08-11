@@ -262,29 +262,57 @@ def measure_seg(img, seg, mapping):
                 rows.append(row)
     metrics['discs'] = rows
     
-    # Compute metrics onto vertebrae foramens
-    rows = []
+    # Compute metrics onto vertebrae and foramens
+    foramens_rows = []
+    vertebrae_rows = []
     for struc in mapping.keys():
         if mapping[struc] in unique_seg  and (10 < mapping[struc] < 50): # Vertebrae
             if mapping[struc]+1 in unique_seg: # two adjacent vertebrae
                 # Fetch vertebrae names
                 top_vert = struc
                 bottom_vert = rev_mapping[mapping[struc]+1]
-                structure_name = f'foramens_{top_vert}-{bottom_vert}'
+                foramens_name = f'foramens_{top_vert}-{bottom_vert}'
 
                 # Init foramen segmentation
                 seg_foramen_data = (seg.data == mapping[f'{top_vert}-{bottom_vert}']).astype(int)*2 # Set disc value to 2
 
-                # Compute properties
-                properties = measure_foramens(seg_foramen=seg_foramen, canal_centerline=centerline, pr=pr)
-                row = {
+                # Compute vertebrae properties
+                for vert in [top_vert, bottom_vert]:
+                    seg_vert_data = (seg.data == mapping[vert]).astype(int)
+
+                    # Crop around region of interest
+                    crop_vert_data, bbox = crop_around_binary(seg_vert_data)
+
+                    properties = measure_vertebra(img_data=img.data, seg_vert_data=seg_vert_data, seg_canal_data=seg_canal_data, canal_centerline=centerline, pr=pr)
+
+                    # Create a row per position/thickness point
+                    for i, (pos, thick, counts, bins) in enumerate(zip(properties['position'], properties['thickness'], properties['counts_signals'], properties['bins_signals'])):
+                        vertebrae_row = {
+                            "structure": "vertebra",
+                            "name": vert,
+                            "index": i,
+                            "position_x": pos[0],
+                            "position_y": pos[1],
+                            "thickness": thick,
+                            "counts_signals":counts,
+                            "bins_signals":bins,
+                            "center": properties['center'] if i == 0 else "",  # only once per disc
+                            "volume": properties['volume'] if i == 0 else ""  # only once per disc
+                        }
+                    vertebrae_rows.append(vertebrae_row)
+                    seg_foramen_data += seg_vert_data
+
+                # Compute foramens properties
+                properties = measure_foramens(seg_foramen_data=seg_foramen_data, canal_centerline=centerline, pr=pr)
+                foramens_row = {
                     "structure": "foramen",
-                    "name": structure_name,
+                    "name": foramens_name,
                     "right_surface": properties['areas']['right'],
                     "left_surface": properties['areas']['left']
                 }
-                rows.append(row)
-    metrics['foramens'] = rows
+                foramens_rows.append(foramens_row)
+    metrics['vertebrae'] = vertebrae_rows
+    metrics['foramens'] = foramens_rows
     return metrics
 
 def measure_disc(img_data, seg_disc_data, pr):
@@ -421,6 +449,89 @@ def measure_canal(seg_canal, seg_bin):
             print(f'Warning: error with slice {iz}.')
 
     return shape_properties, centerline
+
+def measure_vertebra(img_data, seg_vert_data, seg_canal_data, canal_centerline, pr):
+    # Extract vertebra coords
+    coords = np.argwhere(seg_vert_data > 0)
+
+    # Extract z position (SI) of the vertebra center of mass
+    vert_pos = np.mean(coords,axis=0)
+    z_mean = vert_pos[-1]
+
+    # Find closest point and derivative onto the canal centerline
+    closest_canal_idx = np.argmin(abs(canal_centerline['position'][2]-z_mean))
+    canal_pos, canal_deriv = canal_centerline['position'][:,closest_canal_idx], canal_centerline['derivative'][:,closest_canal_idx]
+
+    # Create two perpendicular vectors u1 and u2
+    v = canal_deriv
+    tmp = np.array([1, 0, 0]) # Init temporary non colinear vector
+    u1 = np.cross(v, tmp)
+    u1 /= np.linalg.norm(u1)
+    u2 = np.cross(v, u1)
+    u2 /= np.linalg.norm(u2)
+
+    # Define vector w with angle theta in u1u2 plane
+    def w(u1, u2, theta): 
+        return np.cos(theta) * u1 + np.sin(theta) * u2
+    
+    def cutting_plane(theta):
+        # Init normal vector of the plane
+        n = np.cross(v, w(u1, u2, theta))
+        n_norm = np.linalg.norm(n)
+        if n_norm == 0:
+            raise ValueError("Normal vector has zero norm.")
+        n = n/n_norm
+
+        dot_product = np.dot(coords-canal_pos, n)
+        pos = np.sum(dot_product > 0)
+        neg = len(coords) - pos
+        proportion = pos/(pos+neg)
+        return proportion - 0.5
+
+    # Find function zero between 0 and pi
+    res = scipy.optimize.root_scalar(cutting_plane, bracket=[0, np.pi], method='brentq')
+    if not res.converged:
+        raise ValueError('Did not find a cutting plane for vertebra')
+    best_theta = res.root
+    if (vert_pos[1]-canal_pos[1])*w(u1, u2, best_theta)[1] < 0:
+        # Orient vector from canal to body
+        best_theta += np.pi
+    u = np.cross(v, w(u1, u2, best_theta)) # create last vector
+
+    # Find canal distance to vertebral body
+    canal_slice_coords = np.argwhere(seg_canal_data[:,:,int(np.round(z_mean))]>0)
+    projections = np.dot(canal_slice_coords-canal_pos[:2], w(u1, u2, best_theta)[:2])
+    AP_radius = projections.max()
+
+    # Isolate vertebral body
+    anterior_pos = np.array([canal_pos[0], canal_pos[1]+AP_radius, canal_pos[2]])
+    projections = np.dot(coords-anterior_pos, w(u1, u2, best_theta))
+    body_coords = coords[projections>0]
+    body_pos = np.mean(body_coords,axis=0)
+
+    # Fetch AP thickness
+    AP_thickness = np.max(projections)
+
+    # Compute thickness profile vertebral body
+    coordinate_system = np.stack((u, w(u1, u2, best_theta), v), axis=0)
+    values = np.array([img_data[c[0], c[1], c[2]] for c in body_coords])
+    bin_size = max(2//pr, 1) # Put 1 bin per 2 mm
+    position, thickness, counts_signals, bins_signals = compute_thickness_profile(body_coords, values, coordinate_system, bin_size=bin_size)
+
+    # Extract vertebral body volume
+    voxel_volume = pr**3
+    volume = body_coords.shape[0]*voxel_volume # mm3
+
+    properties = {
+        'center': np.round(body_pos),
+        'position': position,
+        'thickness': thickness,
+        'counts_signals': counts_signals,
+        'bins_signals': bins_signals,
+        'AP_thickness': AP_thickness,
+        'volume': volume,
+    }
+    return properties
 
 def measure_foramens(seg_foramen_data, canal_centerline, pr):
     '''
