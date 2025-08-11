@@ -14,6 +14,7 @@ import csv
 import warnings
 
 from totalspineseg.utils.image import Image, resample_nib, zeros_like
+import pyvista as pv
 
 warnings.filterwarnings("ignore")
 
