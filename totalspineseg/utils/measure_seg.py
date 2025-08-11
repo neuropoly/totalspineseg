@@ -958,6 +958,12 @@ def compute_solidity(mask):
     props = measure.regionprops(labeled)[0]
     return props.solidity
 
+def save_isometric_png(volume, filename):
+    volume, _ = crop_around_binary(volume)
+    plotter = pv.Plotter(off_screen=True)
+    plotter.add_volume(pv.wrap(volume), cmap="viridis", opacity="sigmoid", shade=True)
+    plotter.view_isometric()
+    plotter.show(screenshot=filename)
 if __name__ == '__main__':
     img_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/measure-discs/img/sub-016_acq-isotropic_T2w.nii.gz'
     seg_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/measure-discs/out/step2_output/sub-016_acq-isotropic_T2w.nii.gz'
