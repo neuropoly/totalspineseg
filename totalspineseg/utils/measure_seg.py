@@ -280,11 +280,7 @@ def measure_seg(img, seg, mapping):
                 # Compute vertebrae properties
                 for vert in [top_vert, bottom_vert]:
                     seg_vert_data = (seg.data == mapping[vert]).astype(int)
-
-                    # Crop around region of interest
-                    crop_vert_data, bbox = crop_around_binary(seg_vert_data)
-
-                    properties = measure_vertebra(img_data=img.data, seg_vert_data=seg_vert_data, seg_canal_data=seg_canal_data, canal_centerline=centerline, pr=pr)
+                    properties = measure_vertebra(img_data=img.data, seg_vert_data=seg_vert_data, seg_canal_data=seg_canal.data, canal_centerline=centerline, pr=pr)
 
                     # Create a row per position/thickness point
                     for i, (pos, thick, counts, bins) in enumerate(zip(properties['position'], properties['thickness'], properties['counts_signals'], properties['bins_signals'])):
