@@ -224,9 +224,8 @@ def measure_seg(img, seg, mapping):
     metrics['canal'] = rows
 
     # Measure CSF signal
-    seg_csf = zeros_like(seg)
-    seg_csf.data = np.isin(seg.data, [mapping['CSF']]).astype(int)
-    properties = measure_csf(img, seg_csf)
+    seg_csf_data = np.isin(seg.data, [mapping['CSF']]).astype(int)
+    properties = measure_csf(img.data, seg_csf_data)
 
     rows = []
     for i in range(len(properties[list(properties.keys())[0]])):
@@ -243,9 +242,8 @@ def measure_seg(img, seg, mapping):
     rows = []
     for struc in mapping.keys():
         if mapping[struc] in unique_seg and '-' in struc: # Intervertbral disc in segmentation
-            seg_disc = zeros_like(seg)
-            seg_disc.data = (seg.data == mapping[struc]).astype(int)
-            properties = measure_disc(img=img, seg_disc=seg_disc, pr=pr)
+            seg_disc_data = (seg.data == mapping[struc]).astype(int)
+            properties = measure_disc(img_data=img.data, seg_disc_data=seg_disc_data, pr=pr)
 
             # Create a row per position/thickness point
             for i, (pos, thick, counts, bins) in enumerate(zip(properties['position'], properties['thickness'], properties['counts_signals'], properties['bins_signals'])):
@@ -274,10 +272,8 @@ def measure_seg(img, seg, mapping):
                 bottom_vert = rev_mapping[mapping[struc]+1]
                 structure_name = f'foramens_{top_vert}-{bottom_vert}'
 
-                # Merge top vert, bottom vert and intervetebral disc segmentations
-                seg_foramen = zeros_like(seg)
-                seg_foramen.data = np.isin(seg.data, [mapping[struc], mapping[struc]+1]).astype(int)
-                seg_foramen.data[seg.data == mapping[f'{top_vert}-{bottom_vert}']] = 2 # Set disc value to 2
+                # Init foramen segmentation
+                seg_foramen_data = (seg.data == mapping[f'{top_vert}-{bottom_vert}']).astype(int)*2 # Set disc value to 2
 
                 # Compute properties
                 properties = measure_foramens(seg_foramen=seg_foramen, canal_centerline=centerline, pr=pr)
@@ -291,13 +287,13 @@ def measure_seg(img, seg, mapping):
     metrics['foramens'] = rows
     return metrics
 
-def measure_disc(img, seg_disc, pr):
+def measure_disc(img_data, seg_disc_data, pr):
     '''
     Calculate metrics from binary disc segmentation
     '''
     # Fetch coords from image
-    coords = np.argwhere(seg_disc.data > 0)
-    values = np.array([img.data[c[0], c[1], c[2]] for c in coords])
+    coords = np.argwhere(seg_disc_data > 0)
+    values = np.array([img_data[c[0], c[1], c[2]] for c in coords])
 
     # Identify the smallest elipsoid that can fit the disc
     ellipsoid = fit_ellipsoid(coords)
@@ -320,12 +316,12 @@ def measure_disc(img, seg_disc, pr):
     }
     return properties
 
-def measure_csf(img, seg_csf):
+def measure_csf(img_data, seg_csf_data):
     '''
     Extract signal from cerebro spinal fluid (CSF)
     '''
     # Extract min and max index in Z direction
-    X, Y, Z = seg_csf.data.nonzero()
+    X, Y, Z = seg_csf_data.nonzero()
     min_z_index, max_z_index = min(Z), max(Z)
 
     # Loop across z axis
@@ -334,10 +330,10 @@ def measure_csf(img, seg_csf):
     }
     for iz in range(min_z_index, max_z_index + 1):
         # Extract csf coordinates in the slice
-        slice_csf = seg_csf.data[:, :, iz].astype(bool)
+        slice_csf = seg_csf_data[:, :, iz].astype(bool)
 
         # Extract images values using segmentation
-        slice_values = img.data[slice_csf]
+        slice_values = img_data[slice_csf]
 
         # Fetch median value
         median_signal = np.median(slice_values)
@@ -426,17 +422,17 @@ def measure_canal(seg_canal, seg_bin):
 
     return shape_properties, centerline
 
-def measure_foramens(seg_foramen, canal_centerline, pr):
+def measure_foramens(seg_foramen_data, canal_centerline, pr):
     '''
-    seg_foramen contains:
+    seg_foramen_data contains:
     - a segmentation of the top and bottom vertebrae equal to 1
     - a segmentation of the intervertebral discs in between equal to 2
     '''
     # Extract vertebrae and disc coords
-    coords = np.argwhere(seg_foramen.data > 0)
+    coords = np.argwhere(seg_foramen_data > 0)
 
     # Extract z position (SI) of the disc center of mass
-    disc_coords = np.argwhere(seg_foramen.data == 2)
+    disc_coords = np.argwhere(seg_foramen_data == 2)
     z_mean = np.mean(disc_coords[:,2])
 
     # Find closest point and derivative onto the canal centerline
