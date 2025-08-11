@@ -448,6 +448,11 @@ def measure_canal(seg_canal, seg_bin):
     return shape_properties, centerline
 
 def measure_vertebra(img_data, seg_vert_data, seg_canal_data, canal_centerline, pr):
+    '''
+    Returns:
+        properties: python dict
+        image: 3D numpy array representing the structure of interest
+    '''
     # Extract vertebra coords
     coords = np.argwhere(seg_vert_data > 0)
 
@@ -528,20 +533,40 @@ def measure_vertebra(img_data, seg_vert_data, seg_canal_data, canal_centerline, 
         'AP_thickness': AP_thickness,
         'volume': volume,
     }
-    return properties
+
+    # Recreate volume for visualization
+    rot_coords = coords @ coordinate_system
+    vert_img = np.zeros((np.max(rot_coords[:,0]), np.max(coorot_coordsrds[:,1]), np.max(rot_coords[:,2])))
+    for i, coord in enumerate(rot_coords):
+        if projections[i]>0: # vertebral body
+            vert_img[coord[0]-1, coord[1]-1, coord[2]-1]=2
+        else:
+            vert_img[coord[0]-1, coord[1]-1, coord[2]-1]=1
+    return properties, vert_img
 
 def measure_foramens(seg_foramen_data, canal_centerline, pr):
     '''
-    seg_foramen_data contains:
-    - a segmentation of the top and bottom vertebrae equal to 1
-    - a segmentation of the intervertebral discs in between equal to 2
+    This function measures the surface of the left and right neural foramen formed by 2 vertebrae and a disc
+
+    Parameters:
+        seg_foramen_data: 3D numpy array containing
+            - a segmentation of the top and bottom vertebrae equal to 1
+            - a segmentation of the intervertebral discs in between equal to 2
+        canal_centerline: python dict
+
+    Returns:
+        foramen_areas: python dict
+            left and right surface of the foramina
+        foramen_imgs:
+            left and right image of the foramina
     '''
     # Extract vertebrae and disc coords
     coords = np.argwhere(seg_foramen_data > 0)
 
     # Extract z position (SI) of the disc center of mass
     disc_coords = np.argwhere(seg_foramen_data == 2)
-    z_mean = np.mean(disc_coords[:,2])
+    disc_pos = np.mean(coords,axis=0)
+    z_mean = disc_pos[-1]
 
     # Find closest point and derivative onto the canal centerline
     closest_canal_idx = np.argmin(abs(canal_centerline['position'][2]-z_mean))
@@ -595,19 +620,28 @@ def measure_foramens(seg_foramen_data, canal_centerline, pr):
     
     # Use best plane to cut the segmentation in two halfs
     best_theta = list(proportion.keys())[np.argmin(np.abs(np.array(list(proportion.values()))-0.5))]
+    if (disc_pos[1]-canal_pos[1])*w(u1, u2, best_theta)[1] < 0:
+        # Orient vector from canal to disc
+        best_theta += np.pi
+
     n = np.cross(v, w(u1, u2, best_theta)) # normal vector of the plane
     n /= np.linalg.norm(n)
     dot_product = np.dot(coords-canal_pos, n)
 
+    # Rotate coords
+    coordinate_system = np.stack((n, w(u1, u2, best_theta), v), axis=0)
+    rot_coords = coords @ coordinate_system
+
     # Distinguish left-from-right
     pos_coords = dot_product>0
     if n[0] > 0: # Oriented from right to left RPI
-        halfs = {"left": coords[pos_coords], "right":coords[~pos_coords]}
+        halfs = {"left": rot_coords[pos_coords], "right":rot_coords[~pos_coords]}
     else:
-        halfs = {"right": coords[pos_coords], "left":coords[~pos_coords]}
+        halfs = {"right": rot_coords[pos_coords], "left":rot_coords[~pos_coords]}
 
     # Project foramens
     foramen_areas = {}
+    foramen_imgs = {}
     for side, coords in halfs.items():
         # Project coords in vw plane
         x_coords = np.dot(coords, v)
@@ -625,7 +659,7 @@ def measure_foramens(seg_foramen_data, canal_centerline, pr):
         img = np.zeros((np.max(x_coords), np.max(y_coords)))
         for x, y in zip(x_coords, y_coords):
             img[x-1, y-1]=1
-        
+
         # Inverse image
         labeled_bg = morphology.remove_small_objects(~img.astype(bool), min_size=64)
 
@@ -642,18 +676,15 @@ def measure_foramens(seg_foramen_data, canal_centerline, pr):
             # Select second biggest region assuming it is the foramen
             foramen_region = regions[np.argsort(areas)[-2]]
             foramen_mask = labeled_img == foramen_region.label
+            foramen_imgs[side] = labeled_bg + foramen_mask.astype(int)
         else:
-            raise ValueError('Error with foramen, possibly not closed shape. See foramen_error.png')
+            raise ValueError('Error with foramen, possibly not closed shape.')
 
         # Calculate foramen area
         pixel_surface = pr**2
         foramen_area = np.argwhere(foramen_mask > 0).shape[0]*pixel_surface #mm2
         foramen_areas[side] = foramen_area
-
-        properties = {
-            "areas":foramen_areas
-        }
-    return properties
+    return foramen_areas, foramen_imgs
 
 def grade_discs():
     return
