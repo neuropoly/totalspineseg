@@ -579,9 +579,9 @@ def measure_foramens(seg_foramen_data, canal_centerline, pr):
         canal_centerline: python dict
 
     Returns:
-        foramen_areas: python dict
+        foramens_areas: python dict
             left and right surface of the foramina
-        foramen_imgs:
+        foramens_imgs:
             left and right image of the foramina
     '''
     # Extract vertebrae and disc coords
@@ -655,13 +655,13 @@ def measure_foramens(seg_foramen_data, canal_centerline, pr):
     # Distinguish left-from-right
     pos_coords = dot_product>0
     if n[0] > 0: # Oriented from right to left RPI
-        halfs = {"left": rot_coords[pos_coords], "right":rot_coords[~pos_coords]}
+        halfs = {"left": coords[pos_coords], "right":coords[~pos_coords]}
     else:
-        halfs = {"right": rot_coords[pos_coords], "left":rot_coords[~pos_coords]}
+        halfs = {"right": coords[pos_coords], "left":coords[~pos_coords]}
 
     # Project foramens
-    foramen_areas = {}
-    foramen_imgs = {}
+    foramens_areas = {}
+    foramens_imgs = {}
     for side, coords in halfs.items():
         # Project coords in vw plane
         x_coords = np.dot(coords, v)
@@ -696,15 +696,17 @@ def measure_foramens(seg_foramen_data, canal_centerline, pr):
             # Select second biggest region assuming it is the foramen
             foramen_region = regions[np.argsort(areas)[-2]]
             foramen_mask = labeled_img == foramen_region.label
-            foramen_imgs[side] = labeled_bg + foramen_mask.astype(int)
+            foramens_imgs[side] = labeled_bg + foramen_mask.astype(int)
+            
+            # Calculate foramen area
+            pixel_surface = pr**2
+            foramen_area = np.argwhere(foramen_mask > 0).shape[0]*pixel_surface #mm2
+            foramens_areas[side] = foramen_area
         else:
-            raise ValueError('Error with foramen, possibly not closed shape.')
-
-        # Calculate foramen area
-        pixel_surface = pr**2
-        foramen_area = np.argwhere(foramen_mask > 0).shape[0]*pixel_surface #mm2
-        foramen_areas[side] = foramen_area
-    return foramen_areas, foramen_imgs
+            print('Error with foramen, possibly not closed shape.')
+            foramens_areas[side] = -1
+            foramens_imgs[side] = labeled_bg
+    return foramens_areas, foramens_imgs
 
 def grade_discs():
     return
