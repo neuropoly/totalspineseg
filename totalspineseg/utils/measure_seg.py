@@ -294,7 +294,10 @@ def measure_seg(img, seg, mapping):
                 # Compute vertebrae properties
                 for vert in [top_vert, bottom_vert]:
                     seg_vert_data = (seg.data == mapping[vert]).astype(int)
-                    properties = measure_vertebra(img_data=img.data, seg_vert_data=seg_vert_data, seg_canal_data=seg_canal.data, canal_centerline=centerline, pr=pr)
+                    properties, vert_img = measure_vertebra(img_data=img.data, seg_vert_data=seg_vert_data, seg_canal_data=seg_canal.data, canal_centerline=centerline, pr=pr)
+                    
+                    # Save image
+                    imgs[f'vertebrae_{vert}'] = vert_img
 
                     # Create a row per position/thickness point
                     for i, (pos, thick, counts, bins) in enumerate(zip(properties['position'], properties['thickness'], properties['counts_signals'], properties['bins_signals'])):
@@ -314,12 +317,18 @@ def measure_seg(img, seg, mapping):
                     seg_foramen_data += seg_vert_data
 
                 # Compute foramens properties
-                properties = measure_foramens(seg_foramen_data=seg_foramen_data, canal_centerline=centerline, pr=pr)
+                foramens_areas, foramens_imgs = measure_foramens(seg_foramen_data=seg_foramen_data, canal_centerline=centerline, pr=pr)
+                
+                # Save image
+                for side,image in foramens_imgs.items():
+                    imgs[f'{foramens_name}_{side}'] = image
+                
+                # Save foramen metrics
                 foramens_row = {
                     "structure": "foramen",
                     "name": foramens_name,
-                    "right_surface": properties['areas']['right'],
-                    "left_surface": properties['areas']['left']
+                    "right_surface": foramens_areas['right'],
+                    "left_surface": foramens_areas['left']
                 }
                 foramens_rows.append(foramens_row)
     metrics['vertebrae'] = vertebrae_rows
