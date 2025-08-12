@@ -652,10 +652,6 @@ def measure_foramens(seg_foramen_data, canal_centerline, pr):
     n /= np.linalg.norm(n)
     dot_product = np.dot(coords-canal_pos, n)
 
-    # Rotate coords
-    coordinate_system = np.stack((n, w(u1, u2, best_theta), v), axis=0)
-    rot_coords = coords @ coordinate_system
-
     # Distinguish left-from-right
     pos_coords = dot_product>0
     if n[0] > 0: # Oriented from right to left RPI
