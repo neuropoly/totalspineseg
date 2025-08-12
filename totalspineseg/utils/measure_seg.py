@@ -280,12 +280,26 @@ def measure_seg(img, seg, mapping):
     # Compute metrics onto vertebrae and foramens
     foramens_rows = []
     vertebrae_rows = []
-    for struc in mapping.keys():
+    vert_list = []
+    for i, struc in enumerate(mapping.keys()):
         if mapping[struc] in unique_seg  and (10 < mapping[struc] < 50): # Vertebrae
-            if mapping[struc]+1 in unique_seg: # two adjacent vertebrae
+            vert_value = int(struc[1:])
+            if struc.startswith('C'):
+                if vert_value == 7:
+                    next_vert = 'T1'
+                else:
+                    next_vert = f'C{vert_value+1}'
+            if struc.startswith('T'):
+                if vert_value == 12:
+                    next_vert = 'L1'
+                else:
+                    next_vert = f'T{vert_value+1}'
+            if struc.startswith('L'):
+                next_vert = f'L{vert_value+1}'
+            if mapping[next_vert] in unique_seg: # two adjacent vertebrae
                 # Fetch vertebrae names
                 top_vert = struc
-                bottom_vert = rev_mapping[mapping[struc]+1]
+                bottom_vert = next_vert
                 foramens_name = f'foramens_{top_vert}-{bottom_vert}'
 
                 # Init foramen segmentation
@@ -294,26 +308,29 @@ def measure_seg(img, seg, mapping):
                 # Compute vertebrae properties
                 for vert in [top_vert, bottom_vert]:
                     seg_vert_data = (seg.data == mapping[vert]).astype(int)
-                    properties, vert_img = measure_vertebra(img_data=img.data, seg_vert_data=seg_vert_data, seg_canal_data=seg_canal.data, canal_centerline=centerline, pr=pr)
-                    
-                    # Save image
-                    imgs[f'vertebrae_{vert}'] = vert_img
+                    if not vert in vert_list:
+                        print(f'Computing metrics onto vertebra {vert}')
+                        properties, vert_img = measure_vertebra(img_data=img.data, seg_vert_data=seg_vert_data, seg_canal_data=seg_canal.data, canal_centerline=centerline, pr=pr)
+                        
+                        # Save image
+                        imgs[f'vertebrae_{vert}'] = vert_img
 
-                    # Create a row per position/thickness point
-                    for i, (pos, thick, counts, bins) in enumerate(zip(properties['position'], properties['thickness'], properties['counts_signals'], properties['bins_signals'])):
-                        vertebrae_row = {
-                            "structure": "vertebra",
-                            "name": vert,
-                            "index": i,
-                            "position_x": pos[0],
-                            "position_y": pos[1],
-                            "thickness": thick,
-                            "counts_signals":counts,
-                            "bins_signals":bins,
-                            "center": properties['center'] if i == 0 else "",  # only once per disc
-                            "volume": properties['volume'] if i == 0 else ""  # only once per disc
-                        }
-                    vertebrae_rows.append(vertebrae_row)
+                        # Create a row per position/thickness point
+                        for i, (pos, thick, counts, bins) in enumerate(zip(properties['position'], properties['thickness'], properties['counts_signals'], properties['bins_signals'])):
+                            vertebrae_row = {
+                                "structure": "vertebra",
+                                "name": vert,
+                                "index": i,
+                                "position_x": pos[0],
+                                "position_y": pos[1],
+                                "thickness": thick,
+                                "counts_signals":counts,
+                                "bins_signals":bins,
+                                "center": properties['center'] if i == 0 else "",  # only once per disc
+                                "volume": properties['volume'] if i == 0 else ""  # only once per disc
+                            }
+                            vertebrae_rows.append(vertebrae_row)
+                        vert_list.append(vert)
                     seg_foramen_data += seg_vert_data
 
                 # Compute foramens properties
