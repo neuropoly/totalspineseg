@@ -245,13 +245,14 @@ def measure_seg(img, seg, mapping):
     properties = measure_csf(img.data, seg_csf_data)
 
     rows = []
-    for i in range(len(properties[list(properties.keys())[0]])):
+    for i, (k, v) in enumerate(properties['slice_signal'].items()):
         row = {
             "structure": "csf",
-            "index": i
+            "index": i,
+            "slice_nb": k,
+            "slice_signal": v
             }
-        for key in properties.keys():
-            row[key] = properties[key][i]
+
         rows.append(row)
     metrics['csf'] = rows
 
