@@ -12,6 +12,7 @@ import scipy
 import platform
 import csv
 import warnings
+import cv2
 
 from totalspineseg.utils.image import Image, resample_nib, zeros_like
 import pyvista as pv
@@ -159,7 +160,7 @@ def _measure_seg(
     seg = Image(str(seg_path)).change_orientation('RPI')
 
     try:
-        metrics = measure_seg(
+        metrics, imgs = measure_seg(
             img=img,
             seg=seg,
             mapping=mapping,
@@ -168,22 +169,34 @@ def _measure_seg(
         print(f'Error: {seg_path}, {e}')
         return
     
-    # Create output folder if does not exists
-    ofolder_path = Path(ofolder_path)
-    ofolder_path.mkdir(parents=True, exist_ok=True)
+    # Create output folders if does not exists
+    img_name=Path(str(seg_path)).name.replace('.nii.gz', '')
+    ofolder_path = Path(os.path.join(ofolder_path, img_name))
+    csv_folder_path = ofolder_path / 'csv'
+    imgs_folder_path = ofolder_path / 'img'
+    csv_folder_path.mkdir(parents=True, exist_ok=True)
+    imgs_folder_path.mkdir(parents=True, exist_ok=True)
 
     # Save csv files
-    img_name=Path(str(seg_path)).name.replace('.nii.gz', '')
     for struc in metrics.keys():
-        csv_name = f'{img_name}_{struc}.csv'
-        csv_path = ofolder_path / csv_name
+        csv_name = f'{struc}.csv'
+        csv_path = csv_folder_path / csv_name
         fieldnames=list(metrics[struc][0].keys())
         with open(str(csv_path), mode='w', newline='') as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames)
             writer.writeheader()
             for row in metrics[struc]:
                 writer.writerow(row)
-
+    
+    # Save images
+    for name, img in imgs.items():
+        img_name = f'{name}.png'
+        img_path = imgs_folder_path / img_name
+        if len(img.shape) == 3:
+            save_isometric_png(img, img_path)
+        else:
+            cv2.imwrite(img_path, img*125)
+    
 def measure_seg(img, seg, mapping):
     '''
     Compute morphometric measurements of the spinal canal, the intervertebral discs and the neural foramen
@@ -208,8 +221,9 @@ def measure_seg(img, seg, mapping):
     seg_bin = zeros_like(seg)
     seg_bin.data = seg.data != 0
 
-    # Init dictionary with metrics
-    metrics = {'canal':{}, 'discs':[], 'foramens':[]}
+    # Init output dictionaries with metrics
+    metrics = {}
+    imgs = {}
 
     # Compute metrics onto canal segmentation
     properties, centerline = measure_canal(seg_canal, seg_bin)
@@ -310,7 +324,7 @@ def measure_seg(img, seg, mapping):
                 foramens_rows.append(foramens_row)
     metrics['vertebrae'] = vertebrae_rows
     metrics['foramens'] = foramens_rows
-    return metrics
+    return metrics, imgs
 
 def measure_disc(img_data, seg_disc_data, pr):
     '''
