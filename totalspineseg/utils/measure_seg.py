@@ -841,8 +841,8 @@ def get_centerline(seg):
 
     # Interpolate centerline
     px, py, pz = seg.dim[4:7]
-    x_centerline_fit, x_centerline_deriv = bspline(z_mean, x_mean, z_ref, smooth=20, pz=pz)
-    y_centerline_fit, y_centerline_deriv = bspline(z_mean, y_mean, z_ref, smooth=20, pz=pz)
+    x_centerline_fit, x_centerline_deriv = bspline(z_mean, x_mean, z_ref, smooth=8000, pz=pz) # Increase smoothing...
+    y_centerline_fit, y_centerline_deriv = bspline(z_mean, y_mean, z_ref, smooth=8000, pz=pz) # ...a lot
 
     # Construct output
     arr_ctl = np.array([x_centerline_fit, y_centerline_fit, z_ref])
