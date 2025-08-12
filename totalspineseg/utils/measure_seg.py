@@ -229,12 +229,14 @@ def measure_seg(img, seg, mapping):
     properties, centerline = measure_canal(seg_canal, seg_bin)
     rows = []
     for i in range(len(properties[list(properties.keys())[0]])):
+        slice_nb = list(properties[key].keys())[i]
         row = {
             "structure": "canal",
-            "index": i
+            "index": i,
+            "slice_nb": slice_nb
             }
         for key in properties.keys():
-            row[key] = properties[key][i]
+            row[key] = properties[key][slice_nb]
         rows.append(row)
     metrics['canal'] = rows
 
@@ -444,7 +446,7 @@ def measure_canal(seg_canal, seg_bin):
     centerline = {"position":arr_ctl, "derivative":arr_ctl_der}
 
     # Loop across the S-I slices
-    shape_properties = {key: np.full(nz, np.nan, dtype=np.double) for key in property_list}
+    shape_properties = {key: {} for key in property_list}
     for iz in range(min_z_index, max_z_index + 1):
         patch_canal = seg_canal.data[:, :, iz]
         patch_spine = seg_bin.data[:, :, iz]
