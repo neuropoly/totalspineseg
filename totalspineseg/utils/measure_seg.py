@@ -948,7 +948,7 @@ def _properties2d(canal, spine, dim):
     area = np.sum(canal_bin) * dim[0] * dim[1]
 
     # Compute eccentricity
-    eccentricity = np.sqrt(1 - AP_length**2/RL_length**2)
+    eccentricity = np.sqrt(1 - diameter_AP**2/diameter_RL**2)
 
     # Compute solidity
     solidity = compute_solidity(canal_bin)
