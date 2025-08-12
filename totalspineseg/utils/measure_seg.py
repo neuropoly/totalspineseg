@@ -559,12 +559,13 @@ def measure_vertebra(img_data, seg_vert_data, seg_canal_data, canal_centerline, 
 
     # Recreate volume for visualization
     rot_coords = coords @ coordinate_system
-    vert_img = np.zeros((np.max(rot_coords[:,0]), np.max(coorot_coordsrds[:,1]), np.max(rot_coords[:,2])))
+    rot_coords = rot_coords - np.min(rot_coords, axis=0)
+    vert_img = np.zeros((int(np.round(np.max(rot_coords[:,0]))), int(np.round(np.max(rot_coords[:,1]))), int(np.round(np.max(rot_coords[:,2])))))
     for i, coord in enumerate(rot_coords):
         if projections[i]>0: # vertebral body
-            vert_img[coord[0]-1, coord[1]-1, coord[2]-1]=2
+            vert_img[int(np.round(coord[0]-1)), int(np.round(coord[1]-1)), int(np.round(coord[2]-1))]=2
         else:
-            vert_img[coord[0]-1, coord[1]-1, coord[2]-1]=1
+            vert_img[int(np.round(coord[0]-1)), int(np.round(coord[1]-1)), int(np.round(coord[2]-1))]=1
     return properties, vert_img
 
 def measure_foramens(seg_foramen_data, canal_centerline, pr):
