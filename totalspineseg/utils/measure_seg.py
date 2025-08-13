@@ -1,5 +1,6 @@
 import json, os, textwrap, argparse
 import multiprocessing as mp
+import importlib
 from tqdm.contrib.concurrent import process_map
 from functools import partial
 from pathlib import Path
@@ -16,6 +17,7 @@ import cv2
 
 from totalspineseg.utils.image import Image, resample_nib, zeros_like
 import pyvista as pv
+import totalspineseg.resources as ressources
 
 warnings.filterwarnings("ignore")
 
@@ -80,6 +82,10 @@ def main():
     max_workers = args.max_workers
     quiet = args.quiet
 
+    # Use default mapping path
+    ressources_path = importlib.resources.files(ressources)
+    mapping_path = os.path.join(ressources_path, 'labels_maps/tss_map.json')
+
     # Print the argument values if not quiet
     if not quiet:
         print(textwrap.dedent(f'''
@@ -90,6 +96,7 @@ def main():
             prefix = "{prefix}"
             image_suffix = "{image_suffix}"
             seg_suffix = "{seg_suffix}"
+            mapping_path = "{mapping_path}"
             max_workers = {max_workers}
             quiet = {quiet}
         '''))
@@ -101,6 +108,7 @@ def main():
         prefix=prefix,
         image_suffix=image_suffix,
         seg_suffix=seg_suffix,
+        mapping_path=mapping_path,
         max_workers=max_workers,
         quiet=quiet,
     )
@@ -139,8 +147,8 @@ def measure_seg_mp(
             ofolder_path=ofolder_path,
             mapping=mapping,
         ),
+        image_path_list,
         seg_path_list,
-        output_seg_path_list,
         max_workers=max_workers,
         chunksize=1,
         disable=quiet,
