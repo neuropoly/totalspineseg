@@ -229,7 +229,7 @@ def measure_seg(img, seg, mapping):
     properties, centerline = measure_canal(seg_canal, seg_bin)
     rows = []
     for i in range(len(properties[list(properties.keys())[0]])):
-        slice_nb = list(properties[key].keys())[i]
+        slice_nb = list(properties[list(properties.keys())[0]].keys())[i]
         row = {
             "structure": "canal",
             "index": i,
