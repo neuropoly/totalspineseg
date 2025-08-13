@@ -1,4 +1,4 @@
-import json, os
+import json, os, textwrap, argparse
 import multiprocessing as mp
 from tqdm.contrib.concurrent import process_map
 from functools import partial
@@ -312,7 +312,6 @@ def measure_seg(img, seg, mapping):
                 for vert in [top_vert, bottom_vert]:
                     seg_vert_data = (seg.data == mapping[vert]).astype(int)
                     if not vert in vert_list:
-                        print(f'Computing metrics onto vertebra {vert}')
                         properties, vert_img = measure_vertebra(img_data=img.data, seg_vert_data=seg_vert_data, seg_canal_data=seg_canal.data, canal_centerline=centerline, pr=pr)
                         
                         # Save image
