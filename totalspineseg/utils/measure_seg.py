@@ -390,7 +390,15 @@ def measure_disc(img_data, seg_disc_data, pr):
         'intensity_profile': intensity_profile,
         'volume': volume,
     }
-    return properties
+
+    # Recreate volume for visualization
+    rotate_inv = np.linalg.inv(ellipsoid['rotation_matrix'])
+    rot_coords = coords @ rotate_inv
+    rot_coords = rot_coords - np.min(rot_coords, axis=0)
+    disc_img = np.zeros((int(np.round(np.max(rot_coords[:,0]))), int(np.round(np.max(rot_coords[:,1]))), int(np.round(np.max(rot_coords[:,2])))))
+    for i, coord in enumerate(rot_coords):
+        disc_img[int(np.round(coord[0]-1)), int(np.round(coord[1]-1)), int(np.round(coord[2]-1))]=1
+    return properties, disc_img
 
 def measure_csf(img_data, seg_csf_data):
     '''
