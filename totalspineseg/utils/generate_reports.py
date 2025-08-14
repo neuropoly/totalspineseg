@@ -1,7 +1,10 @@
 import sys, os, argparse, textwrap
+import pandas as pd
+from pathlib import Path
+import matplotlib.pyplot as plt
+import numpy as np
 
 def main():
-
     # Description and arguments
     parser = argparse.ArgumentParser(
         description=' '.join(f'''
@@ -44,15 +47,105 @@ def main():
         '''))
 
     generate_reports(
-        images_path=images_path,
+        metrics_path=metrics_path,
         ofolder_path=ofolder,
         quiet=quiet,
     )
 
 def generate_reports(
-        images_path,
+        metrics_path,
         ofolder_path,
         quiet=False
     ):
+    # Load paths
+    metrics_path = Path(metrics_path)
+    ofolder_path = Path(ofolder_path)
+
+    # Loop across subject folders under metrics_path
+    for subject in os.listdir(metrics_path):
+        subject_folder = metrics_path / subject
+
+        # Compute metrics subject
+        ofolder_path = ofolder_path / subject / 'plots'
+        ofolder_path.mkdir(parents=True, exist_ok=True)
+        merged_data = compute_metrics_subject(subject_folder, ofolder_path, quiet)
 
     return
+
+def compute_metrics_subject(subject_folder, ofolder_path, quiet=False):
+    """
+    Compute metrics for a single subject and return merged_data dict for global figures.
+
+    Parameters:
+        subject_folder (Path): Path to the subject's metrics folder.
+        ofolder_path (Path): Path to the output folder where reports will be saved.
+        quiet (bool, optional): If True, suppresses output messages. Defaults to False.
+
+    Returns:
+        dict: A dictionary containing merged metrics data for the subject.
+    """
+    merged_data = {}
+
+    # List of expected CSV files
+    csv_files = {
+        "canal":compute_canal, 
+        "csf":compute_csf, 
+        "discs":compute_discs, 
+        "foramens":compute_foramens, 
+        "vertebrae":compute_vertebrae
+    }
+
+    # Load each CSV if it exists
+    for csv_file, compute_func in csv_files.items():
+        csv_path = subject_folder / 'csv' / f"{csv_file}.csv"
+        if csv_path.exists():
+            subject_data = pd.read_csv(str(csv_path))
+            if not quiet:
+                print(f"Processing {csv_file} for subject {subject_folder.name}")
+            # Call the compute function to process the data
+            merged_data[csv_file] = compute_func(subject_data, ofolder_path)
+
+    return merged_data
+
+def compute_canal(subject_data, ofolder_path):
+    # Create plots for all the metrics
+    for metric in subject_data.columns[3:]:
+        plt.figure()
+        plt.plot(subject_data['slice_nb'], subject_data[metric])
+        plt.title(f"Canal {metric}")
+        plt.xlabel("Slice number")
+        plt.ylabel(metric)
+        plt.savefig(str(ofolder_path / f"canal_{metric}.png"))
+        plt.close()
+    return subject_data
+
+def compute_csf(subject_data, ofolder_path):
+    # Create plots for all the metrics
+    for metric in subject_data.columns[3:]:
+        plt.figure()
+        plt.plot(subject_data['slice_nb'], subject_data[metric])
+        plt.title(f"CSF {metric}")
+        plt.xlabel("Slice number")
+        plt.ylabel(metric)
+        plt.savefig(str(ofolder_path / f"csf_{metric}.png"))
+        plt.close()
+    return subject_data
+
+def compute_discs(subject_data, ofolder_path):
+    return subject_data
+
+def compute_foramens(subject_data, ofolder_path):
+    return subject_data
+
+def compute_vertebrae(subject_data, ofolder_path):
+    return
+
+if __name__ == "__main__":
+    metrics_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/out/metrics_output'
+    ofolder = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/code/totalspineseg/test'
+    quiet = False
+    generate_reports(
+        metrics_path=metrics_path,
+        ofolder_path=ofolder,
+        quiet=quiet,
+    )
