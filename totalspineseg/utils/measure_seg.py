@@ -378,7 +378,7 @@ def measure_disc(img_data, seg_disc_data, pr):
 
     # Extract SI thickness and intensity profile
     bin_size = max(2//pr, 1) # Put 1 bin per 2 mm
-    position, thickness, counts_signals, bins_signals = compute_thickness_profile(coords, values, ellipsoid['rotation_matrix'], bin_size=bin_size)
+    median_thickness, intensity_profile = compute_thickness_profile(coords, values, ellipsoid['rotation_matrix'], bin_size=bin_size)
 
     # Extract disc volume
     voxel_volume = pr**3
@@ -386,10 +386,8 @@ def measure_disc(img_data, seg_disc_data, pr):
 
     properties = {
         'center': np.round(ellipsoid['center']),
-        'position': position,
-        'thickness': thickness,
-        'counts_signals': counts_signals,
-        'bins_signals': bins_signals,
+        'median_thickness': median_thickness,
+        'intensity_profile': intensity_profile,
         'volume': volume,
     }
     return properties
@@ -571,7 +569,7 @@ def measure_vertebra(img_data, seg_vert_data, seg_canal_data, canal_centerline, 
     coordinate_system = np.stack((u, w(u1, u2, best_theta), v), axis=0)
     values = np.array([img_data[c[0], c[1], c[2]] for c in body_coords])
     bin_size = max(2//pr, 1) # Put 1 bin per 2 mm
-    position, thickness, counts_signals, bins_signals = compute_thickness_profile(body_coords, values, coordinate_system, bin_size=bin_size)
+    median_thickness, intensity_profile = compute_thickness_profile(body_coords, values, coordinate_system, bin_size=bin_size)
 
     # Extract vertebral body volume
     voxel_volume = pr**3
@@ -579,10 +577,8 @@ def measure_vertebra(img_data, seg_vert_data, seg_canal_data, canal_centerline, 
 
     properties = {
         'center': np.round(body_pos),
-        'position': position,
-        'thickness': thickness,
-        'counts_signals': counts_signals,
-        'bins_signals': bins_signals,
+        'median_thickness': median_thickness,
+        'intensity_profile': intensity_profile,
         'AP_thickness': AP_thickness,
         'volume': volume,
     }
@@ -807,11 +803,8 @@ def compute_thickness_profile(coords, values, rotation_matrix, bin_size=1.0):
     bins_AP = np.arange(min_AP, max_AP + bin_size, bin_size)
     bin_indices_AP = np.digitize(rot_coords[:,1], bins_AP) - 1
 
+    # Fetch median thickness
     thicknesses = []
-    positions = []
-    counts_signals = []
-    bins_signals = []
-
     for x in range(len(bins_RL) - 1):
         slice_mask_RL = bin_indices_RL == x
         for y in range(len(bins_AP) - 1):
@@ -824,17 +817,21 @@ def compute_thickness_profile(coords, values, rotation_matrix, bin_size=1.0):
                 # Find max and minimum in square
                 min_SI, max_SI = slice_coords[:,2].min(), slice_coords[:,2].max()
 
-                # Extract thickness and position
+                # Extract thickness
                 thicknesses.append(max_SI-min_SI)
-                positions.append([(bins_RL[x] + bins_RL[x+1]) / 2, (bins_AP[y] + bins_AP[y+1]) / 2])
-
-                # Extract intensity histogram
-                slice_values = values[slice_mask]
-                counts, bins = np.histogram(slice_values, bins=25)
-                counts_signals.append(counts)
-                bins_signals.append(bins)
-    return np.array(positions), np.array(thicknesses), np.array(counts_signals), np.array(bins_signals)
+                # positions.append([(bins_RL[x] + bins_RL[x+1]) / 2, (bins_AP[y] + bins_AP[y+1]) / 2])
     
+    # Create bin matrix along SI dimension
+    SI_bin_size = bin_size//3
+    min_SI, max_SI = rot_coords[:,2].min(), rot_coords[:,2].max()
+    bins_SI = np.arange(min_SI, max_SI + SI_bin_size, SI_bin_size)
+    bin_indices_SI = np.digitize(rot_coords[:,2], bins_SI) - 1
+
+    # Extract average SI intensity histogram
+    intensities_avg = []
+    for z in range(len(bins_SI) - 1):
+        intensities_avg.append(values[bin_indices_SI == z].mean())
+    return np.median(np.array(thicknesses)), np.array(intensities_avg)
 
 def get_centerline(seg):
     '''
