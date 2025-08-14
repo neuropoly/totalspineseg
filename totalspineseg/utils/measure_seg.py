@@ -269,7 +269,10 @@ def measure_seg(img, seg, mapping):
     for struc in mapping.keys():
         if mapping[struc] in unique_seg and '-' in struc: # Intervertbral disc in segmentation
             seg_disc_data = (seg.data == mapping[struc]).astype(int)
-            properties = measure_disc(img_data=img.data, seg_disc_data=seg_disc_data, pr=pr)
+            properties, disc_img = measure_disc(img_data=img.data, seg_disc_data=seg_disc_data, pr=pr)
+
+            # Save image
+            imgs[f'discs_{struc}'] = disc_img
 
             # Create a row per position/thickness point
             for i, (pos, thick, counts, bins) in enumerate(zip(properties['position'], properties['thickness'], properties['counts_signals'], properties['bins_signals'])):
