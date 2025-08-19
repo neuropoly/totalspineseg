@@ -274,8 +274,18 @@ def measure_seg(img, seg, mapping):
             # Save image
             imgs[f'discs_{struc}'] = disc_img
 
+            # Create a row
+            row = {
+                "structure": "disc",
+                "name": struc,
                 "eccentricity": properties['eccentricity'],
                 "solidity": properties['solidity'],
+                "median_thickness": properties['median_thickness'],
+                "intensity_profile": properties['intensity_profile'],
+                "center": properties['center'],
+                "volume": properties['volume']
+            }
+            rows.append(row)
     metrics['discs'] = rows
     
     # Compute metrics onto vertebrae and foramens
@@ -316,20 +326,16 @@ def measure_seg(img, seg, mapping):
                         imgs[f'vertebrae_{vert}'] = vert_img
 
                         # Create a row per position/thickness point
-                        for i, (pos, thick, counts, bins) in enumerate(zip(properties['position'], properties['thickness'], properties['counts_signals'], properties['bins_signals'])):
-                            vertebrae_row = {
-                                "structure": "vertebra",
-                                "name": vert,
-                                "index": i,
-                                "position_x": pos[0],
-                                "position_y": pos[1],
-                                "thickness": thick,
-                                "counts_signals":counts,
-                                "bins_signals":bins,
-                                "center": properties['center'] if i == 0 else "",  # only once per disc
-                                "volume": properties['volume'] if i == 0 else ""  # only once per disc
-                            }
-                            vertebrae_rows.append(vertebrae_row)
+                        vertebrae_row = {
+                            "structure": "vertebra",
+                            "name": vert,
+                            "AP_thickness": properties['AP_thickness'],
+                            "median_thickness": properties['median_thickness'],
+                            "intensity_profile": properties['intensity_profile'],
+                            "center": properties['center'],
+                            "volume": properties['volume']
+                        }
+                        vertebrae_rows.append(vertebrae_row)
                         vert_list.append(vert)
                     seg_foramen_data += seg_vert_data
 
