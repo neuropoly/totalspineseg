@@ -274,21 +274,8 @@ def measure_seg(img, seg, mapping):
             # Save image
             imgs[f'discs_{struc}'] = disc_img
 
-            # Create a row per position/thickness point
-            for i, (pos, thick, counts, bins) in enumerate(zip(properties['position'], properties['thickness'], properties['counts_signals'], properties['bins_signals'])):
-                row = {
-                    "structure": "disc",
-                    "name": struc,
-                    "index": i,
-                    "position_x": pos[0],
-                    "position_y": pos[1],
-                    "thickness": thick,
-                    "counts_signals":counts,
-                    "bins_signals":bins,
-                    "center": properties['center'] if i == 0 else "",  # only once per disc
-                    "volume": properties['volume'] if i == 0 else ""  # only once per disc
-                }
-                rows.append(row)
+                "eccentricity": properties['eccentricity'],
+                "solidity": properties['solidity'],
     metrics['discs'] = rows
     
     # Compute metrics onto vertebrae and foramens
@@ -382,13 +369,15 @@ def measure_disc(img_data, seg_disc_data, pr):
 
     # Extract disc volume
     voxel_volume = pr**3
-    volume = coords.shape[0]*voxel_volume # mm3
+    volume = ellipsoid['volume']*voxel_volume # mm3
 
     properties = {
         'center': np.round(ellipsoid['center']),
         'median_thickness': median_thickness,
         'intensity_profile': intensity_profile,
         'volume': volume,
+        'eccentricity': ellipsoid['eccentricity'],
+        'solidity': ellipsoid['solidity']
     }
 
     # Recreate volume for visualization
@@ -767,11 +756,22 @@ def fit_ellipsoid(coords):
     # Extract axis length from eigen values
     radii = np.sqrt(eigvals) * 2  # Multiply by 2 for full axis length
 
+    # Compute eccentricity
+    eccentricity = np.sqrt(1 - (np.min(eigvals) / np.max(eigvals))) if np.max(eigvals) > 0 else 0
+
+    # Compute solidity = volume / convex_hull_volume
+    hull = scipy.spatial.ConvexHull(coords)
+    volume = coords.shape[0]  # Ellipsoid volume
+    solidity = volume / hull.volume if hull.volume > 0 else 0
+
     # Results
     ellipsoid = {
         'center': center,
         'axes_lengths': radii,
-        'rotation_matrix': eigvecs  # columns = directions of axes
+        'rotation_matrix': eigvecs,  # columns = directions of axes
+        'eccentricity': eccentricity,
+        'solidity': solidity,
+        'volume': volume
     }
     return ellipsoid
 
