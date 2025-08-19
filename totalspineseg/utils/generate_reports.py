@@ -114,6 +114,25 @@ def compute_canal(subject_data, ofolder_path):
 def compute_csf(subject_data, ofolder_path):
     # Create plots for all the metrics
     plot_metrics(subject_data, ofolder_path, structure="csf")
+def compute_discs(subject_data, ofolder_path):
+    # Plot bar plot for intensity profile
+    plot_intensity_profile(subject_data, ofolder_path, structure="disc")
+def compute_vertebrae(subject_data, ofolder_path):
+     # Plot bar plot for intensity profile
+    plot_intensity_profile(subject_data, ofolder_path, structure="vertebrae")
+def plot_intensity_profile(subject_data, ofolder_path, structure):
+    for struc in subject_data.name:
+        struc_data = subject_data[subject_data['name'] == struc]
+        struc_idx = struc_data.index[0]
+        plt.figure()
+        intensity_profile = convert_str_to_list(struc_data['intensity_profile'][struc_idx])
+        plt.bar(range(len(intensity_profile)), intensity_profile)
+        plt.title(f"{structure} {struc} intensity profile")
+        plt.xlabel("Z index")
+        plt.ylabel("Intensity")
+        plt.savefig(str(ofolder_path / f"{structure}_{struc}_intensity_profile.png"))
+        plt.close()
+
 def plot_metrics(subject_data, ofolder_path, structure):
     for metric in subject_data.columns[3:]:
         plt.figure()
