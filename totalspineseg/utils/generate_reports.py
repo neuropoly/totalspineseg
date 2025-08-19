@@ -110,16 +110,34 @@ def compute_metrics_subject(subject_folder, ofolder_path, quiet=False):
 def compute_canal(subject_data, ofolder_path):
     # Create plots for all the metrics
     plot_metrics(subject_data, ofolder_path, structure="canal")
+    return {'canal': None}
 
 def compute_csf(subject_data, ofolder_path):
     # Create plots for all the metrics
     plot_metrics(subject_data, ofolder_path, structure="csf")
+    return {'csf': None}
+
 def compute_discs(subject_data, ofolder_path):
     # Plot bar plot for intensity profile
     plot_intensity_profile(subject_data, ofolder_path, structure="disc")
+
+    # Create dictionary from pandas dataframes with names as keys
+    subject_dict = create_dict_from_subject_data(subject_data)
+    return subject_dict
+
 def compute_vertebrae(subject_data, ofolder_path):
      # Plot bar plot for intensity profile
     plot_intensity_profile(subject_data, ofolder_path, structure="vertebrae")
+
+    # Create dictionary from pandas dataframes with names as keys
+    subject_dict = create_dict_from_subject_data(subject_data)
+    return subject_dict
+
+def compute_foramens(subject_data, ofolder_path):
+    # Create dictionary from pandas dataframes with names as keys
+    subject_dict = create_dict_from_subject_data(subject_data)
+    return subject_dict
+
 def plot_intensity_profile(subject_data, ofolder_path, structure):
     for struc in subject_data.name:
         struc_data = subject_data[subject_data['name'] == struc]
@@ -142,16 +160,30 @@ def plot_metrics(subject_data, ofolder_path, structure):
         plt.ylabel(metric)
         plt.savefig(str(ofolder_path / f"{structure}_{metric}.png"))
         plt.close()
-    return subject_data
 
-def compute_discs(subject_data, ofolder_path):
-    return subject_data
+def create_dict_from_subject_data(subject_data):
+    """
+    Create a dictionary from the subject data DataFrame.
 
-def compute_foramens(subject_data, ofolder_path):
-    return subject_data
+    Parameters:
+        subject_data (pd.DataFrame): The subject data DataFrame.
 
-def compute_vertebrae(subject_data, ofolder_path):
-    return
+    Returns:
+        dict: A dictionary with structure names as keys and DataFrames as values.
+    """
+    subject_dict = {}
+    for struc in subject_data.name:
+        struc_dict = {}
+        struc_data = subject_data[subject_data['name'] == struc]
+        struc_idx = struc_data.index[0]
+        for column in struc_data.columns[2:]:
+            if column == 'intensity_profile':
+                struc_dict['intensity_mean'] = np.mean(convert_str_to_list(struc_data[column][struc_idx]))
+            else:
+                if column != 'center':
+                    struc_dict[column] = struc_data[column][struc_idx]
+        subject_dict[struc] = struc_dict
+    return subject_dict
 
 if __name__ == "__main__":
     metrics_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/out/metrics_output'
