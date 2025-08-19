@@ -3,6 +3,7 @@ import pandas as pd
 from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
+import seaborn as sns
 
 def main():
     # Description and arguments
@@ -62,15 +63,17 @@ def generate_reports(
     ofolder_path = Path(ofolder_path)
 
     # Loop across subject folders under metrics_path
+    subjects_data = {}
     for subject in os.listdir(metrics_path):
         subject_folder = metrics_path / subject
 
         # Compute metrics subject
         ofolder_subject = ofolder_path / subject / 'plots'
         ofolder_subject.mkdir(parents=True, exist_ok=True)
-        merged_data = compute_metrics_subject(subject_folder, ofolder_subject, quiet)
+        subjects_data[subject] = compute_metrics_subject(subject_folder, ofolder_subject, quiet)
 
-    return
+    # Create global figures
+    create_global_figures(subjects_data, ofolder_path)
 
 def compute_metrics_subject(subject_folder, ofolder_path, quiet=False):
     """
@@ -184,6 +187,57 @@ def create_dict_from_subject_data(subject_data):
                     struc_dict[column] = struc_data[column][struc_idx]
         subject_dict[struc] = struc_dict
     return subject_dict
+
+def create_global_figures(subjects_data, ofolder_path):
+    """
+    Create global figures from the processed subjects data.
+
+    Parameters:
+        subjects_data (dict): A dictionary containing merged metrics data for each subject.
+        ofolder_path (Path): Path to the output folder where reports will be saved.
+    """
+    print("Creating global figures...")
+    mean_dict = {}
+    # Create discs figures
+    for struc in ['discs', 'vertebrae', 'foramens']:
+        for struc_name in subjects_data[list(subjects_data.keys())[0]][struc].keys():
+            for metric in subjects_data[list(subjects_data.keys())[0]][struc][struc_name].keys():
+                values = []
+                fig, ax = plt.subplots()
+                for subject in subjects_data.keys():
+                    values.append(subjects_data[subject][struc][struc_name][metric])
+                
+                # Create global violin plot
+                sns.violinplot(x=values)
+                plt.title(f"Global {struc_name} {metric} distribution")
+                plt.xlabel("Subjects")
+                plt.ylabel(metric)
+                plt.xticks(rotation=45)
+                plt.tight_layout()
+                plt.savefig(str(ofolder_path / f"global_{struc}_{struc_name}_{metric}.png"))
+                
+                # Create a red line for each subject
+                for subject in subjects_data.keys():
+                    subject_value = subjects_data[subject][struc][struc_name][metric]
+                    # Add the red line
+                    line = ax.axvline(x=subject_value, color='red', linestyle='--')
+                    plt.savefig(str(ofolder_path / subject / f"compared_{struc}_{struc_name}_{metric}.png"))
+                    # Remove the line for the next subject
+                    line.remove()
+                plt.close(fig)
+
+                # Create mean dictionary
+                mean_value = np.mean(values)
+                if struc not in mean_dict:
+                    mean_dict[struc] = {struc_name: {metric: mean_value}}
+                else:
+                    if struc_name not in mean_dict[struc]:
+                        mean_dict[struc][struc_name] = {metric: mean_value}
+                    else:
+                        mean_dict[struc][struc_name][metric] = mean_value
+
+def convert_str_to_list(string):
+    return [float(item.strip()) for item in string.split()[1:-1]]
 
 if __name__ == "__main__":
     metrics_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/out/metrics_output'
