@@ -109,25 +109,19 @@ def compute_metrics_subject(subject_folder, ofolder_path, quiet=False):
 
 def compute_canal(subject_data, ofolder_path):
     # Create plots for all the metrics
-    for metric in subject_data.columns[3:]:
-        plt.figure()
-        plt.plot(subject_data['slice_nb'], subject_data[metric])
-        plt.title(f"Canal {metric}")
-        plt.xlabel("Slice number")
-        plt.ylabel(metric)
-        plt.savefig(str(ofolder_path / f"canal_{metric}.png"))
-        plt.close()
-    return subject_data
+    plot_metrics(subject_data, ofolder_path, structure="canal")
 
 def compute_csf(subject_data, ofolder_path):
     # Create plots for all the metrics
+    plot_metrics(subject_data, ofolder_path, structure="csf")
+def plot_metrics(subject_data, ofolder_path, structure):
     for metric in subject_data.columns[3:]:
         plt.figure()
         plt.plot(subject_data['slice_nb'], subject_data[metric])
-        plt.title(f"CSF {metric}")
+        plt.title(f"{structure} {metric}")
         plt.xlabel("Slice number")
         plt.ylabel(metric)
-        plt.savefig(str(ofolder_path / f"csf_{metric}.png"))
+        plt.savefig(str(ofolder_path / f"{structure}_{metric}.png"))
         plt.close()
     return subject_data
 
