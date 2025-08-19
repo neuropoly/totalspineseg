@@ -66,9 +66,9 @@ def generate_reports(
         subject_folder = metrics_path / subject
 
         # Compute metrics subject
-        ofolder_path = ofolder_path / subject / 'plots'
-        ofolder_path.mkdir(parents=True, exist_ok=True)
-        merged_data = compute_metrics_subject(subject_folder, ofolder_path, quiet)
+        ofolder_subject = ofolder_path / subject / 'plots'
+        ofolder_subject.mkdir(parents=True, exist_ok=True)
+        merged_data = compute_metrics_subject(subject_folder, ofolder_subject, quiet)
 
     return
 
