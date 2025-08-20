@@ -762,8 +762,8 @@ def fit_ellipsoid(coords):
     # Extract axis length from eigen values
     radii = np.sqrt(eigvals) * 2  # Multiply by 2 for full axis length
 
-    # Compute eccentricity
-    eccentricity = np.sqrt(1 - (np.min(eigvals) / np.max(eigvals))) if np.max(eigvals) > 0 else 0
+    # Compute eccentricity in the RL-AP plane
+    eccentricity = np.sqrt(1 - (np.min(eigvals[:2]) / np.max(eigvals[:2]))) if np.max(eigvals[:2]) > 0 else 0
 
     # Compute solidity = volume / convex_hull_volume
     hull = scipy.spatial.ConvexHull(coords)
