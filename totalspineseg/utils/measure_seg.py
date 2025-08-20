@@ -379,8 +379,8 @@ def measure_disc(img_data, seg_disc_data, pr):
 
     properties = {
         'center': np.round(ellipsoid['center']),
-        'median_thickness': median_thickness,
-        'intensity_profile': intensity_profile,
+        'median_thickness': median_thickness*pr,
+        'intensity_profile': intensity_profile, # TODO: Normalize the intensity using CSF for example
         'volume': volume,
         'eccentricity': ellipsoid['eccentricity'],
         'solidity': ellipsoid['solidity']
@@ -578,9 +578,9 @@ def measure_vertebra(img_data, seg_vert_data, seg_canal_data, canal_centerline, 
 
     properties = {
         'center': np.round(body_pos),
-        'median_thickness': median_thickness,
-        'intensity_profile': intensity_profile,
-        'AP_thickness': AP_thickness,
+        'median_thickness': median_thickness*pr,
+        'intensity_profile': intensity_profile, # TODO: Normalize the intensity using CSF for example
+        'AP_thickness': AP_thickness*pr,
         'volume': volume,
     }
 
