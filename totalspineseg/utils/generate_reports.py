@@ -198,33 +198,24 @@ def create_global_figures(subjects_data, ofolder_path):
     """
     print("Creating global figures...")
     mean_dict = {}
-    # Create discs figures
+
+    def next_even(N):
+        return N if N % 2 == 0 else N + 1
+
+    # Create discs, vertebrae, foramens figures
     for struc in ['discs', 'vertebrae', 'foramens']:
         for struc_name in subjects_data[list(subjects_data.keys())[0]][struc].keys():
-            for metric in subjects_data[list(subjects_data.keys())[0]][struc][struc_name].keys():
+            metrics = list(subjects_data[list(subjects_data.keys())[0]][struc][struc_name].keys())
+            N = len(metrics)
+            nrows = 2
+            ncols = next_even(N) // nrows
+            fig, axes = plt.subplots(nrows, ncols, figsize=(6 * ncols, 4 * nrows))
+            axes = axes.flatten() if N > 1 else [axes]
+
+            for idx, metric in enumerate(metrics):
                 values = []
-                fig, ax = plt.subplots()
                 for subject in subjects_data.keys():
                     values.append(subjects_data[subject][struc][struc_name][metric])
-                
-                # Create global violin plot
-                sns.violinplot(x=values)
-                plt.title(f"Global {struc_name} {metric} distribution")
-                plt.xlabel("Subjects")
-                plt.ylabel(metric)
-                plt.xticks(rotation=45)
-                plt.tight_layout()
-                plt.savefig(str(ofolder_path / f"global_{struc}_{struc_name}_{metric}.png"))
-                
-                # Create a red line for each subject
-                for subject in subjects_data.keys():
-                    subject_value = subjects_data[subject][struc][struc_name][metric]
-                    # Add the red line
-                    line = ax.axvline(x=subject_value, color='red', linestyle='--')
-                    plt.savefig(str(ofolder_path / subject / f"compared_{struc}_{struc_name}_{metric}.png"))
-                    # Remove the line for the next subject
-                    line.remove()
-                plt.close(fig)
 
                 # Create mean dictionary
                 mean_value = np.mean(values)
@@ -235,6 +226,34 @@ def create_global_figures(subjects_data, ofolder_path):
                         mean_dict[struc][struc_name] = {metric: mean_value}
                     else:
                         mean_dict[struc][struc_name][metric] = mean_value
+                
+                # Plot global distribution
+                ax = axes[idx]
+                sns.violinplot(x=values, ax=ax, cut=0, bw=0.2)
+                ax.set_title(f"{struc_name} {metric} distribution")
+                ax.set_xlabel(metric)
+                ax.tick_params(axis='x', rotation=45)
+            
+            # Hide unused subplots
+            for j in range(idx + 1, nrows * ncols):
+                axes[j].set_visible(False)
+            
+            # Save the base violin plot
+            fig.tight_layout()
+            plt.savefig(str(ofolder_path / f"global_{struc}_{struc_name}.png"))
+
+            # Overlay a red line for each subject and save, then remove
+            for subject in subjects_data.keys():
+                lines = []
+                for idx, metric in enumerate(metrics):
+                    subject_value = subjects_data[subject][struc][struc_name][metric]
+                    line = axes[idx].axvline(x=subject_value, color='red', linestyle='--')
+                    lines.append(line)
+                    fig.tight_layout()
+                plt.savefig(str(ofolder_path / subject / f"compared_{struc}_{struc_name}.png"))
+                for line in lines:
+                    line.remove()
+
 
 def convert_str_to_list(string):
     return [float(item.strip()) for item in string.split()[1:-1]]
