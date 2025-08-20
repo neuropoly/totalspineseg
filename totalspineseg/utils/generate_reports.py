@@ -1,9 +1,11 @@
+import importlib
 import sys, os, argparse, textwrap
 import pandas as pd
 from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
+import totalspineseg.resources as ressources
 
 def main():
     # Description and arguments
@@ -73,7 +75,7 @@ def generate_reports(
         subjects_data[subject] = compute_metrics_subject(subject_folder, ofolder_subject, quiet)
 
     # Create global figures
-    create_global_figures(subjects_data, ofolder_path)
+    create_global_figures(subjects_data, metrics_path, ofolder_path)
 
 def compute_metrics_subject(subject_folder, ofolder_path, quiet=False):
     """
@@ -188,7 +190,7 @@ def create_dict_from_subject_data(subject_data):
         subject_dict[struc] = struc_dict
     return subject_dict
 
-def create_global_figures(subjects_data, ofolder_path):
+def create_global_figures(subjects_data, metrics_path, ofolder_path):
     """
     Create global figures from the processed subjects data.
 
@@ -199,20 +201,39 @@ def create_global_figures(subjects_data, ofolder_path):
     print("Creating global figures...")
     mean_dict = {}
 
-    def next_even(N):
-        return N if N % 2 == 0 else N + 1
+    # Load totalspineseg ressources path
+    ressources_path = importlib.resources.files(ressources)
 
     # Create discs, vertebrae, foramens figures
-    for struc in ['discs', 'vertebrae', 'foramens']:
-        for struc_name in subjects_data[list(subjects_data.keys())[0]][struc].keys():
-            metrics = list(subjects_data[list(subjects_data.keys())[0]][struc][struc_name].keys())
-            N = len(metrics)
-            nrows = 2
-            ncols = next_even(N) // nrows
-            fig, axes = plt.subplots(nrows, ncols, figsize=(6 * ncols, 4 * nrows))
-            axes = axes.flatten() if N > 1 else [axes]
+    for struc in ['foramens', 'discs', 'vertebrae']: 
+        struc_names = list(subjects_data[list(subjects_data.keys())[0]][struc].keys())
+        metrics = list(subjects_data[list(subjects_data.keys())[0]][struc][struc_names[0]].keys())
+        nrows = len(struc_names) + 1
+        ncols = len(metrics) + 2
+        fig, axes = plt.subplots(nrows, ncols, figsize=(6 * ncols, 4 * nrows))
+        axes = axes.flatten()
 
-            for idx, metric in enumerate(metrics):
+        # Initialize first row
+        idx = 0
+        for i in range(ncols):
+            if i == 0:
+                axes[i].text(0.5, 0.5, "Structure name", fontsize=45, ha='center', va='center')
+            elif i == 1:
+                axes[i].text(0.5, 0.5, "Segmentation", fontsize=45, ha='center', va='center')
+            else:
+                # Load image 
+                img_path = os.path.join(ressources_path, f'imgs/{struc}_{metrics[i - 2]}.jpg')
+                axes[i].imshow(plt.imread(img_path))
+            axes[i].set_axis_off()
+            idx += 1
+        idx_start = idx
+        for struc_name in struc_names:
+            # Initialize first two columns
+            axes[idx].text(0.5, 0.5, struc_name, fontsize=45, ha='center', va='center')
+            axes[idx].set_axis_off()
+            axes[idx+1].set_axis_off()
+            idx += 2
+            for metric in metrics:
                 values = []
                 for subject in subjects_data.keys():
                     values.append(subjects_data[subject][struc][struc_name][metric])
@@ -229,30 +250,48 @@ def create_global_figures(subjects_data, ofolder_path):
                 
                 # Plot global distribution
                 ax = axes[idx]
-                sns.violinplot(x=values, ax=ax, cut=0, bw=0.2)
-                ax.set_title(f"{struc_name} {metric} distribution")
-                ax.set_xlabel(metric)
-                ax.tick_params(axis='x', rotation=45)
+                sns.violinplot(x=values, ax=ax, cut=0, bw_method=0.5)
+                ax.tick_params(axis='x', rotation=45, labelsize=20)
+                idx += 1
             
-            # Hide unused subplots
-            for j in range(idx + 1, nrows * ncols):
-                axes[j].set_visible(False)
-            
-            # Save the base violin plot
-            fig.tight_layout()
-            plt.savefig(str(ofolder_path / f"global_{struc}_{struc_name}.png"))
+        # Save the base violin plot
+        fig.tight_layout()
+        plt.savefig(str(ofolder_path / f"global_{struc}.png"))
 
-            # Overlay a red line for each subject and save, then remove
-            for subject in subjects_data.keys():
-                lines = []
-                for idx, metric in enumerate(metrics):
+        # Overlay a red line for each subject and save, then remove
+        for subject in subjects_data.keys():
+            idx = idx_start
+            lines = []
+            for struc_name in struc_names:
+                axes[idx].text(0.5, 0.5, struc_name, fontsize=45, ha='center', va='center')
+                axes[idx].set_axis_off()
+                if struc != 'foramens':
+                    img_name = f'{struc}_{struc_name}'
+                    img = plt.imread(os.path.join(metrics_path, f'{subject}/img/{img_name}.png'))
+                else:
+                    img_name = f'{struc_name}'
+                    img_left = plt.imread(os.path.join(metrics_path, f'{subject}/img/{img_name}_left.png'))
+                    img_right = plt.imread(os.path.join(metrics_path, f'{subject}/img/{img_name}_right.png'))
+
+                    # Concatenate images after padding to the maximal shape
+                    max_height = max(img_left.shape[0], img_right.shape[0])
+                    img_left_padded = np.pad(img_left, ((0, max_height - img_left.shape[0]), (0, 0)), mode='constant')
+                    img_right_padded = np.pad(img_right, ((0, max_height - img_right.shape[0]), (0, 0)), mode='constant')
+                    img = np.concatenate((img_left_padded, img_right_padded), axis=1)
+
+                axes[idx+1].imshow(img)
+                axes[idx+1].set_axis_off()
+                idx += 2
+                for metric in metrics:
                     subject_value = subjects_data[subject][struc][struc_name][metric]
                     line = axes[idx].axvline(x=subject_value, color='red', linestyle='--')
                     lines.append(line)
                     fig.tight_layout()
-                plt.savefig(str(ofolder_path / subject / f"compared_{struc}_{struc_name}.png"))
-                for line in lines:
-                    line.remove()
+                    idx += 1
+                
+            plt.savefig(str(ofolder_path / subject / f"compared_{struc}.png"))
+            for line in lines:
+                line.remove()
 
 
 def convert_str_to_list(string):
