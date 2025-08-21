@@ -284,8 +284,10 @@ def create_global_figures(subjects_data, metrics_path, ofolder_path):
                 idx += 2
                 for metric in metrics:
                     subject_value = subjects_data[subject][struc][struc_name][metric]
-                    line = axes[idx].axvline(x=subject_value, color='red', linestyle='--')
-                    lines.append(line)
+                    if subject_value >= mean_value:
+                        sns.violinplot(x=values, ax=ax, cut=0, bw_method=0.7, color='gray', alpha=0.2)
+                    else:
+                        sns.violinplot(x=values, ax=ax, cut=0, bw_method=0.7)
                     fig.tight_layout()
                     idx += 1
                 
