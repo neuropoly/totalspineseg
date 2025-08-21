@@ -216,7 +216,9 @@ def create_global_figures(subjects_data, metrics_path, ofolder_path):
             for struc_name in struc_names:
                 for metric in metrics:
                     if struc_name in subjects_data[subject][struc]:
-                        all_values[metric][struc_name].append(subjects_data[subject][struc][struc_name][metric])
+                        subject_value = subjects_data[subject][struc][struc_name][metric]
+                        if subject_value != -1:
+                            all_values[metric][struc_name].append(subject_value)
 
         # Create a subplot for each subject and overlay a red line corresponding to their value
         for subject in subjects_data.keys():
@@ -271,16 +273,18 @@ def create_global_figures(subjects_data, metrics_path, ofolder_path):
                         if struc_name not in mean_dict[struc]:
                             mean_dict[struc][struc_name] = {metric: mean_value}
                         else:
-                            mean_dict[struc][struc_name][metric] = mean_value
+                            if metric not in mean_dict[struc][struc_name]:
+                                mean_dict[struc][struc_name][metric] = mean_value
 
                     # Plot metric for subject
                     # If subject_value >= mean_value, make the violin plot transparent
-                    if subject_value >= mean_value:
+                    if subject_value >= mean_value or subject_value == -1:
                         sns.violinplot(x=values, ax=ax, cut=0, bw_method=0.7, color='gray', alpha=0.2)
                     else:
                         sns.violinplot(x=values, ax=ax, cut=0, bw_method=0.7)
                     ax.tick_params(axis='x', rotation=45, labelsize=12)
-                    axes[idx].axvline(x=subject_value, color='red', linestyle='--')
+                    if subject_value != -1:
+                        axes[idx].axvline(x=subject_value, color='red', linestyle='--')
                     fig.tight_layout()
                     idx += 1
                 
