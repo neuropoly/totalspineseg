@@ -275,7 +275,7 @@ def create_global_figures(subjects_data, metrics_path, ofolder_path):
 
                     # Concatenate images after padding to the maximal shape
                     max_height = max(img_left.shape[0], img_right.shape[0])
-                    img_left_padded = np.pad(img_left, ((0, max_height - img_left.shape[0]), (0, 0)), mode='constant')
+                    img_left_padded = np.pad(np.fliplr(img_left), ((0, max_height - img_left.shape[0]), (0, 0)), mode='constant')
                     img_right_padded = np.pad(img_right, ((0, max_height - img_right.shape[0]), (0, 0)), mode='constant')
                     img = np.concatenate((img_left_padded, img_right_padded), axis=1)
 
