@@ -1157,9 +1157,10 @@ def compute_solidity_2d(mask):
 
 def save_isometric_png(volume, filename):
     volume, _ = crop_around_binary(volume)
-    plotter = pv.Plotter(off_screen=True)
-    plotter.add_volume(pv.wrap(volume), cmap="viridis", opacity="sigmoid", shade=True)
-    plotter.view_isometric()
+    plotter = pv.Plotter(off_screen=True, border=False)
+    plotter.add_volume(pv.wrap(volume), cmap="viridis", opacity="linear", shade=True)
+    plotter.remove_scalar_bar()
+    plotter.camera.zoom(1.3)
     plotter.show(screenshot=filename)
 
 def crop_around_binary(volume):
