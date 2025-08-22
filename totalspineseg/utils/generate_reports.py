@@ -66,16 +66,41 @@ def generate_reports(
 
     # Loop across subject folders under metrics_path
     subjects_data = {}
+    all_values = {}
     for subject in os.listdir(metrics_path):
         subject_folder = metrics_path / subject
 
         # Compute metrics subject
         ofolder_subject = ofolder_path / subject / 'plots'
         ofolder_subject.mkdir(parents=True, exist_ok=True)
-        subjects_data[subject] = compute_metrics_subject(subject_folder, ofolder_subject, quiet)
+        # Gather all values for each metric and structures
+        for struc in subjects_data[subject].keys():
+            if struc not in all_values:
+                all_values[struc] = {}
+            if struc in ['foramens', 'discs', 'vertebrae']:
+                for struc_name in subjects_data[subject][struc].keys():
+                    if struc_name not in all_values[struc]:
+                        all_values[struc][struc_name] = {}
+                    for metric in subjects_data[subject][struc][struc_name].keys():
+                        if metric not in all_values[struc][struc_name]:
+                            all_values[struc][struc_name][metric] = []
+
+                        # Add subject to all_values
+                        subject_value = subjects_data[subject][struc][struc_name][metric]
+                        if subject_value != -1:
+                            all_values[struc][struc_name][metric].append(subject_value)
+            else:
+                for metric in subjects_data[subject][struc].keys():
+                    if metric not in all_values[struc]:
+                        all_values[struc][metric] = []
+
+                    # Add subject to all_values
+                    subject_value = subjects_data[subject][struc][metric]
+                    if subject_value != -1:
+                        all_values[struc][metric].append(subject_value)
 
     # Create global figures
-    create_global_figures(subjects_data, metrics_path, ofolder_path)
+    create_global_figures(subjects_data, all_values, metrics_path, ofolder_path)
 
 def compute_metrics_subject(subject_folder, ofolder_path, quiet=False):
     """
@@ -190,7 +215,7 @@ def create_dict_from_subject_data(subject_data):
         subject_dict[struc] = struc_dict
     return subject_dict
 
-def create_global_figures(subjects_data, metrics_path, ofolder_path):
+def create_global_figures(subjects_data, all_values, metrics_path, ofolder_path):
     """
     Create global figures from the processed subjects data.
 
@@ -205,21 +230,7 @@ def create_global_figures(subjects_data, metrics_path, ofolder_path):
     ressources_path = importlib.resources.files(ressources)
 
     # Create discs, vertebrae, foramens figures
-    for struc in ['foramens', 'discs', 'vertebrae']: 
-        nested = [list(subjects_data[list(subjects_data.keys())[i]][struc].keys()) for i in range(len(subjects_data.keys()))]
-        struc_names = list(set([item for sublist in nested for item in sublist]))
-        metrics = list(subjects_data[list(subjects_data.keys())[0]][struc][list(subjects_data[list(subjects_data.keys())[0]][struc].keys())[0]].keys())
-
-        # Gather all values for each metric and structure name across subjects
-        all_values = {metric: {struc_name: [] for struc_name in struc_names} for metric in metrics}
-        for subject in subjects_data.keys():
-            for struc_name in struc_names:
-                for metric in metrics:
-                    if struc_name in subjects_data[subject][struc]:
-                        subject_value = subjects_data[subject][struc][struc_name][metric]
-                        if subject_value != -1:
-                            all_values[metric][struc_name].append(subject_value)
-
+    for struc in ['foramens', 'discs', 'vertebrae']:
         # Create a subplot for each subject and overlay a red line corresponding to their value
         for subject in subjects_data.keys():
             struc_names = list(subjects_data[subject][struc].keys())
@@ -263,7 +274,7 @@ def create_global_figures(subjects_data, metrics_path, ofolder_path):
                 for metric in metrics:
                     ax = axes[idx]
                     subject_value = subjects_data[subject][struc][struc_name][metric]
-                    values = all_values[metric][struc_name]
+                    values = all_values[struc][struc_name][metric]
 
                     # Create mean dictionary
                     mean_value = np.mean(values)
