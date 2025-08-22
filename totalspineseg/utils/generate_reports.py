@@ -68,11 +68,15 @@ def generate_reports(
     subjects_data = {}
     all_values = {}
     for subject in os.listdir(metrics_path):
+        if not quiet:
+            print(f"Processing subject: {subject}")
         subject_folder = metrics_path / subject
 
         # Compute metrics subject
         ofolder_subject = ofolder_path / subject / 'plots'
         ofolder_subject.mkdir(parents=True, exist_ok=True)
+        subjects_data[subject] = compute_metrics_subject(subject_folder)
+
         # Gather all values for each metric and structures
         for struc in subjects_data[subject].keys():
             if struc not in all_values:
@@ -102,7 +106,7 @@ def generate_reports(
     # Create global figures
     create_global_figures(subjects_data, all_values, metrics_path, ofolder_path)
 
-def compute_metrics_subject(subject_folder, ofolder_path, quiet=False):
+def compute_metrics_subject(subject_folder):
     """
     Compute metrics for a single subject and return merged_data dict for global figures.
 
@@ -130,40 +134,36 @@ def compute_metrics_subject(subject_folder, ofolder_path, quiet=False):
         csv_path = subject_folder / 'csv' / f"{csv_file}.csv"
         if csv_path.exists():
             subject_data = pd.read_csv(str(csv_path))
-            if not quiet:
-                print(f"Processing {csv_file} for subject {subject_folder.name}")
             # Call the compute function to process the data
-            merged_data[csv_file] = compute_func(subject_data, ofolder_path)
-
+            merged_data[csv_file] = compute_func(subject_data)
     return merged_data
 
-def compute_canal(subject_data, ofolder_path):
-    # Create plots for all the metrics
-    plot_metrics(subject_data, ofolder_path, structure="canal")
-    return {'canal': None}
+def compute_canal(subject_data):
+    # Convert pandas columns to lists
+    canal_dict = {}
+    for column in subject_data.columns[2:]:
+        if column != 'canal_centroid':
+            canal_dict[column] = subject_data[column].tolist()
+    return canal_dict
 
-def compute_csf(subject_data, ofolder_path):
-    # Create plots for all the metrics
-    plot_metrics(subject_data, ofolder_path, structure="csf")
-    return {'csf': None}
+def compute_csf(subject_data):
+    # Convert pandas columns to lists
+    csf_dict = {}
+    for column in subject_data.columns[2:]:
+        csf_dict[column] = subject_data[column].tolist()
+    return csf_dict
 
-def compute_discs(subject_data, ofolder_path):
-    # Plot bar plot for intensity profile
-    plot_intensity_profile(subject_data, ofolder_path, structure="disc")
-
+def compute_discs(subject_data):
     # Create dictionary from pandas dataframes with names as keys
     subject_dict = create_dict_from_subject_data(subject_data)
     return subject_dict
 
-def compute_vertebrae(subject_data, ofolder_path):
-     # Plot bar plot for intensity profile
-    plot_intensity_profile(subject_data, ofolder_path, structure="vertebrae")
-
+def compute_vertebrae(subject_data):
     # Create dictionary from pandas dataframes with names as keys
     subject_dict = create_dict_from_subject_data(subject_data)
     return subject_dict
 
-def compute_foramens(subject_data, ofolder_path):
+def compute_foramens(subject_data):
     # Create dictionary from pandas dataframes with names as keys
     subject_dict = create_dict_from_subject_data(subject_data)
     return subject_dict
@@ -179,16 +179,6 @@ def plot_intensity_profile(subject_data, ofolder_path, structure):
         plt.xlabel("Z index")
         plt.ylabel("Intensity")
         plt.savefig(str(ofolder_path / f"{structure}_{struc}_intensity_profile.png"))
-        plt.close()
-
-def plot_metrics(subject_data, ofolder_path, structure):
-    for metric in subject_data.columns[3:]:
-        plt.figure()
-        plt.plot(subject_data['slice_nb'], subject_data[metric])
-        plt.title(f"{structure} {metric}")
-        plt.xlabel("Slice number")
-        plt.ylabel(metric)
-        plt.savefig(str(ofolder_path / f"{structure}_{metric}.png"))
         plt.close()
 
 def create_dict_from_subject_data(subject_data):
