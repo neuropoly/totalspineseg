@@ -46,6 +46,10 @@ def main():
         help='The folder where input NIfTI segmentation files are located (required).'
     )
     parser.add_argument(
+        '--labels-dir', '-l', type=Path, required=True,
+        help='The folder where input NIfTI labels (at the posterior tip of the discs) files are located (required).'
+    )
+    parser.add_argument(
         '--ofolder', '-o', type=Path, required=True,
         help='The folder where output metrics will be saved (required).'
     )
@@ -62,6 +66,10 @@ def main():
         help='Segmentation suffix, defaults to "".'
     )
     parser.add_argument(
+        '--label-suffix', type=str, default='',
+        help='Label suffix, defaults to "".'
+    )
+    parser.add_argument(
         '--max-workers', '-w', type=int, default=mp.cpu_count(),
         help='Max worker to run in parallel proccess, defaults to multiprocessing.cpu_count().'
     )
@@ -76,10 +84,12 @@ def main():
     # Get the command-line argument values
     images_path = args.images_dir
     segs_path = args.segs_dir
+    labels_path = args.labels_dir
     ofolder = args.ofolder
     prefix = args.prefix
     image_suffix = args.image_suffix
     seg_suffix = args.seg_suffix
+    label_suffix = args.label_suffix
     max_workers = args.max_workers
     quiet = args.quiet
 
@@ -93,10 +103,12 @@ def main():
             Running {Path(__file__).stem} with the following params:
             images_path = "{images_path}"
             segs_path = "{segs_path}"
+            labels_path = "{labels_path}"
             ofolder = "{ofolder}"
             prefix = "{prefix}"
             image_suffix = "{image_suffix}"
             seg_suffix = "{seg_suffix}"
+            label_suffix = "{label_suffix}"
             mapping_path = "{mapping_path}"
             max_workers = {max_workers}
             quiet = {quiet}
@@ -105,10 +117,12 @@ def main():
     measure_seg_mp(
         images_path=images_path,
         segs_path=segs_path,
+        labels_path=labels_path,
         ofolder_path=ofolder,
         prefix=prefix,
         image_suffix=image_suffix,
         seg_suffix=seg_suffix,
+        label_suffix=label_suffix,
         mapping_path=mapping_path,
         max_workers=max_workers,
         quiet=quiet,
@@ -117,10 +131,12 @@ def main():
 def measure_seg_mp(
         images_path,
         segs_path,
+        labels_path,
         ofolder_path,
         prefix='',
         image_suffix='_0000',
         seg_suffix='',
+        label_suffix='',
         mapping_path='',
         max_workers=mp.cpu_count(),
         quiet=False,
@@ -130,15 +146,17 @@ def measure_seg_mp(
     '''
     images_path = Path(images_path)
     segs_path = Path(segs_path)
+    labels_path = Path(labels_path)
     ofolder_path = Path(ofolder_path)
 
     glob_pattern = f'{prefix}*{image_suffix}.nii.gz'
 
     # Process the NIfTI image and segmentation files
     image_path_list = list(images_path.glob(glob_pattern))
-    seg_path_list = [segs_path / _.relative_to(images_path).parent / _.name.replace(f'{image_suffix}.nii.gz', f'{seg_suffix}.nii.gz') for _ in image_path_list]
-    
-    # Load mapping 
+    seg_path_list = [segs_path / image_path.relative_to(images_path).parent / image_path.name.replace(f'{image_suffix}.nii.gz', f'{seg_suffix}.nii.gz') for image_path in image_path_list]
+    labels_path_list = [labels_path / image_path.relative_to(images_path).parent / image_path.name.replace(f'{image_suffix}.nii.gz', f'{label_suffix}.nii.gz') for image_path in image_path_list]
+
+    # Load mapping
     with open(mapping_path, 'r') as file:
         mapping = json.load(file)
 
@@ -150,6 +168,7 @@ def measure_seg_mp(
         ),
         image_path_list,
         seg_path_list,
+        labels_path_list,
         max_workers=max_workers,
         chunksize=1,
         disable=quiet,
@@ -158,6 +177,7 @@ def measure_seg_mp(
 def _measure_seg(
         img_path,
         seg_path,
+        label_path,
         ofolder_path,
         mapping
     ):
@@ -167,11 +187,13 @@ def _measure_seg(
     # Load image and segmentation
     img = Image(str(img_path)).change_orientation('RPI')
     seg = Image(str(seg_path)).change_orientation('RPI')
+    label = Image(str(label_path)).change_orientation('RPI')
 
     try:
         metrics, imgs = measure_seg(
             img=img,
             seg=seg,
+            label=label,
             mapping=mapping,
         )
     except ValueError as e:
@@ -206,12 +228,12 @@ def _measure_seg(
         else:
             cv2.imwrite(img_path, img*125)
     
-def measure_seg(img, seg, mapping):
+def measure_seg(img, seg, label, mapping):
     '''
     Compute morphometric measurements of the spinal canal, the intervertebral discs and the neural foramen
     '''
-    # Create reverse mapping:
-    rev_mapping = {v:k for k,v in mapping.items()}
+    # Fetch discs label coordinates
+    discs_label = label.getNonZeroCoordinates(sorting='z')
 
     # Fetch unique segmentation values
     unique_seg = np.unique(seg.data)
@@ -221,6 +243,13 @@ def measure_seg(img, seg, mapping):
     pr = min([px, py, pz])
     seg = resample_nib(seg, new_size=[pr, pr, pr], new_size_type='mm', interpolation='nn', verbose=False)
     img = resample_nib(img, new_size=[pr, pr, pr], new_size_type='mm', interpolation='linear', verbose=False)
+
+    # Create dict with z-slice and values for discs posterior tip
+    disc_slices = {}
+    for x, y, z, v in discs_label:
+        # Rescale z base on image resolution
+        z_rescaled = int(round(z * pz / pr))
+        disc_slices[z_rescaled] = v
 
     # Extract spinal canal from segmentation (CSF + SC)
     seg_canal = zeros_like(seg)
@@ -345,7 +374,8 @@ def measure_seg(img, seg, mapping):
         row = {
             "structure": "canal",
             "index": i,
-            "slice_nb": slice_nb
+            "slice_nb": slice_nb,
+            "disc_level": disc_slices[slice_nb] if slice_nb in disc_slices else None,
             }
         for key in properties.keys():
             row[key] = properties[key][slice_nb]
@@ -362,6 +392,7 @@ def measure_seg(img, seg, mapping):
             "structure": "csf",
             "index": i,
             "slice_nb": k,
+            "disc_level": disc_slices[k] if k in disc_slices else None,
             "slice_signal": v
             }
 
