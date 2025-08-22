@@ -246,11 +246,11 @@ def create_global_figures(subjects_data, all_values, metrics_path, ofolder_path)
                 axes[idx].set_axis_off()
                 if struc != 'foramens':
                     img_name = f'{struc}_{struc_name}'
-                    img = plt.imread(os.path.join(metrics_path, f'{subject}/img/{img_name}.png'))
+                    img = plt.imread(os.path.join(metrics_path, f'{subject}/imgs/{img_name}.png'))
                 else:
                     img_name = f'{struc_name}'
-                    img_left = plt.imread(os.path.join(metrics_path, f'{subject}/img/{img_name}_left.png'))
-                    img_right = plt.imread(os.path.join(metrics_path, f'{subject}/img/{img_name}_right.png'))
+                    img_left = plt.imread(os.path.join(metrics_path, f'{subject}/imgs/{img_name}_left.png'))
+                    img_right = plt.imread(os.path.join(metrics_path, f'{subject}/imgs/{img_name}_right.png'))
 
                     # Concatenate images after padding to the maximal shape
                     max_height = max(img_left.shape[0], img_right.shape[0])
