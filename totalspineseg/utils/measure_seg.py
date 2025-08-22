@@ -181,7 +181,7 @@ def _measure_seg(
     img_name=Path(str(seg_path)).name.replace('.nii.gz', '')
     ofolder_path = Path(os.path.join(ofolder_path, img_name))
     csv_folder_path = ofolder_path / 'csv'
-    imgs_folder_path = ofolder_path / 'img'
+    imgs_folder_path = ofolder_path / 'imgs'
     csv_folder_path.mkdir(parents=True, exist_ok=True)
     imgs_folder_path.mkdir(parents=True, exist_ok=True)
 
