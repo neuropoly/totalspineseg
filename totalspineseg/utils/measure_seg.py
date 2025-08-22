@@ -1191,8 +1191,9 @@ def crop_around_binary(volume):
     return cropped, (xmin, xmax, ymin, ymax, zmin, zmax)
 
 if __name__ == '__main__':
-    img_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/measure-discs/img/sub-016_acq-isotropic_T2w.nii.gz'
-    seg_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/measure-discs/out/step2_output/sub-016_acq-isotropic_T2w.nii.gz'
+    img_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/out/input/sub-001_ses-A_acq-isotropic_T2w_0000.nii.gz'
+    seg_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/out/step2_output/sub-001_ses-A_acq-isotropic_T2w.nii.gz'
+    label_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/out/step1_levels/sub-001_ses-A_acq-isotropic_T2w.nii.gz'
     ofolder_path = 'test'
 
     # Load totalspineseg mapping
@@ -1200,4 +1201,4 @@ if __name__ == '__main__':
         mapping = json.load(file)
     
     # Run measure_seg
-    _measure_seg(img_path, seg_path, ofolder_path, mapping)
+    _measure_seg(img_path, seg_path, label_path, ofolder_path, mapping)
