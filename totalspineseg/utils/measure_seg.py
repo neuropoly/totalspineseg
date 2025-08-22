@@ -17,6 +17,7 @@ import cv2
 
 from totalspineseg.utils.image import Image, resample_nib, zeros_like
 import pyvista as pv
+from skimage.morphology import ball, binary_dilation
 import totalspineseg.resources as ressources
 
 warnings.filterwarnings("ignore")
@@ -292,6 +293,7 @@ def measure_seg(img, seg, mapping):
     foramens_rows = []
     vertebrae_rows = []
     vert_list = []
+    seg_bin = zeros_like(seg) # Segmentation of the vertebral bodies and the discs
     for i, struc in enumerate(mapping.keys()):
         if mapping[struc] in unique_seg  and (10 < mapping[struc] < 50): # Vertebrae
             vert_value = int(struc[1:])
@@ -314,16 +316,21 @@ def measure_seg(img, seg, mapping):
                 foramens_name = f'foramens_{top_vert}-{bottom_vert}'
 
                 # Init foramen segmentation
-                seg_foramen_data = (seg.data == mapping[f'{top_vert}-{bottom_vert}']).astype(int)*2 # Set disc value to 2
+                disc_mask = (seg.data == mapping[f'{top_vert}-{bottom_vert}'])
+                seg_foramen_data = disc_mask.astype(int) * 2 # Set disc value to 2
+                seg_bin.data[disc_mask] = 1
 
                 # Compute vertebrae properties
                 for vert in [top_vert, bottom_vert]:
                     seg_vert_data = (seg.data == mapping[vert]).astype(int)
                     if not vert in vert_list:
-                        properties, vert_img = measure_vertebra(img_data=img.data, seg_vert_data=seg_vert_data, seg_canal_data=seg_canal.data, canal_centerline=centerline, pr=pr)
+                        properties, vert_img, body_array = measure_vertebra(img_data=img.data, seg_vert_data=seg_vert_data, seg_canal_data=seg_canal.data, canal_centerline=centerline, pr=pr)
                         
                         # Save image
                         imgs[f'vertebrae_{vert}'] = vert_img
+
+                        # Add vertebral bodies
+                        seg_bin.data[body_array.astype(bool)] = 1
 
                         # Create a row per position/thickness point
                         vertebrae_row = {
@@ -355,7 +362,12 @@ def measure_seg(img, seg, mapping):
                 }
                 foramens_rows.append(foramens_row)
     metrics['vertebrae'] = vertebrae_rows
-    metrics['foramens'] = foramens_rows
+    # Create spine centerline using vertebral bodies and discs
+    if 50 in unique_seg: # Add sacrum
+        seg_bin.data[seg.data == 50] = 1
+    dilation_radius = 1.5//pr  # 1.5 mm
+    seg_bin.data = binary_dilation(seg_bin.data, ball(dilation_radius)) # Dilate seg_bin to remove gap between discs and vertebrae
+    spine_centerline = get_centerline(seg_bin)
     return metrics, imgs
 
 def measure_disc(img_data, seg_disc_data, pr):
@@ -594,7 +606,13 @@ def measure_vertebra(img_data, seg_vert_data, seg_canal_data, canal_centerline, 
             vert_img[int(np.round(coord[0]-1)), int(np.round(coord[1]-1)), int(np.round(coord[2]-1))]=2
         else:
             vert_img[int(np.round(coord[0]-1)), int(np.round(coord[1]-1)), int(np.round(coord[2]-1))]=1
-    return properties, vert_img
+    
+    # Recreate body volume without rotation
+    body_array = np.zeros_like(seg_vert_data)
+    for coord in body_coords:
+        body_array[coord[0], coord[1], coord[2]]=1
+
+    return properties, vert_img, body_array
 
 def measure_foramens(seg_foramen_data, canal_centerline, pr):
     '''
