@@ -5,7 +5,7 @@ from tqdm.contrib.concurrent import process_map
 from functools import partial
 from pathlib import Path
 import numpy as np
-from skimage import measure, transform, io, morphology
+from skimage import measure, transform, io, morphology, draw
 from scipy import ndimage as ndi
 import math
 from scipy import interpolate
@@ -233,37 +233,6 @@ def measure_seg(img, seg, mapping):
     metrics = {}
     imgs = {}
 
-    # Compute metrics onto canal segmentation
-    properties, centerline = measure_canal(seg_canal, seg_bin)
-    rows = []
-    for i in range(len(properties[list(properties.keys())[0]])):
-        slice_nb = list(properties[list(properties.keys())[0]].keys())[i]
-        row = {
-            "structure": "canal",
-            "index": i,
-            "slice_nb": slice_nb
-            }
-        for key in properties.keys():
-            row[key] = properties[key][slice_nb]
-        rows.append(row)
-    metrics['canal'] = rows
-
-    # Measure CSF signal
-    seg_csf_data = np.isin(seg.data, [mapping['CSF']]).astype(int)
-    properties = measure_csf(img.data, seg_csf_data)
-
-    rows = []
-    for i, (k, v) in enumerate(properties['slice_signal'].items()):
-        row = {
-            "structure": "csf",
-            "index": i,
-            "slice_nb": k,
-            "slice_signal": v
-            }
-
-        rows.append(row)
-    metrics['csf'] = rows
-
     # Compute metrics onto intervertebral discs
     rows = []
     for struc in mapping.keys():
@@ -367,6 +336,37 @@ def measure_seg(img, seg, mapping):
     dilation_radius = 1.5//pr  # 1.5 mm
     seg_bin.data = binary_dilation(seg_bin.data, ball(dilation_radius)) # Dilate seg_bin to remove gap between discs and vertebrae
     spine_centerline = get_centerline(seg_bin)
+
+    # Compute metrics onto canal segmentation
+    properties = measure_canal(seg_canal, centerline, spine_centerline)
+    rows = []
+    for i in range(len(properties[list(properties.keys())[0]])):
+        slice_nb = list(properties[list(properties.keys())[0]].keys())[i]
+        row = {
+            "structure": "canal",
+            "index": i,
+            "slice_nb": slice_nb
+            }
+        for key in properties.keys():
+            row[key] = properties[key][slice_nb]
+        rows.append(row)
+    metrics['canal'] = rows
+
+    # Measure CSF signal
+    seg_csf_data = np.isin(seg.data, [mapping['CSF']]).astype(int)
+    properties = measure_csf(img.data, seg_csf_data)
+
+    rows = []
+    for i, (k, v) in enumerate(properties['slice_signal'].items()):
+        row = {
+            "structure": "csf",
+            "index": i,
+            "slice_nb": k,
+            "slice_signal": v
+            }
+
+        rows.append(row)
+    metrics['csf'] = rows
     return metrics, imgs
 
 def measure_disc(img_data, seg_disc_data, pr):
@@ -430,7 +430,7 @@ def measure_csf(img_data, seg_csf_data):
         properties['slice_signal'][iz] = median_signal
     return properties
 
-def measure_canal(seg_canal, seg_bin):
+def measure_canal(seg_canal, centerline, spine_centerline):
     '''
     Based on https://github.com/spinalcordtoolbox/spinalcordtoolbox/blob/master/spinalcordtoolbox/process_seg.py
 
@@ -459,18 +459,13 @@ def measure_canal(seg_canal, seg_bin):
     # Extract min and max index in Z direction
     X, Y, Z = seg_canal.data.nonzero()
     min_z_index, max_z_index = min(Z), max(Z)
-
-    # Extract derivative of centerline for angle correction
-    arr_ctl, arr_ctl_der = get_centerline(seg_canal)
-    deriv = {int(z_ref): arr_ctl_der[:2, index] for index, z_ref in enumerate(arr_ctl[2])}
-
-    centerline = {"position":arr_ctl, "derivative":arr_ctl_der}
+    deriv = {int(z_ref): centerline["derivative"][:2, index] for index, z_ref in enumerate(centerline["position"][2])}
+    pos_spine = {int(z_ref): np.round(spine_centerline["position"][:2, index]).astype(int) for index, z_ref in enumerate(spine_centerline["position"][2])}
 
     # Loop across the S-I slices
     shape_properties = {key: {} for key in property_list}
     for iz in range(min_z_index, max_z_index + 1):
         patch_canal = seg_canal.data[:, :, iz]
-        patch_spine = seg_bin.data[:, :, iz]
         # Extract tangent vector to the centerline (i.e. its derivative)
         tangent_vect = np.array([deriv[iz][0] * px, deriv[iz][1] * py, pz])
         # Compute the angle about AP axis between the centerline and the normal vector to the slice
@@ -481,21 +476,25 @@ def measure_canal(seg_canal, seg_bin):
         tform = transform.AffineTransform(scale=(np.cos(angle_RL_rad), np.cos(angle_AP_rad)))
         # Convert to float64, to avoid problems in image indexation causing issues when applying transform.warp
         patch_canal = patch_canal.astype(np.float64)
-        patch_spine = patch_spine.astype(np.float64)
+        # Create a circle centered on the spine centerline
+        patch_centerline = np.zeros_like(patch_canal)
+        rr, cc = draw.disk((pos_spine[iz][0], pos_spine[iz][1]), radius=8, shape=patch_canal.shape)
+        patch_centerline[rr, cc] = 1.0
+
         patch_canal_scaled = transform.warp(
             patch_canal,
             tform.inverse,
             output_shape=patch_canal.shape,
             order=1,
         )
-        patch_spine_scaled = transform.warp(
-            patch_spine,
+        patch_centerline_scaled = transform.warp(
+            patch_centerline,
             tform.inverse,
-            output_shape=patch_spine.shape,
+            output_shape=patch_centerline.shape,
             order=1,
         )
         # Calculate shape metrics
-        shape_property = _properties2d(patch_canal_scaled, patch_spine_scaled, [px, py])
+        shape_property = _properties2d(patch_canal_scaled, patch_centerline_scaled, [px, py], iz)
 
         if shape_property is not None:
             # Add custom fields
@@ -508,7 +507,7 @@ def measure_canal(seg_canal, seg_bin):
         else:
             print(f'Warning: error with slice {iz}.')
 
-    return shape_properties, centerline
+    return shape_properties
 
 def measure_vertebra(img_data, seg_vert_data, seg_canal_data, canal_centerline, pr):
     '''
@@ -918,11 +917,11 @@ def bspline(x, y, xref, smooth, deg_bspline=3, pz=1):
     y_fit_der = interpolate.splev(xref, tck, der=1)
     return y_fit, y_fit_der
 
-def _properties2d(canal, spine, dim):
+def _properties2d(canal, spine_centerline, dim):
     """
     Compute shape property of the input 2D image. Accounts for partial volume information.
     :param canal: 2D input canal image in uint8 or float (weighted for partial volume) that has a single object.
-    :param spine: 2D input spine/canal image in uint8 or float (weighted for partial volume) that has a single object.
+    :param spine_centerline: 2D input spine centerline image in uint8 or float (weighted for partial volume).
     :param dim: [px, py]: Physical dimension of the image (in mm). X,Y respectively correspond to AP,RL.
     :return:
     """
@@ -934,15 +933,16 @@ def _properties2d(canal, spine, dim):
         return None
     # Normalize between 0 and 1 (also check if slice is empty)
     canal_norm = (canal - canal.min()) / (canal.max() - canal.min())
-    spine_norm = (spine - spine.min()) / (spine.max() - spine.min())
+
+    # Fetch spine position
+    spine_pos = np.nonzero(spine_centerline)
+    spine_pos = np.array([np.round(np.mean(spine_pos[0])), np.round(np.mean(spine_pos[1]))])
 
     # Convert to float64
     canal_norm = canal_norm.astype(np.float64)
-    spine_norm = spine_norm.astype(np.float64)
 
     # Binarize canal using threshold at 0.5 Necessary input for measure.regionprops
     canal_bin = np.array(canal_norm > 0.5, dtype='uint8')
-    spine_bin = np.array(spine_norm > 0.5, dtype='uint8')
 
     # Extract canal slice center of mass
     canal_coords = np.nonzero(canal_bin)
@@ -950,38 +950,25 @@ def _properties2d(canal, spine, dim):
     y_mean = np.mean(canal_coords[1])
     canal_pos = np.array([np.round(x_mean), np.round(y_mean)])
 
-    # Take two perpendicular vectors u1 and u2
-    u1 = np.array([1, 0])
-    u2 = np.array([0, 1])
-    
-    # Define a rotating vector with an angle theta
-    def v(u1, u2, theta):
-        return np.cos(theta) * u1 + np.sin(theta) * u2
-    
-    # Count pixels on the positive side of the vector
-    spine_coords = np.argwhere(spine_bin > 0)
-    total_pixels = np.sum(spine_bin)
-    def proportion(theta):
-        return np.sum(np.dot(spine_coords-canal_pos, v(u1, u2, theta))>0)/total_pixels
+    # Create vector v from canal_pos to spine pos and normalize it
+    v = spine_pos - canal_pos
+    v = v / np.linalg.norm(v)
 
-    # Find function maximum
-    res = scipy.optimize.minimize_scalar(lambda theta: -proportion(theta), bounds=(0, 2 * np.pi), method='bounded')
-    theta_max = res.x
+    # Create w an orthogonal vector to v
+    w = np.array([-v[1], v[0]])
 
     # Compute AP diameter along v
-    v_mask = cylindrical_mask(shape=canal_bin.shape, p0=canal_pos, v=v(u1,u2,theta_max), radius=4) # Create cylindrical mask along v
+    v_mask = cylindrical_mask(shape=canal_bin.shape, p0=canal_pos, v=v, radius=4) # Create cylindrical mask along v
     AP_mask = v_mask*canal_bin
     AP_coords = np.argwhere(AP_mask)
-    projections = np.dot(AP_coords, v(u1,u2,theta_max))  # Project onto vector
+    projections = np.dot(AP_coords, v)  # Project onto vector
     diameter_AP = (projections.max() - projections.min())*dim[0] # AP length = max - min projection
-    
-    # Compute RL diameter along w 
-    def w(u1, u2, theta): 
-        return np.cos(theta) * u2 - np.sin(theta) * u1
-    w_mask = cylindrical_mask(shape=canal_bin.shape, p0=canal_pos, v=w(u1,u2,theta_max), radius=4) # Create cylindrical mask along v
+
+    # Compute RL diameter along w
+    w_mask = cylindrical_mask(shape=canal_bin.shape, p0=canal_pos, v=w, radius=4) # Create cylindrical mask along w
     RL_mask = w_mask*canal_bin
     RL_coords = np.argwhere(RL_mask)
-    projections = np.dot(RL_coords, w(u1,u2,theta_max))  # Project onto vector
+    projections = np.dot(RL_coords, w)  # Project onto vector
     diameter_RL = (projections.max() - projections.min())*dim[1] # RL length = max - min projection
     
     # Compute area
@@ -990,18 +977,16 @@ def _properties2d(canal, spine, dim):
     # Compute eccentricity
     eccentricity = np.sqrt(1 - diameter_AP**2/diameter_RL**2)
 
-    # Compute solidity
-    solidity = compute_solidity(canal_bin)
-
     # Compute angle between AP and patient AP
-    angle = angle_between(u2, v(u1,u2,theta_max)) # rad
+    u2 = np.array([0, 1])
+    angle = angle_between(u2, v) # rad
     angle = 360*angle/(2*np.pi)
 
     # Deal with https://github.com/spinalcordtoolbox/spinalcordtoolbox/issues/2307
     if any(x in platform.platform() for x in ['Darwin-15', 'Darwin-16']):
-        solidity = np.nan
+        solidity = -1
     else:
-        solidity = compute_solidity(canal_bin)
+        solidity = compute_solidity_2d(canal_bin)
     
     # Fill up dictionary
     properties = {
@@ -1062,7 +1047,7 @@ def cylindrical_mask(shape, p0, v, radius):
     mask = dist < radius
     return mask
 
-def compute_solidity(mask):
+def compute_solidity_2d(mask):
     labeled = measure.label(mask)
     props = measure.regionprops(labeled)[0]
     return props.solidity
