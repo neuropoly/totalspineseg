@@ -687,7 +687,7 @@ def find_zmin_zmax(im, threshold=0.1):
 
 
 def resample_nib(image, new_size=None, new_size_type=None, image_dest=None, interpolation='linear', mode='nearest',
-                 preserve_codes=False):
+                 preserve_codes=False, verbose=True):
     """
     Copied from https://github.com/spinalcordtoolbox/spinalcordtoolbox/blob/master/spinalcordtoolbox/resampling.py 
 
@@ -730,7 +730,8 @@ def resample_nib(image, new_size=None, new_size_type=None, image_dest=None, inte
         original_dtype = img.get_data_dtype()
         img = nib.nifti1.Nifti1Image(img.get_fdata(), img.header.get_best_affine(), img.header)
         img.set_data_dtype(img.dataobj.dtype)
-        logger.warning("Converting image from type '%s' to type '%s' for %s interpolation",
+        if verbose:
+            logger.warning("Converting image from type '%s' to type '%s' for %s interpolation",
                        original_dtype, img.get_data_dtype(), interpolation)
 
     if image_dest is None:
