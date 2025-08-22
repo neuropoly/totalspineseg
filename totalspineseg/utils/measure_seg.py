@@ -226,9 +226,8 @@ def measure_seg(img, seg, mapping):
     seg_canal = zeros_like(seg)
     seg_canal.data = np.isin(seg.data, [mapping['CSF'], mapping['SC']]).astype(int)
 
-    # Extract binary segmentation
-    seg_bin = zeros_like(seg)
-    seg_bin.data = seg.data != 0
+    # Extract canal centerline
+    centerline = get_centerline(seg_canal)
 
     # Init output dictionaries with metrics
     metrics = {}
@@ -887,7 +886,9 @@ def get_centerline(seg):
     arr_ctl = np.array([x_centerline_fit, y_centerline_fit, z_ref])
     arr_ctl_der = np.array([x_centerline_deriv, y_centerline_deriv, np.ones_like(z_ref)])
 
-    return arr_ctl, arr_ctl_der
+    # Create centerline dictionary
+    centerline = {"position": arr_ctl, "derivative": arr_ctl_der}
+    return centerline
 
 def bspline(x, y, xref, smooth, deg_bspline=3, pz=1):
     """
