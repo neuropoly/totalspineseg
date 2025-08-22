@@ -253,8 +253,8 @@ def measure_seg(img, seg, label, mapping):
 
     # Extract spinal canal from segmentation (CSF + SC)
     seg_canal = zeros_like(seg)
-    seg_canal.data = (seg.data == mapping['SC']).astype(int)
-    seg_canal.data = (seg.data == mapping['CSF']).astype(int)*2
+    seg_canal.data[seg.data == mapping['SC']] = 1
+    seg_canal.data[seg.data == mapping['CSF']] = 2
 
     # Extract canal centerline
     centerline = get_centerline(seg_canal)
