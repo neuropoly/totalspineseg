@@ -268,23 +268,25 @@ def measure_seg(img, seg, label, mapping):
     for struc in mapping.keys():
         if mapping[struc] in unique_seg and '-' in struc: # Intervertbral disc in segmentation
             seg_disc_data = (seg.data == mapping[struc]).astype(int)
-            properties, disc_img = measure_disc(img_data=img.data, seg_disc_data=seg_disc_data, pr=pr)
+            # Check if disc is more than one slice
+            if (seg_disc_data.sum(axis=0).sum(axis=0)).astype(bool).sum() > 1:
+                properties, disc_img = measure_disc(img_data=img.data, seg_disc_data=seg_disc_data, pr=pr)
 
-            # Save image
-            imgs[f'discs_{struc}'] = disc_img
+                # Save image
+                imgs[f'discs_{struc}'] = disc_img
 
-            # Create a row
-            row = {
-                "structure": "disc",
-                "name": struc,
-                "eccentricity": properties['eccentricity'],
-                "solidity": properties['solidity'],
-                "median_thickness": properties['median_thickness'],
-                "intensity_profile": properties['intensity_profile'],
-                "center": properties['center'],
-                "volume": properties['volume']
-            }
-            rows.append(row)
+                # Create a row
+                row = {
+                    "structure": "disc",
+                    "name": struc,
+                    "eccentricity": properties['eccentricity'],
+                    "solidity": properties['solidity'],
+                    "median_thickness": properties['median_thickness'],
+                    "intensity_profile": properties['intensity_profile'],
+                    "center": properties['center'],
+                    "volume": properties['volume']
+                }
+                rows.append(row)
     metrics['discs'] = rows
     
     # Compute metrics onto vertebrae and foramens
@@ -321,27 +323,29 @@ def measure_seg(img, seg, label, mapping):
                 # Compute vertebrae properties
                 for vert in [top_vert, bottom_vert]:
                     seg_vert_data = (seg.data == mapping[vert]).astype(int)
-                    if not vert in vert_list:
-                        properties, vert_img, body_array = measure_vertebra(img_data=img.data, seg_vert_data=seg_vert_data, seg_canal_data=seg_canal.data, canal_centerline=centerline, pr=pr)
-                        
-                        # Save image
-                        imgs[f'vertebrae_{vert}'] = vert_img
+                    # Check if vertebra is more than one slice
+                    if (seg_vert_data.sum(axis=0).sum(axis=0)).astype(bool).sum() > 1:
+                        if not vert in vert_list:
+                            properties, vert_img, body_array = measure_vertebra(img_data=img.data, seg_vert_data=seg_vert_data, seg_canal_data=seg_canal.data, canal_centerline=centerline, pr=pr)
 
-                        # Add vertebral bodies
-                        seg_bin.data[body_array.astype(bool)] = 1
+                            # Save image
+                            imgs[f'vertebrae_{vert}'] = vert_img
 
-                        # Create a row per position/thickness point
-                        vertebrae_row = {
-                            "structure": "vertebra",
-                            "name": vert,
-                            "AP_thickness": properties['AP_thickness'],
-                            "median_thickness": properties['median_thickness'],
-                            "intensity_profile": properties['intensity_profile'],
-                            "center": properties['center'],
-                            "volume": properties['volume']
-                        }
-                        vertebrae_rows.append(vertebrae_row)
-                        vert_list.append(vert)
+                            # Add vertebral bodies
+                            seg_bin.data[body_array.astype(bool)] = 1
+
+                            # Create a row per position/thickness point
+                            vertebrae_row = {
+                                "structure": "vertebra",
+                                "name": vert,
+                                "AP_thickness": properties['AP_thickness'],
+                                "median_thickness": properties['median_thickness'],
+                                "intensity_profile": properties['intensity_profile'],
+                                "center": properties['center'],
+                                "volume": properties['volume']
+                            }
+                            vertebrae_rows.append(vertebrae_row)
+                            vert_list.append(vert)
                     seg_foramen_data += seg_vert_data
 
                 # Compute foramens properties
@@ -360,6 +364,8 @@ def measure_seg(img, seg, label, mapping):
                 }
                 foramens_rows.append(foramens_row)
     metrics['vertebrae'] = vertebrae_rows
+    metrics['foramens'] = foramens_rows
+    
     # Create spine centerline using vertebral bodies and discs
     if 50 in unique_seg: # Add sacrum
         seg_bin.data[seg.data == 50] = 1
@@ -432,7 +438,9 @@ def measure_disc(img_data, seg_disc_data, pr):
     # Recreate volume for visualization
     coords = coords - np.min(coords, axis=0)
     disc_img = np.zeros((int(np.round(np.max(coords[:,0]))), int(np.round(np.max(coords[:,1]))), int(np.round(np.max(coords[:,2])))))
-    for i, coord in enumerate(coords):
+    if disc_img.shape[0] == 0 or disc_img.shape[1] == 0 or disc_img.shape[2] == 0:
+        return properties, disc_img
+    for coord in coords:
         disc_img[int(np.round(coord[0]-1)), int(np.round(coord[1]-1)), int(np.round(coord[2]-1))]=1
     return properties, disc_img
 
@@ -828,9 +836,12 @@ def fit_ellipsoid(coords):
     eccentricity = np.sqrt(1 - (np.min(eigvals[:2]) / np.max(eigvals[:2]))) if np.max(eigvals[:2]) > 0 else 0
 
     # Compute solidity = volume / convex_hull_volume
-    hull = scipy.spatial.ConvexHull(coords)
     volume = coords.shape[0]  # Ellipsoid volume
-    solidity = volume / hull.volume if hull.volume > 0 else 0
+    try:
+        hull = scipy.spatial.ConvexHull(coords)
+        solidity = volume / hull.volume if hull.volume > 0 else 0
+    except:
+        solidity = -1  # Fallback if Qhull fails
 
     # Results
     ellipsoid = {
@@ -867,6 +878,14 @@ def compute_thickness_profile(coords, values, rotation_matrix, bin_size=1.0):
     eigvecs = rotation_matrix
     rot_coords = coords_centered @ eigvecs
 
+    # Create bin matrix along SI dimension
+    SI_bin_size = max(bin_size//3, 1)
+    min_SI, max_SI = rot_coords[:,2].min(), rot_coords[:,2].max()
+    if min_SI == max_SI:
+        return 0, np.array([])
+    bins_SI = np.arange(min_SI, max_SI + SI_bin_size, SI_bin_size)
+    bin_indices_SI = np.digitize(rot_coords[:,2], bins_SI) - 1
+
     # Find min and max dimensions of the disc in the RL-AP plane
     min_RL, max_RL = rot_coords[:,0].min(), rot_coords[:,0].max()
     min_AP, max_AP = rot_coords[:,1].min(), rot_coords[:,1].max()
@@ -894,12 +913,6 @@ def compute_thickness_profile(coords, values, rotation_matrix, bin_size=1.0):
                 # Extract thickness
                 thicknesses.append(max_SI-min_SI)
                 # positions.append([(bins_RL[x] + bins_RL[x+1]) / 2, (bins_AP[y] + bins_AP[y+1]) / 2])
-    
-    # Create bin matrix along SI dimension
-    SI_bin_size = bin_size//3
-    min_SI, max_SI = rot_coords[:,2].min(), rot_coords[:,2].max()
-    bins_SI = np.arange(min_SI, max_SI + SI_bin_size, SI_bin_size)
-    bin_indices_SI = np.digitize(rot_coords[:,2], bins_SI) - 1
 
     # Extract average SI intensity histogram
     intensities_avg = []
