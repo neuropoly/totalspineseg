@@ -218,8 +218,8 @@ def measure_seg(img, seg, mapping):
     # Resample image to isotropic resolution
     nx, ny, nz, nt, px, py, pz, pt = seg.dim
     pr = min([px, py, pz])
-    seg = resample_nib(seg, new_size=[pr, pr, pr], new_size_type='mm', interpolation='nn')
-    img = resample_nib(img, new_size=[pr, pr, pr], new_size_type='mm', interpolation='linear')
+    seg = resample_nib(seg, new_size=[pr, pr, pr], new_size_type='mm', interpolation='nn', verbose=False)
+    img = resample_nib(img, new_size=[pr, pr, pr], new_size_type='mm', interpolation='linear', verbose=False)
 
     # Extract spinal canal from segmentation (CSF + SC)
     seg_canal = zeros_like(seg)
