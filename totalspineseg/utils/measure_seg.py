@@ -1028,8 +1028,10 @@ def _properties2d(canal, spinalcord, spine_centerline, dim):
     # Compute area
     area_canal = np.sum(canal_bin) * dim[0] * dim[1]
 
-    # Compute eccentricity 
-    eccentricity_canal = np.sqrt(1 - diameter_AP_canal**2/diameter_RL_canal**2) if diameter_RL_canal > 0 else 0
+    # Compute eccentricity
+    max_diameter_canal = max(diameter_AP_canal, diameter_RL_canal)
+    min_diameter_canal = min(diameter_AP_canal, diameter_RL_canal)
+    eccentricity_canal = np.sqrt(1 - min_diameter_canal**2/max_diameter_canal**2) if max_diameter_canal > 0 else 0
 
     # Compute angle between AP and patient AP
     u2 = np.array([0, 1])
@@ -1072,7 +1074,9 @@ def _properties2d(canal, spinalcord, spine_centerline, dim):
         area_spinalcord = np.sum(spinalcord_bin) * dim[0] * dim[1]
 
         # Compute eccentricity 
-        eccentricity_spinalcord = np.sqrt(1 - diameter_AP_spinalcord**2/diameter_RL_spinalcord**2) if diameter_RL_spinalcord > 0 else 0
+        max_diameter_spinalcord = max(diameter_AP_spinalcord, diameter_RL_spinalcord)
+        min_diameter_spinalcord = min(diameter_AP_spinalcord, diameter_RL_spinalcord)
+        eccentricity_spinalcord = np.sqrt(1 - min_diameter_spinalcord**2/max_diameter_spinalcord**2) if max_diameter_spinalcord > 0 else 0
 
         # Deal with https://github.com/spinalcordtoolbox/spinalcordtoolbox/issues/2307
         if any(x in platform.platform() for x in ['Darwin-15', 'Darwin-16']):
