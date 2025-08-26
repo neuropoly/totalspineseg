@@ -118,6 +118,34 @@ def generate_reports(
                             if metric not in mean_dict[struc][struc_name]:
                                 mean_dict[struc][struc_name][metric] = mean_value
 
+    # Create global figures for test data subjects
+    for subject in os.listdir(test_path):
+        if not quiet:
+            print(f"Creating global figures for subject: {subject}")
+        test_sub_folder = test_path / subject
+
+        # Load subject data
+        subject_data = compute_metrics_subject(test_sub_folder)
+
+        # Rescale canal and CSF metrics
+        interp_data = copy.deepcopy(subject_data)
+        for struc in ['canal', 'csf']:
+            for struc_name in subject_data[struc].keys():
+                for metric in subject_data[struc][struc_name].keys():
+                    if metric in ['slice_nb', 'disc_level']:
+                        continue
+                    interp_values, slice_interp = rescale_metric(subject_data[struc][struc_name]['disc_level'], subject_data[struc][struc_name][metric], all_values[struc][struc_name]['discs_gap'])
+                    interp_data[struc][struc_name][metric] = interp_values
+                interp_data[struc][struc_name]['slice_interp'] = slice_interp
+                # remove slice_nb and disc_level from dict
+                interp_data[struc][struc_name].pop('slice_nb', None)
+                interp_data[struc][struc_name].pop('disc_level', None)
+
+        # Create paths
+        imgs_path = test_path / f'{subject}/imgs'
+        ofolder_subject = ofolder_path / subject
+        create_global_figures(interp_data, all_values, mean_dict, imgs_path, ofolder_subject)
+
 def compute_metrics_subject(subject_folder):
     """
     Compute metrics for a single subject and return merged_data dict for global figures.
