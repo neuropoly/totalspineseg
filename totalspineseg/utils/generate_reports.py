@@ -213,13 +213,27 @@ def compute_metrics_subject(subject_folder):
 
 def compute_canal(subject_data):
     # Convert pandas columns to lists
-    canal_dict = {'canal': {}, 'spinalcord': {}}
+    canal_dict = {'canal': {}, 'spinalcord': {}, 'spinalcord/canal': {}}
     for column in subject_data.columns[2:]:
         if column not in ['canal_centroid', 'angle_AP', 'angle_RL', 'length']:
             if not 'canal' in column:
                 canal_dict['spinalcord'][column.replace('_spinalcord','')] = subject_data[column].tolist()
             if not 'spinalcord' in column:
                 canal_dict['canal'][column.replace('_canal','')] = subject_data[column].tolist()
+    
+    # Create spinalcord/canal quotient
+    for key in canal_dict['spinalcord'].keys():
+        if not key in ['slice_nb', 'disc_level']:
+            canal_dict['spinalcord/canal'][key] = []
+            for i in range(len(canal_dict['spinalcord'][key])):
+                canal_value = canal_dict['canal'][key][i]
+                spinalcord_value = canal_dict['spinalcord'][key][i]
+                if canal_value != 0 and canal_value != -1 and spinalcord_value != -1:
+                    canal_dict['spinalcord/canal'][key].append(spinalcord_value / canal_value)
+                else:
+                    canal_dict['spinalcord/canal'][key].append(-1)
+        else:
+            canal_dict['spinalcord/canal'][key] = canal_dict['spinalcord'][key]
     return canal_dict
 
 def compute_csf(subject_data):
