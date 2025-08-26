@@ -102,7 +102,7 @@ def generate_reports(
                             all_values[struc][struc_name][metric].append(subject_value)
         
         # Align canal and CSF for control group
-        all_values = rescale_data(all_values)
+        all_values = rescale_canal(all_values)
 
         # TODO : save all values
 
@@ -141,7 +141,7 @@ def generate_reports(
                 for metric in subject_data[struc][struc_name].keys():
                     if metric in ['slice_nb', 'disc_level']:
                         continue
-                    interp_values, slice_interp = rescale_metric(subject_data[struc][struc_name]['disc_level'], subject_data[struc][struc_name][metric], all_values[struc][struc_name]['discs_gap'])
+                    interp_values, slice_interp = rescale_with_discs(subject_data[struc][struc_name]['disc_level'], subject_data[struc][struc_name][metric], all_values[struc][struc_name]['discs_gap'])
                     interp_data[struc][struc_name][metric] = interp_values
                 interp_data[struc][struc_name]['slice_interp'] = slice_interp
                 # remove slice_nb and disc_level from dict
@@ -258,7 +258,7 @@ def compute_foramens(subject_data):
     subject_dict = create_dict_from_subject_data(subject_data)
     return subject_dict
 
-def rescale_data(all_values):
+def rescale_canal(all_values):
     '''
     Rescale subject canals and CSF based on discs z coordinates.
     '''
@@ -303,7 +303,7 @@ def rescale_data(all_values):
                 for metric in all_values[struc][struc_name].keys():
                     if metric in ['slice_nb', 'disc_level']:
                         continue
-                    interp_values, slice_interp = rescale_metric(disc_levels[subj_idx], all_values[struc][struc_name][metric][subj_idx], gap_dict)
+                    interp_values, slice_interp = rescale_with_discs(disc_levels[subj_idx], all_values[struc][struc_name][metric][subj_idx], gap_dict)
                     new_values[struc][struc_name][metric][subj_idx] = interp_values
                 if 'slice_interp' not in new_values[struc][struc_name]:
                     new_values[struc][struc_name]['slice_interp'] = []
@@ -316,7 +316,7 @@ def rescale_data(all_values):
             new_values[struc][struc_name]['discs_gap'] = gap_dict
     return new_values
 
-def rescale_metric(disc_levels, metric_list, gap_dict):
+def rescale_with_discs(disc_levels, metric_list, gap_dict):
     '''
     Return rescaled metric values and corresponding slice indices using disc levels and gap information.
     '''
