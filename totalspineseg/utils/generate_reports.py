@@ -102,6 +102,21 @@ def generate_reports(
         
         # Align canal and CSF for control group
         all_values = rescale_data(all_values)
+    # Create mean dictionary
+    mean_dict = {}
+    for struc in all_values.keys():
+        if struc in ['foramens', 'discs', 'vertebrae']:
+            for struc_name in all_values[struc].keys():
+                for metric, values in all_values[struc][struc_name].items():
+                    mean_value = np.mean(values)
+                    if struc not in mean_dict:
+                        mean_dict[struc] = {struc_name: {metric: mean_value}}
+                    else:
+                        if struc_name not in mean_dict[struc]:
+                            mean_dict[struc][struc_name] = {metric: mean_value}
+                        else:
+                            if metric not in mean_dict[struc][struc_name]:
+                                mean_dict[struc][struc_name][metric] = mean_value
 
 def compute_metrics_subject(subject_folder):
     """
