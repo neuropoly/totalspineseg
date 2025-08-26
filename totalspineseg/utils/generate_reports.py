@@ -215,7 +215,7 @@ def compute_canal(subject_data):
     # Convert pandas columns to lists
     canal_dict = {'canal': {}, 'spinalcord': {}}
     for column in subject_data.columns[2:]:
-        if column != 'canal_centroid':
+        if column not in ['canal_centroid', 'angle_AP', 'angle_RL', 'length']:
             if not 'canal' in column:
                 canal_dict['spinalcord'][column.replace('_spinalcord','')] = subject_data[column].tolist()
             if not 'spinalcord' in column:
