@@ -180,17 +180,20 @@ def compute_metrics_subject(subject_folder):
 
 def compute_canal(subject_data):
     # Convert pandas columns to lists
-    canal_dict = {}
+    canal_dict = {'canal': {}, 'spinalcord': {}}
     for column in subject_data.columns[2:]:
         if column != 'canal_centroid':
-            canal_dict[column] = subject_data[column].tolist()
+            if not 'canal' in column:
+                canal_dict['spinalcord'][column.replace('_spinalcord','')] = subject_data[column].tolist()
+            if not 'spinalcord' in column:
+                canal_dict['canal'][column.replace('_canal','')] = subject_data[column].tolist()
     return canal_dict
 
 def compute_csf(subject_data):
     # Convert pandas columns to lists
-    csf_dict = {}
+    csf_dict = {'csf': {}}
     for column in subject_data.columns[2:]:
-        csf_dict[column] = subject_data[column].tolist()
+        csf_dict['csf'][column] = subject_data[column].tolist()
     return csf_dict
 
 def compute_discs(subject_data):
