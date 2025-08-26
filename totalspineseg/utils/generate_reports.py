@@ -441,11 +441,13 @@ def convert_str_to_list(string):
     return [float(item.strip()) for item in string.split()[1:-1]]
 
 if __name__ == "__main__":
-    metrics_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/out/metrics_output'
+    test_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/out/metrics_output'
+    control_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/out/metrics_output'
     ofolder = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/code/totalspineseg/test'
     quiet = False
     generate_reports(
-        metrics_path=metrics_path,
+        test_path=test_path,
+        control_path=control_path,
         ofolder_path=ofolder,
         quiet=quiet,
     )
