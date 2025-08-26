@@ -20,8 +20,12 @@ def main():
         formatter_class=argparse.RawTextHelpFormatter
     )
     parser.add_argument(
-        '--metrics-dir', '-m', type=Path, required=True,
-        help='The folder where computed metrics are located (required).'
+        '--test-dir', '-t', type=Path, required=True,
+        help='The folder where the metrics of the test group are located (required).'
+    )
+    parser.add_argument(
+        '--control-dir', '-c', type=Path, required=True,
+        help='The folder where the metrics of the control group are located (required).'
     )
     parser.add_argument(
         '--ofolder', '-o', type=Path, required=True,
@@ -36,7 +40,8 @@ def main():
     args = parser.parse_args()
 
     # Get the command-line argument values
-    metrics_path = args.metrics_dir
+    test_path = args.test_dir
+    control_path = args.control_dir
     ofolder = args.ofolder
     quiet = args.quiet
 
@@ -44,24 +49,28 @@ def main():
     if not quiet:
         print(textwrap.dedent(f'''
             Running {Path(__file__).stem} with the following params:
-            metrics_path = "{metrics_path}"
+            test_path = "{test_path}"
+            control_path = "{control_path}"
             ofolder = "{ofolder}"
             quiet = {quiet}
         '''))
 
     generate_reports(
-        metrics_path=metrics_path,
+        test_path=test_path,
+        control_path=control_path,
         ofolder_path=ofolder,
         quiet=quiet,
     )
 
 def generate_reports(
-        metrics_path,
+        test_path,
+        control_path,
         ofolder_path,
         quiet=False
     ):
     # Load paths
-    metrics_path = Path(metrics_path)
+    test_path = Path(test_path)
+    control_path = Path(control_path)
     ofolder_path = Path(ofolder_path)
 
     # Loop across subject folders under metrics_path
