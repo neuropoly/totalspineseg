@@ -122,6 +122,9 @@ def generate_reports(
                             if metric not in mean_dict[struc][struc_name]:
                                 mean_dict[struc][struc_name][metric] = mean_value
 
+    # Convert all_values to dataframe
+    all_values_df = convert_to_df(all_values)
+    
     # Create global figures for test data subjects
     for subject in os.listdir(test_path):
         if not quiet:
@@ -148,7 +151,33 @@ def generate_reports(
         # Create paths
         imgs_path = test_path / f'{subject}/imgs'
         ofolder_subject = ofolder_path / subject
-        create_global_figures(interp_data, all_values, mean_dict, imgs_path, ofolder_subject)
+        discs_gap = all_values[struc][struc_name]['discs_gap']
+        create_global_figures(interp_data, all_values_df, discs_gap, mean_dict, imgs_path, ofolder_subject)
+
+def convert_to_df(all_values):
+    new_values = copy.deepcopy(all_values)
+    for struc in all_values.keys():
+        for struc_name in all_values[struc].keys():
+            # Convert dict to dataframe with keys as columns and lines as subjects
+            # Prepare a dictionary where each key is a metric and each value is a list of values for all subjects
+            for i, metric in enumerate(all_values[struc][struc_name].keys()):
+                if metric not in ['discs_gap', 'slice_interp']:
+                    data = {'subjects' : [], 'values' : [], 'slice_interp' : []}
+                    for j, subject_value in enumerate(all_values[struc][struc_name][metric]):
+                        if isinstance(subject_value, list):
+                            for value, slice_interp in zip(subject_value, all_values[struc][struc_name]['slice_interp'][j]):
+                                data['values'].append(value)
+                                data['slice_interp'].append(slice_interp)
+                                data['subjects'].append(f'subject_{j}')
+                        else:
+                            data['values'].append(subject_value)
+                            data['subjects'].append(f'subject_{j}')
+                df = pd.DataFrame.from_dict(
+                    data,
+                    orient='index'
+                ).transpose()
+                new_values[struc][struc_name][metric] = df
+    return new_values
 
 def compute_metrics_subject(subject_folder):
     """
@@ -354,7 +383,7 @@ def create_dict_from_subject_data(subject_data):
         subject_dict[struc] = struc_dict
     return subject_dict
 
-def create_global_figures(subject_data, all_values, mean_dict, imgs_path, ofolder_path):
+def create_global_figures(subject_data, all_values_df, discs_gap, mean_dict, imgs_path, ofolder_path):
     """
     Create global figures from the processed subjects data.
 
