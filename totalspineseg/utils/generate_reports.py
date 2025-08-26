@@ -396,6 +396,9 @@ def create_global_figures(subject_data, all_values_df, discs_gap, mean_dict, img
 
     # Load totalspineseg ressources path
     ressources_path = importlib.resources.files(ressources)
+    with open(os.path.join(ressources_path, 'labels_maps/levels_maps.json'), 'r') as f:
+        mapping = json.load(f)
+        rev_mapping = {v: k for k, v in mapping.items()}
 
     # Create discs, vertebrae, foramens figures
     for struc in ['canal', 'csf']:
@@ -439,6 +442,19 @@ def create_global_figures(subject_data, all_values_df, discs_gap, mean_dict, img
 
                 # Plot subject
                 ax.plot(x_subject, y_subject, color='red', linewidth=2)
+                
+                # Add vertebrae labels
+                bot_pos = 0
+                for disc, gap in discs_gap.items():
+                    bot_vert = rev_mapping[int(float(disc.split('-')[0]))].split('-')[1]
+                    ax.axvline(x=bot_pos, color='gray', linestyle='--', alpha=0.5)
+                    ax.text(bot_pos + gap//2, ax.get_ylim()[1], bot_vert, verticalalignment='bottom', horizontalalignment='center', fontsize=12, color='black', alpha=0.7)
+                    bot_pos += gap
+                # Add last vertebra
+                last_vert = rev_mapping[int(float(disc.split('-')[1]))].split('-')[0]
+                ax.axvline(x=bot_pos, color='gray', linestyle='--', alpha=0.5)
+                ax.text(bot_pos + gap//2, ax.get_ylim()[1], last_vert, verticalalignment='bottom', horizontalalignment='center', fontsize=12, color='black', alpha=0.7)
+
                 fig.tight_layout()
                 idx += 1
             
