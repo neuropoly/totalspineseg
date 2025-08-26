@@ -73,33 +73,30 @@ def generate_reports(
     control_path = Path(control_path)
     ofolder_path = Path(ofolder_path)
 
-    # Loop across subject folders under metrics_path
-    subjects_data = {}
-    all_values = {}
-    for subject in os.listdir(metrics_path):
-        if not quiet:
-            print(f"Processing subject: {subject}")
-        subject_folder = metrics_path / subject
+    # Extract metrics values of the control group
+    if not os.path.exists(str(control_path / "all_values.json")):
+        all_values = {}
+        for subject in os.listdir(control_path):
+            if not quiet:
+                print(f"Processing subject: {subject}")
+            control_sub_folder = control_path / subject
 
-        # Compute metrics subject
-        ofolder_subject = ofolder_path / subject / 'plots'
-        ofolder_subject.mkdir(parents=True, exist_ok=True)
-        subjects_data[subject] = compute_metrics_subject(subject_folder)
+            # Compute metrics subject
+            control_data = compute_metrics_subject(control_sub_folder)
 
-        # Gather all values for each metric and structures
-        for struc in subjects_data[subject].keys():
-            if struc not in all_values:
-                all_values[struc] = {}
-            if struc in ['foramens', 'discs', 'vertebrae']:
-                for struc_name in subjects_data[subject][struc].keys():
+            # Gather all values for each metric and structures
+            for struc in control_data.keys():
+                if struc not in all_values:
+                    all_values[struc] = {}
+                for struc_name in control_data[struc].keys():
                     if struc_name not in all_values[struc]:
                         all_values[struc][struc_name] = {}
-                    for metric in subjects_data[subject][struc][struc_name].keys():
+                    for metric in control_data[struc][struc_name].keys():
                         if metric not in all_values[struc][struc_name]:
                             all_values[struc][struc_name][metric] = []
 
                         # Add subject to all_values
-                        subject_value = subjects_data[subject][struc][struc_name][metric]
+                        subject_value = control_data[struc][struc_name][metric]
                         if subject_value != -1:
                             all_values[struc][struc_name][metric].append(subject_value)
             else:
