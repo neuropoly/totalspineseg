@@ -99,18 +99,9 @@ def generate_reports(
                         subject_value = control_data[struc][struc_name][metric]
                         if subject_value != -1:
                             all_values[struc][struc_name][metric].append(subject_value)
-            else:
-                for metric in subjects_data[subject][struc].keys():
-                    if metric not in all_values[struc]:
-                        all_values[struc][metric] = []
-
-                    # Add subject to all_values
-                    subject_value = subjects_data[subject][struc][metric]
-                    if subject_value != -1:
-                        all_values[struc][metric].append(subject_value)
-
-    # Create global figures
-    create_global_figures(subjects_data, all_values, metrics_path, ofolder_path)
+        
+        # Align canal and CSF for control group
+        all_values = rescale_data(all_values)
 
 def compute_metrics_subject(subject_folder):
     """
@@ -173,6 +164,108 @@ def compute_foramens(subject_data):
     # Create dictionary from pandas dataframes with names as keys
     subject_dict = create_dict_from_subject_data(subject_data)
     return subject_dict
+
+def rescale_data(all_values):
+    '''
+    Rescale subject canals and CSF based on discs z coordinates.
+    '''
+    new_values = copy.deepcopy(all_values)
+    for struc in ['canal', 'csf']:
+        for struc_name in all_values[struc].keys():
+            # Align all metrics for each subject using discs level as references
+            disc_levels = all_values[struc][struc_name]['disc_level']
+            # Flatten the list of arrays and concatenate all unique values
+            all_discs = np.unique(np.concatenate([np.unique(dl) for dl in disc_levels]))
+            all_discs = all_discs[~np.isnan(all_discs)]
+
+            # For each subject count slices between discs
+            n_subjects = len(disc_levels)
+            gap_dict = {}
+            for subj_idx in range(n_subjects):
+                subj_disc_level = np.array(disc_levels[subj_idx])            
+                subj_valid = ~pd.isna(subj_disc_level)
+                subj_disc_positions = np.where(subj_valid)[0]
+                subj_disc_values = subj_disc_level[subj_valid]
+
+                # If the number of discs doesn't match, skip this subject
+                if len(subj_disc_values) < 2:
+                    continue
+                
+                # Create dict with number of slice between discs
+                previous_disc = subj_disc_values[0]
+                previous_pos = subj_disc_positions[0]
+                for pos, disc in zip(subj_disc_positions[1:], subj_disc_values[1:]):
+                    if f"{previous_disc}-{disc}" not in gap_dict:
+                        gap_dict[f"{previous_disc}-{disc}"] = []
+                    gap_dict[f"{previous_disc}-{disc}"].append(pos - previous_pos)
+                    previous_disc = disc
+                    previous_pos = pos
+
+            # Pick max for each gap between discs in gap_dict
+            for k, v in gap_dict.items():
+                gap_dict[k] = max(v)
+
+            # Rescale subjects
+            for subj_idx in range(n_subjects):
+                for metric in all_values[struc][struc_name].keys():
+                    if metric in ['slice_nb', 'disc_level']:
+                        continue
+                    interp_values, slice_interp = rescale_metric(disc_levels[subj_idx], all_values[struc][struc_name][metric][subj_idx], gap_dict)
+                    new_values[struc][struc_name][metric][subj_idx] = interp_values
+                if 'slice_interp' not in new_values[struc][struc_name]:
+                    new_values[struc][struc_name]['slice_interp'] = []
+                new_values[struc][struc_name]['slice_interp'].append(slice_interp)
+                # Remove slice_nb and disc_level from dict
+                new_values[struc][struc_name].pop('slice_nb', None)
+                new_values[struc][struc_name].pop('disc_level', None)
+
+            # Store gap_dict in all_values
+            new_values[struc][struc_name]['discs_gap'] = gap_dict
+    return new_values
+
+def rescale_metric(disc_levels, metric_list, gap_dict):
+    '''
+    Return rescaled metric values and corresponding slice indices using disc levels and gap information.
+    '''
+    # Rescale data for each metric
+    subj_disc_level = np.array(disc_levels)
+    subj_valid = ~pd.isna(subj_disc_level)
+    subj_disc_positions = np.where(subj_valid)[0]
+    subj_disc_values = subj_disc_level[subj_valid]
+
+    # If the number of discs doesn't match, skip this subject
+    if len(subj_disc_values) < 2:
+        return [], []
+
+    # Rescale each metric with linear interpolation
+    values = np.array(metric_list)
+    interp_values = []
+    slice_interp = []
+    for disc_idx, disc in enumerate(subj_disc_values):
+        if disc_idx < len(subj_disc_values) - 1:
+            gap = gap_dict[f"{disc}-{subj_disc_values[disc_idx + 1]}"]
+            yp = values[subj_disc_positions[disc_idx]:subj_disc_positions[disc_idx+1]]
+            xp = np.linspace(0, gap-1, len(yp))
+            x = np.linspace(0, gap-1, gap)
+            if not -1 in yp:
+                interp_func = np.interp(
+                    x=x,
+                    xp=xp,
+                    fp=yp
+                )
+            else:
+                interp_func = np.full_like(x, -1)
+            interp_values += interp_func.tolist()
+
+    start_disc_gap = 0
+    k = list(gap_dict.keys())[0]
+    i = 0
+    while k != f"{subj_disc_values[0]}-{subj_disc_values[1]}":
+        start_disc_gap += gap_dict[k]
+        i += 1
+        k = list(gap_dict.keys())[i]
+    slice_interp += list(range(start_disc_gap, start_disc_gap + len(interp_values)))
+    return interp_values, slice_interp
 
 def plot_intensity_profile(subject_data, ofolder_path, structure):
     for struc in subject_data.name:
