@@ -94,12 +94,11 @@ def generate_reports(
                     if struc_name not in all_values[struc]:
                         all_values[struc][struc_name] = {}
                     for metric in control_data[struc][struc_name].keys():
-                        if metric not in all_values[struc][struc_name]:
-                            all_values[struc][struc_name][metric] = []
-
                         # Add subject to all_values
                         subject_value = control_data[struc][struc_name][metric]
                         if subject_value != -1:
+                            if metric not in all_values[struc][struc_name]:
+                                all_values[struc][struc_name][metric] = []
                             all_values[struc][struc_name][metric].append(subject_value)
         
         # Align canal and CSF for control group
