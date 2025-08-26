@@ -103,7 +103,7 @@ def generate_reports(
         
         # Align canal and CSF for control group
         all_values = rescale_data(all_values)
-        
+
         # TODO : save all values
 
     # Create mean dictionary
@@ -404,7 +404,7 @@ def create_global_figures(subject_data, all_values_df, discs_gap, mean_dict, img
     for struc in ['canal', 'csf']:
         # Create a subplot for each subject and overlay a red line corresponding to their value
         struc_names = list(subject_data[struc].keys())
-        metrics = list(subject_data[struc][struc_names[0]].keys())
+        metrics = [m for m in list(subject_data[struc][struc_names[0]].keys()) if m != 'slice_interp']
         nrows = len(struc_names) + 1
         ncols = len(metrics) + 1
         fig, axes = plt.subplots(nrows, ncols, figsize=(6 * ncols, 4 * nrows))
@@ -428,17 +428,12 @@ def create_global_figures(subject_data, all_values_df, discs_gap, mean_dict, img
                 ax = axes[idx]
                 y_subject = subject_data[struc][struc_name][metric]
                 x_subject = subject_data[struc][struc_name]['slice_interp']
-                y_all = all_values[struc][struc_name][metric]
-                x_all = all_values[struc][struc_name]['slice_interp']
-                
-                # Plot multiple graphs
-                for x,y in zip(x_all, y_all):
-                    ax.plot(x, y, color='gray', alpha=0.2)
 
-                # # Plot multiple graphs and create std
-                # y_all_std = all_values[struc][struc_name][metric + '_std']
-                # for x,y in zip(x_all, y_all_std):
-                #     ax.fill_between(x, y, color='gray', alpha=0.1)
+                # Keep lines with metrics line equal to metric
+                all_values_data = all_values_df[struc][struc_name][metric]
+                
+                # Use seaborn line plot
+                sns.lineplot(x='slice_interp', y='values', data=all_values_data, ax=ax, errorbar='sd')
 
                 # Plot subject
                 ax.plot(x_subject, y_subject, color='red', linewidth=2)
@@ -504,14 +499,14 @@ def create_global_figures(subject_data, all_values_df, discs_gap, mean_dict, img
             for metric in metrics:
                 ax = axes[idx]
                 subject_value = subject_data[struc][struc_name][metric]
-                values = all_values[struc][struc_name][metric]
+                all_values_data = all_values_df[struc][struc_name][metric]
 
                 # Plot metric for subject
                 # If subject_value >= mean_value, make the violin plot transparent
                 if subject_value >= mean_dict[struc][struc_name][metric] or subject_value == -1:
-                    sns.violinplot(x=values, ax=ax, cut=0, bw_method=0.7, color='gray', alpha=0.2)
+                    sns.violinplot(x='values', data=all_values_data, ax=ax, cut=0, bw_method=0.7, color='gray', alpha=0.2)
                 else:
-                    sns.violinplot(x=values, ax=ax, cut=0, bw_method=0.7)
+                    sns.violinplot(x='values', data=all_values_data, ax=ax, cut=0, bw_method=0.7)
                 ax.tick_params(axis='x', rotation=45, labelsize=12)
                 if subject_value != -1:
                     axes[idx].axvline(x=subject_value, color='red', linestyle='--')
