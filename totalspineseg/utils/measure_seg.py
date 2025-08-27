@@ -455,6 +455,10 @@ def measure_disc(img_data, seg_disc_data, median_csf_signal, pr):
 
     # Normalize image
     disc_img = (disc_img - np.mean(disc_img)) / np.std(disc_img) # Normalize with mean and std
+    # Normalize with percentile
+    p10 = np.percentile(disc_img, 5)
+    p90 = np.percentile(disc_img, 95)
+    disc_img =(disc_img - p10) / (p90 - p10)
 
     img_dict = {'seg':disc_seg, 'img':disc_img}
     return properties, img_dict
