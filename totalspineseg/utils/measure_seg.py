@@ -474,11 +474,13 @@ def measure_csf(img_data, seg_csf_data):
         # Extract images values using segmentation
         slice_values = img_data[slice_csf]
 
-        # Fetch median value
-        median_signal = np.median(slice_values)
+        # Extract most represented value
+        # Take multiple maximums
+        hist, bin_edges = np.histogram(slice_values, bins=100)
+        signal = np.median(bin_edges[np.argsort(hist)[-10:]])
 
         # Save values
-        properties['slice_signal'][iz] = median_signal
+        properties['slice_signal'][iz] = signal
     return properties
 
 def measure_canal(seg_canal, centerline, spine_centerline):
