@@ -229,7 +229,7 @@ def _measure_seg(
             if 'foramen' in img_name:
                 cv2.imwrite(img_path, img*125)
             else:
-                cv2.imwrite(img_path, img)
+                cv2.imwrite(img_path, img*255)
     
 def measure_seg(img, seg, label, mapping):
     '''
@@ -444,10 +444,14 @@ def measure_disc(img_data, seg_disc_data, pr):
     
     # Extract 2D cut of disc image
     padding = 5
-    ymax, zmax = [v + padding for v in (ymax, zmax) if v + padding < img_data.shape[1]]
-    ymin, zmin = [v - padding for v in (ymin, zmin) if v - padding >= 0]
+    ymax, zmax = [v + padding if v + padding < img_data.shape[1+i] else v for i, v in enumerate((ymax, zmax))]
+    ymin, zmin = [v - padding if v - padding >= 0 else v for i, v in enumerate((ymin, zmin))]
     disc_img = img_data[xmin:xmax, ymin:ymax, zmin:zmax]
     disc_img = disc_img[int((xmax-xmin)//2)]
+
+    # Normalize image
+    disc_img = (disc_img - np.mean(disc_img)) / np.std(disc_img) # Normalize with mean and std
+
     img_dict = {'seg':disc_seg, 'img':disc_img}
     return properties, img_dict
 
@@ -1199,9 +1203,13 @@ def crop_around_binary(volume):
     return cropped, (xmin, xmax, ymin, ymax, zmin, zmax)
 
 if __name__ == '__main__':
-    img_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/out/input/sub-001_ses-A_acq-isotropic_T2w_0000.nii.gz'
-    seg_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/out/step2_output/sub-001_ses-A_acq-isotropic_T2w.nii.gz'
-    label_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/out/step1_levels/sub-001_ses-A_acq-isotropic_T2w.nii.gz'
+    # img_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/out/input/sub-001_ses-A_acq-isotropic_T2w_0000.nii.gz'
+    # seg_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/out/step2_output/sub-001_ses-A_acq-isotropic_T2w.nii.gz'
+    # label_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/out/step1_levels/sub-001_ses-A_acq-isotropic_T2w.nii.gz'
+    
+    img_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/spider_output/input/sub-219_acq-lowresSag_T1w_0000.nii.gz'
+    seg_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/spider_output/step2_output/sub-219_acq-lowresSag_T1w.nii.gz'
+    label_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/spider_output/step1_levels/sub-219_acq-lowresSag_T1w.nii.gz'
     ofolder_path = 'test'
 
     # Load totalspineseg mapping
