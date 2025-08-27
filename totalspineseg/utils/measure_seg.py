@@ -510,11 +510,11 @@ def measure_canal(seg_canal, centerline, spine_centerline):
     nx, ny, nz, nt, px, py, pz, pt = seg_canal.dim
 
     # Extract min and max index in Z direction
-    X, Y, Z = seg_canal.data.nonzero()
-    min_z_index, max_z_index = min(Z), max(Z)
     deriv = {int(z_ref): centerline["derivative"][:2, index] for index, z_ref in enumerate(centerline["position"][2])}
     pos_spine = {int(z_ref): np.round(spine_centerline["position"][:2, index]).astype(int) for index, z_ref in enumerate(spine_centerline["position"][2])}
 
+    min_z_index = max(min(deriv.keys()), min(pos_spine.keys()))
+    max_z_index = min(max(deriv.keys()), max(pos_spine.keys()))
     # Loop across the S-I slices
     shape_properties = {key: {} for key in property_list}
     for iz in range(min_z_index, max_z_index + 1):
