@@ -447,17 +447,17 @@ def measure_disc(img_data, seg_disc_data, median_csf_signal, pr):
     disc_seg, (xmin, xmax, ymin, ymax, zmin, zmax) = crop_around_binary(seg_disc_data)
     
     # Extract 2D cut of disc image
-    padding = 5
-    ymax, zmax = [v + padding if v + padding < img_data.shape[1+i] else v for i, v in enumerate((ymax, zmax))]
-    ymin, zmin = [v - padding if v - padding >= 0 else v for i, v in enumerate((ymin, zmin))]
+    padding = 8
+    ymax, zmax = [v + padding if v + padding < img_data.shape[1+i] else img_data.shape[1+i]-1 for i, v in enumerate((ymax, zmax))]
+    ymin, zmin = [v - padding if v - padding >= 0 else 0 for v in (ymin, zmin)]
     disc_img = img_data[xmin:xmax, ymin:ymax, zmin:zmax]
     disc_img = disc_img[int((xmax-xmin)//2)]
 
     # Normalize image
     disc_img = (disc_img - np.mean(disc_img)) / np.std(disc_img) # Normalize with mean and std
     # Normalize with percentile
-    p10 = np.percentile(disc_img, 5)
-    p90 = np.percentile(disc_img, 95)
+    p10 = np.percentile(disc_img, 10)
+    p90 = np.percentile(disc_img, 90)
     disc_img =(disc_img - p10) / (p90 - p10)
 
     img_dict = {'seg':disc_seg, 'img':disc_img}
