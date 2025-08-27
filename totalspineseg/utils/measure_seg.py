@@ -927,7 +927,7 @@ def compute_thickness_profile(coords, values, rotation_matrix, bin_size=1.0):
     # Extract average SI intensity histogram
     intensities_avg = []
     for z in range(len(bins_SI) - 1):
-        intensities_avg.append(values[bin_indices_SI == z].mean())
+        intensities_avg.append(np.median(values[bin_indices_SI == z]))
     return np.median(np.array(thicknesses)), np.array(intensities_avg)
 
 def get_centerline(seg):
