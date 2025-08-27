@@ -266,6 +266,24 @@ def measure_seg(img, seg, label, mapping):
     metrics = {}
     imgs = {}
 
+    # Measure CSF signal
+    seg_csf_data = (seg.data == mapping['CSF']).astype(int)
+    properties = measure_csf(img.data, seg_csf_data)
+    median_csf_signal = np.median(list(properties['slice_signal'].values()))
+
+    rows = []
+    for i, (k, v) in enumerate(properties['slice_signal'].items()):
+        row = {
+            "structure": "csf",
+            "index": i,
+            "slice_nb": k,
+            "disc_level": disc_slices[k] if k in disc_slices else None,
+            "slice_signal": v
+            }
+
+        rows.append(row)
+    metrics['csf'] = rows
+
     # Compute metrics onto intervertebral discs
     rows = []
     for struc in mapping.keys():
@@ -273,7 +291,7 @@ def measure_seg(img, seg, label, mapping):
             seg_disc_data = (seg.data == mapping[struc]).astype(int)
             # Check if disc is more than one slice
             if (seg_disc_data.sum(axis=0).sum(axis=0)).astype(bool).sum() > 1:
-                properties, img_dict = measure_disc(img_data=img.data, seg_disc_data=seg_disc_data, pr=pr)
+                properties, img_dict = measure_disc(img_data=img.data, seg_disc_data=seg_disc_data, median_csf_signal=median_csf_signal, pr=pr)
 
                 # Save image
                 imgs[f'discs_{struc}_seg'] = img_dict['seg']
@@ -392,26 +410,9 @@ def measure_seg(img, seg, label, mapping):
             row[key] = properties[key][slice_nb]
         rows.append(row)
     metrics['canal'] = rows
-
-    # Measure CSF signal
-    seg_csf_data = np.isin(seg.data, [mapping['CSF']]).astype(int)
-    properties = measure_csf(img.data, seg_csf_data)
-
-    rows = []
-    for i, (k, v) in enumerate(properties['slice_signal'].items()):
-        row = {
-            "structure": "csf",
-            "index": i,
-            "slice_nb": k,
-            "disc_level": disc_slices[k] if k in disc_slices else None,
-            "slice_signal": v
-            }
-
-        rows.append(row)
-    metrics['csf'] = rows
     return metrics, imgs
 
-def measure_disc(img_data, seg_disc_data, pr):
+def measure_disc(img_data, seg_disc_data, median_csf_signal, pr):
     '''
     Calculate metrics from binary disc segmentation
     '''
@@ -426,6 +427,9 @@ def measure_disc(img_data, seg_disc_data, pr):
     bin_size = max(2//pr, 1) # Put 1 bin per 2 mm
     median_thickness, intensity_profile = compute_thickness_profile(coords, values, ellipsoid['rotation_matrix'], bin_size=bin_size)
 
+    # Normalize intensity profile using median CSF signal
+    intensity_profile = intensity_profile / median_csf_signal
+
     # Extract disc volume
     voxel_volume = pr**3
     volume = ellipsoid['volume']*voxel_volume # mm3
@@ -433,7 +437,7 @@ def measure_disc(img_data, seg_disc_data, pr):
     properties = {
         'center': np.round(ellipsoid['center']),
         'median_thickness': median_thickness*pr,
-        'intensity_profile': intensity_profile, # TODO: Normalize the intensity using CSF for example
+        'intensity_profile': intensity_profile,
         'volume': volume,
         'eccentricity': ellipsoid['eccentricity'],
         'solidity': ellipsoid['solidity']
@@ -1205,13 +1209,10 @@ def crop_around_binary(volume):
     return cropped, (xmin, xmax, ymin, ymax, zmin, zmax)
 
 if __name__ == '__main__':
-    # img_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/out/input/sub-001_ses-A_acq-isotropic_T2w_0000.nii.gz'
-    # seg_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/out/step2_output/sub-001_ses-A_acq-isotropic_T2w.nii.gz'
-    # label_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/out/step1_levels/sub-001_ses-A_acq-isotropic_T2w.nii.gz'
+    img_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/out/input/sub-001_ses-A_acq-isotropic_T2w_0000.nii.gz'
+    seg_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/out/step2_output/sub-001_ses-A_acq-isotropic_T2w.nii.gz'
+    label_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/out/step1_levels/sub-001_ses-A_acq-isotropic_T2w.nii.gz'
     
-    img_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/spider_output/input/sub-219_acq-lowresSag_T1w_0000.nii.gz'
-    seg_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/spider_output/step2_output/sub-219_acq-lowresSag_T1w.nii.gz'
-    label_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/spider_output/step1_levels/sub-219_acq-lowresSag_T1w.nii.gz'
     ofolder_path = 'test'
 
     # Load totalspineseg mapping
