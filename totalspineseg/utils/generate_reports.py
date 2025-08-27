@@ -94,12 +94,13 @@ def generate_reports(
                     if struc_name not in all_values[struc]:
                         all_values[struc][struc_name] = {}
                     for metric in control_data[struc][struc_name].keys():
-                        # Add subject to all_values
-                        subject_value = control_data[struc][struc_name][metric]
-                        if subject_value != -1:
-                            if metric not in all_values[struc][struc_name]:
-                                all_values[struc][struc_name][metric] = []
-                            all_values[struc][struc_name][metric].append(subject_value)
+                        if metric != 'intensity':
+                            # Add subject to all_values
+                            subject_value = control_data[struc][struc_name][metric]
+                            if subject_value != -1:
+                                if metric not in all_values[struc][struc_name]:
+                                    all_values[struc][struc_name][metric] = []
+                                all_values[struc][struc_name][metric].append(subject_value)
         
         # Align canal and CSF for control group
         all_values = rescale_canal(all_values)
@@ -152,6 +153,7 @@ def generate_reports(
         imgs_path = test_path / f'{subject}/imgs'
         ofolder_subject = ofolder_path / subject
         discs_gap = all_values[struc][struc_name]['discs_gap']
+        ofolder_subject.mkdir(parents=True, exist_ok=True)
         create_global_figures(interp_data, all_values_df, discs_gap, mean_dict, imgs_path, ofolder_subject)
 
 def convert_to_df(all_values):
@@ -250,7 +252,7 @@ def compute_discs(subject_data):
 
 def compute_vertebrae(subject_data):
     # Create dictionary from pandas dataframes with names as keys
-    subject_dict = create_dict_from_subject_data(subject_data)
+    subject_dict = create_dict_from_subject_data(subject_data, intensity_profile=False)
     return subject_dict
 
 def compute_foramens(subject_data):
@@ -373,7 +375,7 @@ def plot_intensity_profile(subject_data, ofolder_path, structure):
         plt.savefig(str(ofolder_path / f"{structure}_{struc}_intensity_profile.png"))
         plt.close()
 
-def create_dict_from_subject_data(subject_data):
+def create_dict_from_subject_data(subject_data, intensity_profile=True):
     """
     Create a dictionary from the subject data DataFrame.
 
@@ -390,7 +392,8 @@ def create_dict_from_subject_data(subject_data):
         struc_idx = struc_data.index[0]
         for column in struc_data.columns[2:]:
             if column == 'intensity_profile':
-                struc_dict['intensity_mean'] = np.mean(convert_str_to_list(struc_data[column][struc_idx]))
+                if intensity_profile:
+                    struc_dict['intensity'] = convert_str_to_list(struc_data[column][struc_idx])
             else:
                 if column != 'center':
                     struc_dict[column] = struc_data[column][struc_idx]
@@ -469,8 +472,8 @@ def create_global_figures(subject_data, all_values_df, discs_gap, mean_dict, img
             
         plt.savefig(str(ofolder_path / f"compared_{struc}.png"))
     
-    # Create discs, vertebrae, foramens figures
-    for struc in ['foramens', 'discs', 'vertebrae']:
+    # Create vertebrae, foramens figures
+    for struc in ['foramens', 'vertebrae']:
         # Create a subplot for each subject and overlay a red line corresponding to their value
         struc_names = list(subject_data[struc].keys())
         metrics = list(subject_data[struc][struc_names[0]].keys())
@@ -524,6 +527,64 @@ def create_global_figures(subject_data, all_values_df, discs_gap, mean_dict, img
                 ax.tick_params(axis='x', rotation=45, labelsize=12)
                 if subject_value != -1:
                     axes[idx].axvline(x=subject_value, color='red', linestyle='--')
+                fig.tight_layout()
+                idx += 1
+            
+        plt.savefig(str(ofolder_path / f"compared_{struc}.png"))
+    
+    # Create discs figures
+    for struc in ['discs']:
+        # Create a subplot for each subject and overlay a red line corresponding to their value
+        struc_names = list(subject_data[struc].keys())
+        metrics = list(subject_data[struc][struc_names[0]].keys())
+        nrows = len(struc_names) + 1
+        ncols = len(metrics) + 3
+        fig, axes = plt.subplots(nrows, ncols, figsize=(6 * ncols, 4 * nrows))
+        axes = axes.flatten()
+        idx = 0
+        for i in range(ncols):
+            if i == 0:
+                axes[i].text(0.5, 0.5, "Structure name", fontsize=45, ha='center', va='center')
+            elif i == 1:
+                axes[i].text(0.5, 0.5, "Image", fontsize=45, ha='center', va='center')
+            elif i == 2:
+                axes[i].text(0.5, 0.5, "Segmentation", fontsize=45, ha='center', va='center')
+            else:
+                # Load image 
+                img_path = os.path.join(ressources_path, f'imgs/{struc}_{metrics[i - 3]}.jpg')
+                axes[i].imshow(plt.imread(img_path))
+            axes[i].set_axis_off()
+            idx += 1
+        for struc_name in struc_names:
+            axes[idx].text(0.5, 0.5, struc_name, fontsize=45, ha='center', va='center')
+            axes[idx].set_axis_off()
+            # Load images
+            img_name = f'{struc}_{struc_name}'
+            img = plt.imread(str(imgs_path / f'{img_name}_img.png'))
+            seg = plt.imread(str(imgs_path / f'{img_name}_seg.png'))
+            axes[idx+1].imshow(np.rot90(img), cmap='gray')
+            axes[idx+1].set_axis_off()
+            axes[idx+2].imshow(seg)
+            axes[idx+2].set_axis_off()
+            idx += 3
+            for metric in metrics:
+                ax = axes[idx]
+                subject_value = subject_data[struc][struc_name][metric]
+                if metric != 'intensity':
+                    all_values_data = all_values_df[struc][struc_name][metric]
+                    # Plot metric for subject
+                    # If subject_value >= mean_value, make the violin plot transparent
+                    if subject_value >= mean_dict[struc][struc_name][metric] or subject_value == -1:
+                        sns.violinplot(x='values', data=all_values_data, ax=ax, cut=0, bw_method=0.7, color='gray', alpha=0.2)
+                    else:
+                        sns.violinplot(x='values', data=all_values_data, ax=ax, cut=0, bw_method=0.7)
+                    ax.tick_params(axis='x', rotation=45, labelsize=12)
+                    if subject_value != -1:
+                        axes[idx].axvline(x=subject_value, color='red', linestyle='--')
+                else:
+                    axes[idx].bar(range(len(subject_value)), subject_value)
+                    axes[idx].set_xlabel("Slice index")
+                    axes[idx].set_ylabel("Intensity")
                 fig.tight_layout()
                 idx += 1
             
