@@ -226,7 +226,10 @@ def _measure_seg(
         if len(img.shape) == 3:
             save_isometric_png(img, img_path)
         else:
-            cv2.imwrite(img_path, img*125)
+            if 'foramen' in img_name:
+                cv2.imwrite(img_path, img*125)
+            else:
+                cv2.imwrite(img_path, img)
     
 def measure_seg(img, seg, label, mapping):
     '''
@@ -270,10 +273,11 @@ def measure_seg(img, seg, label, mapping):
             seg_disc_data = (seg.data == mapping[struc]).astype(int)
             # Check if disc is more than one slice
             if (seg_disc_data.sum(axis=0).sum(axis=0)).astype(bool).sum() > 1:
-                properties, disc_img = measure_disc(img_data=img.data, seg_disc_data=seg_disc_data, pr=pr)
+                properties, img_dict = measure_disc(img_data=img.data, seg_disc_data=seg_disc_data, pr=pr)
 
                 # Save image
-                imgs[f'discs_{struc}'] = disc_img
+                imgs[f'discs_{struc}_seg'] = img_dict['seg']
+                imgs[f'discs_{struc}_img'] = img_dict['img']
 
                 # Create a row
                 row = {
@@ -436,13 +440,16 @@ def measure_disc(img_data, seg_disc_data, pr):
     }
 
     # Recreate volume for visualization
-    coords = coords - np.min(coords, axis=0)
-    disc_img = np.zeros((int(np.round(np.max(coords[:,0]))), int(np.round(np.max(coords[:,1]))), int(np.round(np.max(coords[:,2])))))
-    if disc_img.shape[0] == 0 or disc_img.shape[1] == 0 or disc_img.shape[2] == 0:
-        return properties, disc_img
-    for coord in coords:
-        disc_img[int(np.round(coord[0]-1)), int(np.round(coord[1]-1)), int(np.round(coord[2]-1))]=1
-    return properties, disc_img
+    disc_seg, (xmin, xmax, ymin, ymax, zmin, zmax) = crop_around_binary(seg_disc_data)
+    
+    # Extract 2D cut of disc image
+    padding = 5
+    ymax, zmax = [v + padding for v in (ymax, zmax) if v + padding < img_data.shape[1]]
+    ymin, zmin = [v - padding for v in (ymin, zmin) if v - padding >= 0]
+    disc_img = img_data[xmin:xmax, ymin:ymax, zmin:zmax]
+    disc_img = disc_img[int((xmax-xmin)//2)]
+    img_dict = {'seg':disc_seg, 'img':disc_img}
+    return properties, img_dict
 
 def measure_csf(img_data, seg_csf_data):
     '''
@@ -805,9 +812,6 @@ def measure_foramens(seg_foramen_data, canal_centerline, pr):
             foramens_areas[side] = -1
             foramens_imgs[side] = labeled_bg
     return foramens_areas, foramens_imgs
-
-def grade_discs():
-    return
 
 def fit_ellipsoid(coords):
     # Compute the center of mass of the disc
