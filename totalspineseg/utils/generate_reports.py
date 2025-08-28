@@ -211,6 +211,9 @@ def compute_metrics_subject(subject_folder):
             subject_data = pd.read_csv(str(csv_path))
             # Call the compute function to process the data
             merged_data[csv_file] = process_func(subject_data)
+    
+    # Compute discs metrics
+    merged_data = compute_discs_metrics(merged_data)
     return merged_data
 
 def process_canal(subject_data):
@@ -259,6 +262,13 @@ def process_foramens(subject_data):
     # Create dictionary from pandas dataframes with names as keys
     subject_dict = create_dict_from_subject_data(subject_data)
     return subject_dict
+
+def compute_discs_metrics(data_dict):
+    # Compute Disc Height Index (DHI)
+    for struc_name in data_dict['discs'].keys():
+        overlying_vertebra = struc_name.split('-')[0]
+        data_dict['discs'][struc_name]['DHI'] = data_dict['discs'][struc_name]['median_thickness'] / data_dict['vertebrae'][overlying_vertebra]['AP_thickness']
+    return data_dict
 
 def rescale_canal(all_values):
     '''
@@ -551,8 +561,11 @@ def create_global_figures(subject_data, all_values_df, discs_gap, mean_dict, img
                 axes[i].text(0.5, 0.5, "Segmentation", fontsize=45, ha='center', va='center')
             else:
                 # Load image 
-                img_path = os.path.join(ressources_path, f'imgs/{struc}_{metrics[i - 3]}.jpg')
-                axes[i].imshow(plt.imread(img_path))
+                if os.path.exists(os.path.join(ressources_path, f'imgs/{struc}_{metrics[i - 3]}.jpg')):
+                    img_path = os.path.join(ressources_path, f'imgs/{struc}_{metrics[i - 3]}.jpg')
+                    axes[i].imshow(plt.imread(img_path))
+                else:
+                    axes[i].text(0.5, 0.5, metrics[i - 3], fontsize=45, ha='center', va='center')
             axes[i].set_axis_off()
             idx += 1
         for struc_name in struc_names:
