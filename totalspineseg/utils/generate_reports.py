@@ -430,7 +430,8 @@ def create_global_figures(subject_data, all_values_df, discs_gap, mean_dict, img
     # Create discs, vertebrae, foramens figures
     for struc in ['canal', 'csf']:
         # Create a subplot for each subject and overlay a red line corresponding to their value
-        struc_names = list(subject_data[struc].keys())
+        struc_names = np.array(list(subject_data[struc].keys()))
+        struc_names = struc_names[np.isin(struc_names, list(all_values_df[struc].keys()))].tolist()
         metrics = [m for m in list(subject_data[struc][struc_names[0]].keys()) if m != 'slice_interp']
         nrows = len(struc_names) + 1
         ncols = len(metrics) + 1
@@ -485,7 +486,8 @@ def create_global_figures(subject_data, all_values_df, discs_gap, mean_dict, img
     # Create vertebrae, foramens figures
     for struc in ['foramens', 'vertebrae']:
         # Create a subplot for each subject and overlay a red line corresponding to their value
-        struc_names = list(subject_data[struc].keys())
+        struc_names = np.array(list(subject_data[struc].keys()))
+        struc_names = struc_names[np.isin(struc_names, list(all_values_df[struc].keys()))].tolist()
         metrics = list(subject_data[struc][struc_names[0]].keys())
         nrows = len(struc_names) + 1
         ncols = len(metrics) + 2
@@ -545,7 +547,8 @@ def create_global_figures(subject_data, all_values_df, discs_gap, mean_dict, img
     # Create discs figures
     for struc in ['discs']:
         # Create a subplot for each subject and overlay a red line corresponding to their value
-        struc_names = list(subject_data[struc].keys())
+        struc_names = np.array(list(subject_data[struc].keys()))
+        struc_names = struc_names[np.isin(struc_names, list(all_values_df[struc].keys()))].tolist()
         metrics = list(subject_data[struc][struc_names[0]].keys())
         nrows = len(struc_names) + 1
         ncols = len(metrics) + 3
