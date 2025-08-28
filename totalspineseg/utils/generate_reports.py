@@ -197,23 +197,23 @@ def compute_metrics_subject(subject_folder):
 
     # List of expected CSV files
     csv_files = {
-        "canal":compute_canal, 
-        "csf":compute_csf, 
-        "discs":compute_discs, 
-        "foramens":compute_foramens, 
-        "vertebrae":compute_vertebrae
+        "canal":process_canal, 
+        "csf":process_csf, 
+        "discs":process_discs, 
+        "foramens":process_foramens, 
+        "vertebrae":process_vertebrae
     }
 
     # Load each CSV if it exists
-    for csv_file, compute_func in csv_files.items():
+    for csv_file, process_func in csv_files.items():
         csv_path = subject_folder / 'csv' / f"{csv_file}.csv"
         if csv_path.exists():
             subject_data = pd.read_csv(str(csv_path))
             # Call the compute function to process the data
-            merged_data[csv_file] = compute_func(subject_data)
+            merged_data[csv_file] = process_func(subject_data)
     return merged_data
 
-def compute_canal(subject_data):
+def process_canal(subject_data):
     # Convert pandas columns to lists
     canal_dict = {'canal': {}, 'spinalcord': {}, 'spinalcord/canal': {}}
     for column in subject_data.columns[2:]:
@@ -238,24 +238,24 @@ def compute_canal(subject_data):
             canal_dict['spinalcord/canal'][key] = canal_dict['spinalcord'][key]
     return canal_dict
 
-def compute_csf(subject_data):
+def process_csf(subject_data):
     # Convert pandas columns to lists
     csf_dict = {'csf': {}}
     for column in subject_data.columns[2:]:
         csf_dict['csf'][column] = subject_data[column].tolist()
     return csf_dict
 
-def compute_discs(subject_data):
+def process_discs(subject_data):
     # Create dictionary from pandas dataframes with names as keys
     subject_dict = create_dict_from_subject_data(subject_data)
     return subject_dict
 
-def compute_vertebrae(subject_data):
+def process_vertebrae(subject_data):
     # Create dictionary from pandas dataframes with names as keys
     subject_dict = create_dict_from_subject_data(subject_data, intensity_profile=False)
     return subject_dict
 
-def compute_foramens(subject_data):
+def process_foramens(subject_data):
     # Create dictionary from pandas dataframes with names as keys
     subject_dict = create_dict_from_subject_data(subject_data)
     return subject_dict
