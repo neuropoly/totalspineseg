@@ -247,6 +247,11 @@ def measure_seg(img, seg, label, mapping):
     seg = resample_nib(seg, new_size=[pr, pr, pr], new_size_type='mm', interpolation='nn', verbose=False)
     img = resample_nib(img, new_size=[pr, pr, pr], new_size_type='mm', interpolation='linear', verbose=False)
 
+    # Normalize image intensity
+    p10 = np.percentile(img.data, 5)
+    p90 = np.percentile(img.data, 95)
+    img.data = (img.data - p10) / (p90 - p10 + 1e-8)
+
     # Create dict with z-slice and values for discs posterior tip
     disc_slices = {}
     for x, y, z, v in discs_label:
@@ -448,10 +453,6 @@ def measure_disc(img_data, seg_disc_data, median_csf_signal, pr):
 
     # Normalize image
     img_data = (img_data - np.mean(img_data)) / np.std(img_data) # Normalize with mean and std
-    # Normalize with percentile
-    p10 = np.percentile(img_data, 5)
-    p90 = np.percentile(img_data, 95)
-    img_data = (img_data - p10) / (p90 - p10)
 
     # Extract 2D cut of disc image
     padding = 8
@@ -1213,10 +1214,14 @@ def crop_around_binary(volume):
     return cropped, (xmin, xmax, ymin, ymax, zmin, zmax)
 
 if __name__ == '__main__':
-    img_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/out/input/sub-001_ses-A_acq-isotropic_T2w_0000.nii.gz'
-    seg_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/out/step2_output/sub-001_ses-A_acq-isotropic_T2w.nii.gz'
-    label_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/out/step1_levels/sub-001_ses-A_acq-isotropic_T2w.nii.gz'
+    # img_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/out/input/sub-001_ses-A_acq-isotropic_T2w_0000.nii.gz'
+    # seg_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/out/step2_output/sub-001_ses-A_acq-isotropic_T2w.nii.gz'
+    # label_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/out/step1_levels/sub-001_ses-A_acq-isotropic_T2w.nii.gz'
     
+    img_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/spider_output/input/sub-232_acq-lowresSag_T2w_0000.nii.gz'
+    seg_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/spider_output/step2_output/sub-232_acq-lowresSag_T2w.nii.gz'
+    label_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/spider_output/step1_levels/sub-232_acq-lowresSag_T2w.nii.gz'
+
     ofolder_path = 'test'
 
     # Load totalspineseg mapping
