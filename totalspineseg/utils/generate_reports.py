@@ -88,16 +88,16 @@ def generate_reports(
 
             # Gather all values for each metric and structures
             for struc in control_data.keys():
-                if struc not in all_values:
-                    all_values[struc] = {}
                 for struc_name in control_data[struc].keys():
-                    if struc_name not in all_values[struc]:
-                        all_values[struc][struc_name] = {}
                     for metric in control_data[struc][struc_name].keys():
                         if metric != 'intensity':
                             # Add subject to all_values
                             subject_value = control_data[struc][struc_name][metric]
                             if subject_value != -1:
+                                if struc not in all_values:
+                                    all_values[struc] = {}
+                                if struc_name not in all_values[struc]:
+                                    all_values[struc][struc_name] = {}
                                 if metric not in all_values[struc][struc_name]:
                                     all_values[struc][struc_name][metric] = []
                                 all_values[struc][struc_name][metric].append(subject_value)
