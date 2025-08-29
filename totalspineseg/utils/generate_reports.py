@@ -2,6 +2,9 @@ import importlib
 import os, argparse, textwrap
 import pandas as pd
 from pathlib import Path
+import multiprocessing as mp
+from functools import partial
+from tqdm.contrib.concurrent import process_map
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
@@ -34,6 +37,10 @@ def main():
         help='The folder where reports will be saved (required).'
     )
     parser.add_argument(
+        '--max-workers', '-w', type=int, default=mp.cpu_count(),
+        help='Max worker to run in parallel proccess, defaults to multiprocessing.cpu_count().'
+    )
+    parser.add_argument(
         '--quiet', '-q', action="store_true", default=False,
         help='Do not display inputs and progress bar, defaults to false (display).'
     )
@@ -45,6 +52,7 @@ def main():
     test_path = args.test_dir
     control_path = args.control_dir
     ofolder = args.ofolder
+    max_workers = args.max_workers
     quiet = args.quiet
 
     # Print the argument values if not quiet
@@ -54,6 +62,7 @@ def main():
             test_path = "{test_path}"
             control_path = "{control_path}"
             ofolder = "{ofolder}"
+            max_workers = {max_workers}
             quiet = {quiet}
         '''))
 
@@ -61,14 +70,16 @@ def main():
         test_path=test_path,
         control_path=control_path,
         ofolder_path=ofolder,
-        quiet=quiet,
+        max_workers=max_workers,
+        quiet=quiet
     )
 
 def generate_reports(
         test_path,
         control_path,
         ofolder_path,
-        quiet=False
+        max_workers,
+        quiet
     ):
     # Load paths
     test_path = Path(test_path)
@@ -127,34 +138,51 @@ def generate_reports(
     all_values_df = convert_to_df(all_values)
     
     # Create global figures for test data subjects
-    for subject in os.listdir(test_path):
-        if not quiet:
-            print(f"Creating global figures for subject: {subject}")
-        test_sub_folder = test_path / subject
+    discs_gap = all_values['canal']['canal']['discs_gap'] 
+    create_figures_mp(test_path, ofolder_path, all_values_df, mean_dict, discs_gap, max_workers, quiet)
 
-        # Load subject data
-        subject_data = compute_metrics_subject(test_sub_folder)
+def create_figures_mp(test_path, ofolder_path, all_values_df, mean_dict, discs_gap, max_workers, quiet):
+    # Create a list of test subject folders
+    test_sub_folders = [test_path / subject for subject in os.listdir(test_path)]
+    imgs_paths = [test_sub_folder / 'imgs' for test_sub_folder in test_sub_folders]
+    ofolder_subjects = [ofolder_path / subject for subject in os.listdir(test_path)]
 
-        # Rescale canal and CSF metrics
-        interp_data = copy.deepcopy(subject_data)
-        for struc in ['canal', 'csf']:
-            for struc_name in subject_data[struc].keys():
-                for metric in subject_data[struc][struc_name].keys():
-                    if metric in ['slice_nb', 'disc_level']:
-                        continue
-                    interp_values, slice_interp = rescale_with_discs(subject_data[struc][struc_name]['disc_level'], subject_data[struc][struc_name][metric], all_values[struc][struc_name]['discs_gap'])
-                    interp_data[struc][struc_name][metric] = interp_values
-                interp_data[struc][struc_name]['slice_interp'] = slice_interp
-                # remove slice_nb and disc_level from dict
-                interp_data[struc][struc_name].pop('slice_nb', None)
-                interp_data[struc][struc_name].pop('disc_level', None)
+    process_map(
+        partial(
+            create_figures,
+            all_values_df=all_values_df,
+            mean_dict=mean_dict,
+            discs_gap=discs_gap,
+        ),
+        test_sub_folders,
+        imgs_paths,
+        ofolder_subjects,
+        max_workers=max_workers,
+        chunksize=1,
+        disable=quiet,
+    )
+        
+def create_figures(sub_folder, imgs_path, ofolder_subject, all_values_df, mean_dict, discs_gap):
+    # Load subject data
+    subject_data = compute_metrics_subject(sub_folder)
 
-        # Create paths
-        imgs_path = test_path / f'{subject}/imgs'
-        ofolder_subject = ofolder_path / subject
-        discs_gap = all_values[struc][struc_name]['discs_gap']
-        ofolder_subject.mkdir(parents=True, exist_ok=True)
-        create_global_figures(interp_data, all_values_df, discs_gap, mean_dict, imgs_path, ofolder_subject)
+    # Rescale canal and CSF metrics
+    interp_data = copy.deepcopy(subject_data)
+    for struc in ['canal', 'csf']:
+        for struc_name in subject_data[struc].keys():
+            for metric in subject_data[struc][struc_name].keys():
+                if metric in ['slice_nb', 'disc_level']:
+                    continue
+                interp_values, slice_interp = rescale_with_discs(subject_data[struc][struc_name]['disc_level'], subject_data[struc][struc_name][metric], discs_gap)
+                interp_data[struc][struc_name][metric] = interp_values
+            interp_data[struc][struc_name]['slice_interp'] = slice_interp
+            # remove slice_nb and disc_level from dict
+            interp_data[struc][struc_name].pop('slice_nb', None)
+            interp_data[struc][struc_name].pop('disc_level', None)
+
+    # Create figures    
+    ofolder_subject.mkdir(parents=True, exist_ok=True)
+    create_global_figures(interp_data, all_values_df, discs_gap, mean_dict, imgs_path, ofolder_subject)
 
 def convert_to_df(all_values):
     new_values = copy.deepcopy(all_values)
@@ -619,5 +647,6 @@ if __name__ == "__main__":
         test_path=test_path,
         control_path=control_path,
         ofolder_path=ofolder,
+        max_workers=8,
         quiet=quiet,
     )
