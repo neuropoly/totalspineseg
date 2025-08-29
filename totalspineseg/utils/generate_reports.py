@@ -119,22 +119,22 @@ def generate_reports(
 
         # TODO : save all values
 
-    # Create mean dictionary
-    mean_dict = {}
+    # Create median dictionary
+    median_dict = {}
     if not quiet: print("\n" "Computing average metrics:")
     for struc in tqdm(all_values.keys(), disable=quiet):
         if struc in ['foramens', 'discs', 'vertebrae']:
             for struc_name in all_values[struc].keys():
                 for metric, values in all_values[struc][struc_name].items():
-                    mean_value = np.mean(values)
-                    if struc not in mean_dict:
-                        mean_dict[struc] = {struc_name: {metric: mean_value}}
+                    median_value = np.median(values)
+                    if struc not in median_dict:
+                        median_dict[struc] = {struc_name: {metric: median_value}}
                     else:
-                        if struc_name not in mean_dict[struc]:
-                            mean_dict[struc][struc_name] = {metric: mean_value}
+                        if struc_name not in median_dict[struc]:
+                            median_dict[struc][struc_name] = {metric: median_value}
                         else:
-                            if metric not in mean_dict[struc][struc_name]:
-                                mean_dict[struc][struc_name][metric] = mean_value
+                            if metric not in median_dict[struc][struc_name]:
+                                median_dict[struc][struc_name][metric] = median_value
 
     # Convert all_values to dataframe
     all_values_df = convert_to_df(all_values)
@@ -142,9 +142,9 @@ def generate_reports(
     # Create global figures for test data subjects
     discs_gap = all_values['canal']['canal']['discs_gap'] 
     if not quiet: print("\n" "Generating test group reports:")
-    create_figures_mp(test_path, ofolder_path, all_values_df, mean_dict, discs_gap, max_workers, quiet)
+    create_figures_mp(test_path, ofolder_path, all_values_df, median_dict, discs_gap, max_workers, quiet)
 
-def create_figures_mp(test_path, ofolder_path, all_values_df, mean_dict, discs_gap, max_workers, quiet):
+def create_figures_mp(test_path, ofolder_path, all_values_df, median_dict, discs_gap, max_workers, quiet):
     # Create a list of test subject folders
     test_sub_folders = [test_path / subject for subject in os.listdir(test_path)]
     imgs_paths = [test_sub_folder / 'imgs' for test_sub_folder in test_sub_folders]
@@ -154,7 +154,7 @@ def create_figures_mp(test_path, ofolder_path, all_values_df, mean_dict, discs_g
         partial(
             create_figures,
             all_values_df=all_values_df,
-            mean_dict=mean_dict,
+            median_dict=median_dict,
             discs_gap=discs_gap,
         ),
         test_sub_folders,
@@ -165,7 +165,7 @@ def create_figures_mp(test_path, ofolder_path, all_values_df, mean_dict, discs_g
         disable=quiet,
     )
         
-def create_figures(sub_folder, imgs_path, ofolder_subject, all_values_df, mean_dict, discs_gap):
+def create_figures(sub_folder, imgs_path, ofolder_subject, all_values_df, median_dict, discs_gap):
     # Load subject data
     subject_data = compute_metrics_subject(sub_folder)
 
@@ -185,7 +185,7 @@ def create_figures(sub_folder, imgs_path, ofolder_subject, all_values_df, mean_d
 
     # Create figures    
     ofolder_subject.mkdir(parents=True, exist_ok=True)
-    create_global_figures(interp_data, all_values_df, discs_gap, mean_dict, imgs_path, ofolder_subject)
+    create_global_figures(interp_data, all_values_df, discs_gap, median_dict, imgs_path, ofolder_subject)
 
 def convert_to_df(all_values):
     new_values = copy.deepcopy(all_values)
@@ -442,7 +442,7 @@ def create_dict_from_subject_data(subject_data, intensity_profile=True):
         subject_dict[struc] = struc_dict
     return subject_dict
 
-def create_global_figures(subject_data, all_values_df, discs_gap, mean_dict, imgs_path, ofolder_path):
+def create_global_figures(subject_data, all_values_df, discs_gap, median_dict, imgs_path, ofolder_path):
     """
     Create global figures from the processed subjects data.
 
@@ -563,8 +563,8 @@ def create_global_figures(subject_data, all_values_df, discs_gap, mean_dict, img
                 all_values_data = all_values_df[struc][struc_name][metric]
 
                 # Plot metric for subject
-                # If subject_value >= mean_value, make the violin plot transparent
-                if subject_value >= mean_dict[struc][struc_name][metric] or subject_value == -1:
+                # If subject_value >= median_value, make the violin plot transparent
+                if subject_value >= median_dict[struc][struc_name][metric] or subject_value == -1:
                     sns.violinplot(x='values', data=all_values_data, ax=ax, cut=0, bw_method=0.7, color='gray', alpha=0.2)
                 else:
                     sns.violinplot(x='values', data=all_values_data, ax=ax, cut=0, bw_method=0.7)
@@ -621,8 +621,8 @@ def create_global_figures(subject_data, all_values_df, discs_gap, mean_dict, img
                 if metric != 'intensity':
                     all_values_data = all_values_df[struc][struc_name][metric]
                     # Plot metric for subject
-                    # If subject_value >= mean_value, make the violin plot transparent
-                    if subject_value >= mean_dict[struc][struc_name][metric] or subject_value == -1:
+                    # If subject_value >= median_value, make the violin plot transparent
+                    if subject_value >= median_dict[struc][struc_name][metric] or subject_value == -1:
                         sns.violinplot(x='values', data=all_values_data, ax=ax, cut=0, bw_method=0.7, color='gray', alpha=0.2)
                     else:
                         sns.violinplot(x='values', data=all_values_data, ax=ax, cut=0, bw_method=0.7)
