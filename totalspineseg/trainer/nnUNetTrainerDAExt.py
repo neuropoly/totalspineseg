@@ -33,6 +33,7 @@ class nnUNetTrainerDAExt(nnUNetTrainer):
                  device: torch.device = torch.device('cuda')):
         super().__init__(plans, configuration, fold, dataset_json, device)
         self.save_every = 10
+        self.num_epochs = 1500
     
     @staticmethod
     def get_training_transforms(
