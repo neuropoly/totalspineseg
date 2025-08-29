@@ -608,7 +608,7 @@ def create_global_figures(subject_data, all_values_df, discs_gap, mean_dict, img
 
 
 def convert_str_to_list(string):
-    return [float(item.strip()) for item in string.split()[1:-1]]
+    return [float(item.strip()) for item in string[1:-1].split()]
 
 if __name__ == "__main__":
     test_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/out/metrics_output'
