@@ -10,6 +10,7 @@ import numpy as np
 import seaborn as sns
 import json
 import copy
+from tqdm import tqdm
 import totalspineseg.resources as ressources
 
 def main():
@@ -89,9 +90,9 @@ def generate_reports(
     # Extract metrics values of the control group
     if not os.path.exists(str(control_path / "all_values.json")):
         all_values = {}
-        for subject in os.listdir(control_path):
-            if not quiet:
-                print(f"Processing subject: {subject}")
+        subjects = [s for s in os.listdir(control_path) if os.path.isdir(control_path / s)]
+        if not quiet: print("\n" "Processing control subjects:")
+        for subject in tqdm(subjects, disable=quiet):
             control_sub_folder = control_path / subject
 
             # Compute metrics subject
@@ -120,7 +121,8 @@ def generate_reports(
 
     # Create mean dictionary
     mean_dict = {}
-    for struc in all_values.keys():
+    if not quiet: print("\n" "Computing average metrics:")
+    for struc in tqdm(all_values.keys(), disable=quiet):
         if struc in ['foramens', 'discs', 'vertebrae']:
             for struc_name in all_values[struc].keys():
                 for metric, values in all_values[struc][struc_name].items():
@@ -139,6 +141,7 @@ def generate_reports(
     
     # Create global figures for test data subjects
     discs_gap = all_values['canal']['canal']['discs_gap'] 
+    if not quiet: print("\n" "Generating test group reports:")
     create_figures_mp(test_path, ofolder_path, all_values_df, mean_dict, discs_gap, max_workers, quiet)
 
 def create_figures_mp(test_path, ofolder_path, all_values_df, mean_dict, discs_gap, max_workers, quiet):
