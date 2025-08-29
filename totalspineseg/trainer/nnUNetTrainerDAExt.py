@@ -134,6 +134,10 @@ class nnUNetTrainerDAExt(nnUNetTrainer):
                 random_pick=True
             ), apply_probability=0.6
         ))
+        
+        # Deactivate mirroring data augmentation
+        mirror_axes = None
+
         ### End of customs
 
         if do_dummy_2d_data_aug:
