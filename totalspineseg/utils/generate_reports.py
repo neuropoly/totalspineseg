@@ -340,7 +340,7 @@ def rescale_canal(all_values):
 
             # Pick max for each gap between discs in gap_dict
             for k, v in gap_dict.items():
-                gap_dict[k] = max(v)
+                gap_dict[k] = int(round(np.median(v)))
 
             # Rescale subjects
             for subj_idx in range(n_subjects):
