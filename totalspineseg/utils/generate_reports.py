@@ -121,7 +121,7 @@ def generate_reports(
 
     # Create median dictionary
     median_dict = {}
-    if not quiet: print("\n" "Computing average metrics:")
+    if not quiet: print("\n" "Computing median metrics:")
     for struc in tqdm(all_values.keys(), disable=quiet):
         if struc in ['foramens', 'discs', 'vertebrae']:
             for struc_name in all_values[struc].keys():
