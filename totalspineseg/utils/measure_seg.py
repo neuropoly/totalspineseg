@@ -248,9 +248,8 @@ def measure_seg(img, seg, label, mapping):
     img = resample_nib(img, new_size=[pr, pr, pr], new_size_type='mm', interpolation='linear', verbose=False)
 
     # Normalize image intensity
-    p10 = np.percentile(img.data, 5)
-    p90 = np.percentile(img.data, 95)
-    img.data = (img.data - p10) / (p90 - p10 + 1e-8)
+    img.data = (img.data - np.mean(img.data)) / np.std(img.data) # Normalize with mean and std
+    img.data = (img.data - img.data.min()) / (img.data.max() - img.data.min() + 1e-8)
 
     # Create dict with z-slice and values for discs posterior tip
     disc_slices = {}
@@ -451,8 +450,10 @@ def measure_disc(img_data, seg_disc_data, median_csf_signal, pr):
     # Recreate volume for visualization
     disc_seg, (xmin, xmax, ymin, ymax, zmin, zmax) = crop_around_binary(seg_disc_data)
 
-    # Normalize image
-    img_data = (img_data - np.mean(img_data)) / np.std(img_data) # Normalize with mean and std
+    # Normalize image intensity
+    p10 = np.percentile(img_data, 5)
+    p90 = np.percentile(img_data, 95)
+    img_data = (img_data - p10) / (p90 - p10 + 1e-8)
 
     # Extract 2D cut of disc image
     padding = 8
