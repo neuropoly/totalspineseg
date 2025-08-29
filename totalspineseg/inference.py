@@ -1,11 +1,14 @@
 import os, argparse, warnings, textwrap, torch, psutil, shutil
 from fnmatch import fnmatch
 import nibabel as nib
+import importlib
 from pathlib import Path
 import importlib.resources
 from tqdm import tqdm
 from totalspineseg import *
 from totalspineseg.init_inference import init_inference
+import nnunetv2
+import totalspineseg.trainer as tss_trainer
 
 warnings.filterwarnings("ignore")
 
@@ -418,6 +421,12 @@ def inference(
     # Construct step 1 model folder
     model_folder_step1 = nnUNet_results / step1_dataset / f'{nnUNetTrainer}__{nnUNetPlans}__{configuration}'
     
+    # Check if nnUNetTrainerDAext is in nnunet folder
+    nnunet_path = (Path(nnunetv2.__path__[0]) / 'training' / 'nnUNetTrainer' / 'nnUNetTrainerDAExt.py').resolve()
+    if not nnunet_path.exists():
+        trainer_path = Path(importlib.resources.files(tss_trainer)) / 'nnUNetTrainerDAExt.py'
+        shutil.copy(trainer_path, nnunet_path)
+
     if not quiet: print('\n' 'Running step 1 model:')
     predict_nnunet(
         model_folder=model_folder_step1,
