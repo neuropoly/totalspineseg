@@ -295,7 +295,8 @@ def compute_discs_metrics(data_dict):
     # Compute Disc Height Index (DHI)
     for struc_name in data_dict['discs'].keys():
         overlying_vertebra = struc_name.split('-')[0]
-        data_dict['discs'][struc_name]['DHI'] = data_dict['discs'][struc_name]['median_thickness'] / data_dict['vertebrae'][overlying_vertebra]['AP_thickness']
+        if overlying_vertebra in data_dict['vertebrae']:
+            data_dict['discs'][struc_name]['DHI'] = data_dict['discs'][struc_name]['median_thickness'] / data_dict['vertebrae'][overlying_vertebra]['AP_thickness']
     return data_dict
 
 def rescale_canal(all_values):
