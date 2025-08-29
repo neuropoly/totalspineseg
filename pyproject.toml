@@ -76,6 +76,8 @@ totalspineseg_extract_levels = "totalspineseg.utils.extract_levels:main"
 totalspineseg_extract_alternate = "totalspineseg.utils.extract_alternate:main"
 totalspineseg_install_weights = "totalspineseg.utils.install_weights:main"
 totalspineseg_predict_nnunet = "totalspineseg.utils.predict_nnunet:main"
+totalspineseg_measure_seg = "totalspineseg.utils.measure_seg:main"
+totalspineseg_generate_reports = "totalspineseg.utils.generate_reports:main"
 
 [build-system]
 requires = ["pip>=23", "setuptools>=67"]
