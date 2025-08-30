@@ -207,7 +207,6 @@ class nnUNetTrainerDAExt(nnUNetTrainer):
                 random_pick=True
             ), apply_probability=0.6
         ))
-
         ### End of customs
 
         if do_dummy_2d_data_aug:
