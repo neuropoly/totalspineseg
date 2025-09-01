@@ -59,6 +59,10 @@ class nnUNetTrainerDAExt(nnUNetTrainer):
             mirror_axes,
         ) = self.configure_rotation_dummyDA_mirroring_and_inital_patch_size()
 
+        # Deactivate mirroring data augmentation
+        mirror_axes = None
+        self.inference_allowed_mirroring_axes = None
+
         # training pipeline
         tr_transforms = self.get_training_transforms(
             patch_size, rotation_for_DA, deep_supervision_scales, mirror_axes, do_dummy_2d_data_aug,
