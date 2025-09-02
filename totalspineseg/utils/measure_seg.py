@@ -352,10 +352,11 @@ def measure_seg(img, seg, label, mapping):
                     # Check if vertebra is more than one slice
                     if (seg_vert_data.sum(axis=0).sum(axis=0)).astype(bool).sum() > 1:
                         if not vert in vert_list:
-                            properties, vert_img, body_array = measure_vertebra(img_data=img.data, seg_vert_data=seg_vert_data, seg_canal_data=seg_canal.data, canal_centerline=centerline, pr=pr)
+                            properties, img_dict, body_array = measure_vertebra(img_data=img.data, seg_vert_data=seg_vert_data, seg_canal_data=seg_canal.data, canal_centerline=centerline, pr=pr)
 
                             # Save image
-                            imgs[f'vertebrae_{vert}'] = vert_img
+                            imgs[f'vertebrae_{vert}_seg'] = img_dict['seg']
+                            imgs[f'vertebrae_{vert}_img'] = img_dict['img']
 
                             # Add vertebral bodies
                             seg_bin.data[body_array.astype(bool)] = 1
@@ -453,13 +454,13 @@ def measure_disc(img_data, seg_disc_data, median_csf_signal, pr):
     # Normalize image intensity
     p10 = np.percentile(img_data, 5)
     p90 = np.percentile(img_data, 95)
-    img_data = (img_data - p10) / (p90 - p10 + 1e-8)
+    img_disc = (img_data - p10) / (p90 - p10 + 1e-8)
 
     # Extract 2D cut of disc image
     padding = 8
-    ymax, zmax = [v + padding if v + padding < img_data.shape[1+i] else img_data.shape[1+i]-1 for i, v in enumerate((ymax, zmax))]
+    ymax, zmax = [v + padding if v + padding < img_disc.shape[1+i] else img_disc.shape[1+i]-1 for i, v in enumerate((ymax, zmax))]
     ymin, zmin = [v - padding if v - padding >= 0 else 0 for v in (ymin, zmin)]
-    disc_img = img_data[xmin:xmax, ymin:ymax, zmin:zmax]
+    disc_img = img_disc[xmin:xmax, ymin:ymax, zmin:zmax]
     disc_img = disc_img[int((xmax-xmin)//2)]
 
     img_dict = {'seg':disc_seg, 'img':disc_img}
@@ -675,19 +676,36 @@ def measure_vertebra(img_data, seg_vert_data, seg_canal_data, canal_centerline, 
     rotate_inv = np.linalg.inv(coordinate_system)
     rot_coords = coords @ rotate_inv
     rot_coords = rot_coords - np.min(rot_coords, axis=0)
-    vert_img = np.zeros((int(np.round(np.max(rot_coords[:,0]))), int(np.round(np.max(rot_coords[:,1]))), int(np.round(np.max(rot_coords[:,2])))))
+    vert_seg = np.zeros((int(np.round(np.max(rot_coords[:,0]))), int(np.round(np.max(rot_coords[:,1]))), int(np.round(np.max(rot_coords[:,2])))))
     for i, coord in enumerate(rot_coords):
         if projections[i]>0: # vertebral body
-            vert_img[int(np.round(coord[0]-1)), int(np.round(coord[1]-1)), int(np.round(coord[2]-1))]=2
+            vert_seg[int(np.round(coord[0]-1)), int(np.round(coord[1]-1)), int(np.round(coord[2]-1))]=2
         else:
-            vert_img[int(np.round(coord[0]-1)), int(np.round(coord[1]-1)), int(np.round(coord[2]-1))]=1
+            vert_seg[int(np.round(coord[0]-1)), int(np.round(coord[1]-1)), int(np.round(coord[2]-1))]=1
     
     # Recreate body volume without rotation
     body_array = np.zeros_like(seg_vert_data)
     for coord in body_coords:
         body_array[coord[0], coord[1], coord[2]]=1
 
-    return properties, vert_img, body_array
+    # Recreate volume for visualization
+    _, (xmin, xmax, ymin, ymax, zmin, zmax) = crop_around_binary(seg_vert_data)
+    
+    # Normalize image intensity
+    p10 = np.percentile(img_data, 5)
+    p90 = np.percentile(img_data, 95)
+    img_vert = (img_data - p10) / (p90 - p10 + 1e-8)
+
+    # Extract 2D cut of disc image
+    padding = 8
+    ymax, zmax = [v + padding if v + padding < img_vert.shape[1+i] else img_vert.shape[1+i]-1 for i, v in enumerate((ymax, zmax))]
+    ymin, zmin = [v - padding if v - padding >= 0 else 0 for v in (ymin, zmin)]
+    vert_img = img_vert[xmin:xmax, ymin:ymax, zmin:zmax]
+    vert_img = vert_img[int((xmax-xmin)//2)]
+
+    img_dict = {'seg':vert_seg, 'img':vert_img}
+
+    return properties, img_dict, body_array
 
 def measure_foramens(seg_foramen_data, canal_centerline, pr):
     '''
