@@ -696,7 +696,7 @@ def measure_vertebra(img_data, seg_vert_data, seg_canal_data, canal_centerline, 
         body_array[coord[0], coord[1], coord[2]]=1
 
     # Recreate volume for visualization
-    _, (xmin, xmax, ymin, ymax, zmin, zmax) = crop_around_binary(seg_vert_data)
+    _, (xmin, xmax, ymin, ymax, zmin, zmax) = crop_around_binary(body_array)
     
     # Normalize image intensity
     p10 = np.percentile(img_data, 5)
