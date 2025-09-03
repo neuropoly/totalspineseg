@@ -353,7 +353,6 @@ def measure_seg(img, seg, label, mapping):
                     if (seg_vert_data.sum(axis=0).sum(axis=0)).astype(bool).sum() > 1:
                         if not vert in vert_list:
                             properties, img_dict, body_array = measure_vertebra(img_data=img.data, seg_vert_data=seg_vert_data, seg_canal_data=seg_canal.data, canal_centerline=centerline, pr=pr)
-
                             # Save image
                             imgs[f'vertebrae_{vert}_seg'] = img_dict['seg']
                             imgs[f'vertebrae_{vert}_img'] = img_dict['img']
@@ -596,13 +595,19 @@ def measure_vertebra(img_data, seg_vert_data, seg_canal_data, canal_centerline, 
     # Extract vertebra coords
     coords = np.argwhere(seg_vert_data > 0)
 
-    # Extract z position (SI) of the vertebra center of mass
+    # Extract z position (SI) of the vertebra
     vert_pos = np.mean(coords,axis=0)
+    vert_range = np.unique(coords[:,-1])
     z_mean = vert_pos[-1]
+    z_max = vert_range[-1]
 
     # Find closest point and derivative onto the canal centerline
     closest_canal_idx = np.argmin(abs(canal_centerline['position'][2]-z_mean))
-    canal_pos, canal_deriv = canal_centerline['position'][:,closest_canal_idx], canal_centerline['derivative'][:,closest_canal_idx]
+    canal_pos = canal_centerline['position'][:,closest_canal_idx]
+    
+    # Use average derivative
+    max_canal_idx = np.argmin(abs(canal_centerline['position'][2]-z_max))
+    canal_deriv = canal_centerline['derivative'][:,closest_canal_idx:max_canal_idx-1].mean(axis=1)
 
     # Create two perpendicular vectors u1 and u2
     v = canal_deriv
@@ -1201,6 +1206,8 @@ def save_isometric_png(volume, filename):
     volume, _ = crop_around_binary(volume)
     plotter = pv.Plotter(off_screen=True, border=False)
     plotter.add_volume(pv.wrap(volume), cmap="viridis", opacity="linear", shade=True)
+    # # See top view
+    # plotter.view_xy()
     plotter.remove_scalar_bar()
     plotter.camera.zoom(1.3)
     plotter.show(screenshot=filename)
@@ -1233,13 +1240,13 @@ def crop_around_binary(volume):
     return cropped, (xmin, xmax, ymin, ymax, zmin, zmax)
 
 if __name__ == '__main__':
-    # img_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/out/input/sub-001_ses-A_acq-isotropic_T2w_0000.nii.gz'
-    # seg_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/out/step2_output/sub-001_ses-A_acq-isotropic_T2w.nii.gz'
-    # label_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/out/step1_levels/sub-001_ses-A_acq-isotropic_T2w.nii.gz'
-    
-    img_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/spider_output/input/sub-232_acq-lowresSag_T2w_0000.nii.gz'
-    seg_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/spider_output/step2_output/sub-232_acq-lowresSag_T2w.nii.gz'
-    label_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/spider_output/step1_levels/sub-232_acq-lowresSag_T2w.nii.gz'
+    img_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/out/input/sub-001_ses-A_acq-isotropic_T2w_0000.nii.gz'
+    seg_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/out/step2_output/sub-001_ses-A_acq-isotropic_T2w.nii.gz'
+    label_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/out/step1_levels/sub-001_ses-A_acq-isotropic_T2w.nii.gz'
+
+    # img_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/spider_output/input/sub-232_acq-lowresSag_T2w_0000.nii.gz'
+    # seg_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/spider_output/step2_output/sub-232_acq-lowresSag_T2w.nii.gz'
+    # label_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/spider_output/step1_levels/sub-232_acq-lowresSag_T2w.nii.gz'
 
     ofolder_path = 'test'
 
