@@ -245,6 +245,12 @@ def compute_metrics_subject(subject_folder):
     
     # Compute discs metrics
     merged_data = compute_discs_metrics(merged_data)
+
+    # Compute foramen metrics
+    merged_data = compute_foramens_metrics(merged_data)
+
+    # Compute vertebrae metrics
+    merged_data = compute_vertebrae_metrics(merged_data)
     return merged_data
 
 def process_canal(subject_data):
@@ -297,9 +303,40 @@ def process_foramens(subject_data):
 def compute_discs_metrics(data_dict):
     # Compute Disc Height Index (DHI)
     for struc_name in data_dict['discs'].keys():
-        overlying_vertebra = struc_name.split('-')[0]
-        if overlying_vertebra in data_dict['vertebrae']:
-            data_dict['discs'][struc_name]['DHI'] = data_dict['discs'][struc_name]['median_thickness'] / data_dict['vertebrae'][overlying_vertebra]['AP_thickness']
+        top_vertebra = struc_name.split('-')[0]
+        if top_vertebra in data_dict['vertebrae']:
+            # Normalize disc height with top vertebra AP_thickness
+            data_dict['discs'][struc_name]['DHI'] = data_dict['discs'][struc_name]['median_thickness'] / data_dict['vertebrae'][top_vertebra]['AP_thickness']
+
+            # Normalize disc volume with top vertebra volume
+            data_dict['discs'][struc_name]['volume'] = data_dict['discs'][struc_name]['volume'] / data_dict['vertebrae'][top_vertebra]['volume']
+        else:
+            data_dict['discs'][struc_name]['DHI'] = -1
+            data_dict['discs'][struc_name]['volume'] = -1
+    return data_dict
+
+def compute_foramens_metrics(data_dict):
+    # Compute Foramen metrics
+    for struc_name in data_dict['foramens'].keys():
+        top_vertebra = struc_name.replace('foramens_','').split('-')[0]
+        # Normalize foramen surfaces with top vertebra AP thickness
+        for surface in ['right_surface', 'left_surface']:
+            data_dict['foramens'][struc_name][surface] = data_dict['foramens'][struc_name][surface] / (data_dict['vertebrae'][top_vertebra]['AP_thickness']*data_dict['vertebrae'][top_vertebra]['median_thickness'])
+
+        # Create asymmetry quotient
+        if data_dict['foramens'][struc_name]['right_surface'] != -1 and data_dict['foramens'][struc_name]['left_surface'] != -1 and data_dict['foramens'][struc_name]['left_surface'] != 0:
+            data_dict['foramens'][struc_name]['asymmetry R/L'] = data_dict['foramens'][struc_name]['right_surface'] / data_dict['foramens'][struc_name]['left_surface']
+        else:
+            data_dict['foramens'][struc_name]['asymmetry R/L'] = -1
+    return data_dict
+
+def compute_vertebrae_metrics(data_dict):
+    # Compute Vertebrae metrics
+    for struc_name in data_dict['vertebrae'].keys():
+        # Normalize foramen surfaces with top vertebra volume
+        for metric in data_dict['vertebrae'][struc_name].keys():
+            if metric != 'volume':
+                data_dict['vertebrae'][struc_name][metric] = data_dict['vertebrae'][struc_name][metric] / data_dict['vertebrae'][struc_name]['volume']
     return data_dict
 
 def rescale_canal(all_values):
@@ -519,27 +556,27 @@ def create_global_figures(subject_data, all_values_df, discs_gap, median_dict, i
             elif i == 1:
                 axes[i].text(0.5, 0.5, "Segmentation", fontsize=45, ha='center', va='center')
             else:
-                # Load image 
-                img_path = os.path.join(ressources_path, f'imgs/{struc}_{metrics[i - 2]}.jpg')
-                axes[i].imshow(plt.imread(img_path))
+                if os.path.exists(os.path.join(ressources_path, f'imgs/{struc}_{metrics[i - 2]}.jpg')):
+                    # Load image 
+                    img_path = os.path.join(ressources_path, f'imgs/{struc}_{metrics[i - 2]}.jpg')
+                    axes[i].imshow(plt.imread(img_path))
+                else:
+                    axes[i].text(0.5, 0.5, metrics[i - 2], fontsize=45, ha='center', va='center')
+            
             axes[i].set_axis_off()
             idx += 1
         for struc_name in struc_names:
             axes[idx].text(0.5, 0.5, struc_name, fontsize=45, ha='center', va='center')
             axes[idx].set_axis_off()
-            if struc != 'foramens':
-                img_name = f'{struc}_{struc_name}'
-                img = plt.imread(str(imgs_path / f'{img_name}.png'))
-            else:
-                img_name = f'{struc_name}'
-                img_left = plt.imread(str(imgs_path / f'{img_name}_left.png'))
-                img_right = plt.imread(str(imgs_path / f'{img_name}_right.png'))
+            img_name = f'{struc_name}'
+            img_left = plt.imread(str(imgs_path / f'{img_name}_left.png'))
+            img_right = plt.imread(str(imgs_path / f'{img_name}_right.png'))
 
-                # Concatenate images after padding to the maximal shape
-                max_height = max(img_left.shape[0], img_right.shape[0])
-                img_left_padded = np.pad(np.fliplr(img_left), ((0, max_height - img_left.shape[0]), (0, 0)), mode='constant')
-                img_right_padded = np.pad(img_right, ((0, max_height - img_right.shape[0]), (0, 0)), mode='constant')
-                img = np.concatenate((img_right_padded, img_left_padded), axis=1)
+            # Concatenate images after padding to the maximal shape
+            max_height = max(img_left.shape[0], img_right.shape[0])
+            img_left_padded = np.pad(np.fliplr(img_left), ((0, max_height - img_left.shape[0]), (0, 0)), mode='constant')
+            img_right_padded = np.pad(img_right, ((0, max_height - img_right.shape[0]), (0, 0)), mode='constant')
+            img = np.concatenate((img_right_padded, img_left_padded), axis=1)
 
             axes[idx+1].imshow(img)
             axes[idx+1].set_axis_off()
@@ -582,8 +619,8 @@ def create_global_figures(subject_data, all_values_df, discs_gap, median_dict, i
             elif i == 2:
                 axes[i].text(0.5, 0.5, "Segmentation", fontsize=45, ha='center', va='center')
             else:
-                # Load image 
                 if os.path.exists(os.path.join(ressources_path, f'imgs/{struc}_{metrics[i - 3]}.jpg')):
+                    # Load image 
                     img_path = os.path.join(ressources_path, f'imgs/{struc}_{metrics[i - 3]}.jpg')
                     axes[i].imshow(plt.imread(img_path))
                 else:
