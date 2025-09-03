@@ -424,15 +424,15 @@ def measure_disc(img_data, seg_disc_data, median_csf_signal, pr):
     coords = np.argwhere(seg_disc_data > 0)
     values = np.array([img_data[c[0], c[1], c[2]] for c in coords])
 
+    # Normalize disc intensity using median CSF signal
+    values = values / median_csf_signal
+
     # Identify the smallest elipsoid that can fit the disc
     ellipsoid = fit_ellipsoid(coords)
 
     # Extract SI thickness and intensity profile
     bin_size = max(2//pr, 1) # Put 1 bin per 2 mm
-    median_thickness, intensity_profile = compute_thickness_profile(coords, values, ellipsoid['rotation_matrix'], bin_size=bin_size)
-
-    # Normalize intensity profile using median CSF signal
-    intensity_profile = intensity_profile / median_csf_signal
+    median_thickness, intensity_counts, intensity_bins = compute_thickness_profile(coords, values, ellipsoid['rotation_matrix'], bin_size=bin_size)
 
     # Extract disc volume
     voxel_volume = pr**3
@@ -441,7 +441,8 @@ def measure_disc(img_data, seg_disc_data, median_csf_signal, pr):
     properties = {
         'center': np.round(ellipsoid['center']),
         'median_thickness': median_thickness*pr,
-        'intensity_profile': intensity_profile,
+        'intensity_counts': intensity_counts,
+        'intensity_bins': intensity_bins,
         'volume': volume,
         'eccentricity': ellipsoid['eccentricity'],
         'solidity': ellipsoid['solidity']
@@ -663,7 +664,7 @@ def measure_vertebra(img_data, seg_vert_data, seg_canal_data, canal_centerline, 
     coordinate_system = np.stack((u, w(u1, u2, best_theta), v), axis=0)
     values = np.array([img_data[c[0], c[1], c[2]] for c in body_coords])
     bin_size = max(2//pr, 1) # Put 1 bin per 2 mm
-    median_thickness, intensity_profile = compute_thickness_profile(body_coords, values, coordinate_system, bin_size=bin_size)
+    median_thickness, intensity_counts, intensity_bins = compute_thickness_profile(body_coords, values, coordinate_system, bin_size=bin_size)
 
     # Extract vertebral body volume
     voxel_volume = pr**3
@@ -672,7 +673,8 @@ def measure_vertebra(img_data, seg_vert_data, seg_canal_data, canal_centerline, 
     properties = {
         'center': np.round(body_pos),
         'median_thickness': median_thickness*pr,
-        'intensity_profile': intensity_profile, # TODO: Normalize the intensity using CSF for example
+        'intensity_counts': intensity_counts,
+        'intensity_bins': intensity_bins, # TODO: Normalize the intensity using CSF for example
         'AP_thickness': AP_thickness*pr,
         'volume': volume,
     }
@@ -921,14 +923,6 @@ def compute_thickness_profile(coords, values, rotation_matrix, bin_size=1.0):
     eigvecs = rotation_matrix
     rot_coords = coords_centered @ eigvecs
 
-    # Create bin matrix along SI dimension
-    SI_bin_size = max(bin_size//3, 1)
-    min_SI, max_SI = rot_coords[:,2].min(), rot_coords[:,2].max()
-    if min_SI == max_SI:
-        return 0, np.array([])
-    bins_SI = np.arange(min_SI, max_SI + SI_bin_size, SI_bin_size)
-    bin_indices_SI = np.digitize(rot_coords[:,2], bins_SI) - 1
-
     # Find min and max dimensions of the disc in the RL-AP plane
     min_RL, max_RL = rot_coords[:,0].min(), rot_coords[:,0].max()
     min_AP, max_AP = rot_coords[:,1].min(), rot_coords[:,1].max()
@@ -961,13 +955,10 @@ def compute_thickness_profile(coords, values, rotation_matrix, bin_size=1.0):
 
                 # Extract thickness
                 thicknesses.append(max_SI-min_SI)
-                # positions.append([(bins_RL[x] + bins_RL[x+1]) / 2, (bins_AP[y] + bins_AP[y+1]) / 2])
 
-    # Extract average SI intensity histogram
-    intensities_avg = []
-    for z in range(len(bins_SI) - 1):
-        intensities_avg.append(np.median(values[bin_indices_SI == z]))
-    return np.median(np.array(thicknesses)), np.array(intensities_avg)
+    # Extract intensity histogram
+    intensity_counts, intensity_bins = np.histogram(values, bins=80)
+    return np.median(np.array(thicknesses)), intensity_counts, intensity_bins
 
 def get_centerline(seg):
     '''
