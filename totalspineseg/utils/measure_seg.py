@@ -308,7 +308,8 @@ def measure_seg(img, seg, label, mapping):
                     "eccentricity": properties['eccentricity'],
                     "solidity": properties['solidity'],
                     "median_thickness": properties['median_thickness'],
-                    "intensity_profile": properties['intensity_profile'],
+                    "intensity_counts": properties['intensity_counts'],
+                    "intensity_bins": properties['intensity_bins'],
                     "center": properties['center'],
                     "volume": properties['volume']
                 }
@@ -366,7 +367,8 @@ def measure_seg(img, seg, label, mapping):
                                 "name": vert,
                                 "AP_thickness": properties['AP_thickness'],
                                 "median_thickness": properties['median_thickness'],
-                                "intensity_profile": properties['intensity_profile'],
+                                "intensity_counts": properties['intensity_counts'],
+                                "intensity_bins": properties['intensity_bins'],
                                 "center": properties['center'],
                                 "volume": properties['volume']
                             }
@@ -958,7 +960,7 @@ def compute_thickness_profile(coords, values, rotation_matrix, bin_size=1.0):
 
     # Extract intensity histogram
     intensity_counts, intensity_bins = np.histogram(values, bins=80)
-    return np.median(np.array(thicknesses)), intensity_counts, intensity_bins
+    return np.median(np.array(thicknesses)), intensity_counts.tolist(), intensity_bins.tolist()
 
 def get_centerline(seg):
     '''
