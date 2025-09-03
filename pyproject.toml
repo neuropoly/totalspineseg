@@ -34,7 +34,7 @@ keywords = [
 ]
 dependencies = [
     "tqdm",
-    "numpy<2",
+    "numpy",
     "nibabel",
     "gryds",
     "torchio",
@@ -42,11 +42,7 @@ dependencies = [
     "pillow",
     "nilearn",
     "SimpleITK",
-    # We use nnunetv2==2.4.2 for nnUNetTrainer_DASegOrd0_NoMirroring
-    # https://github.com/MIC-DKFZ/nnUNet/issues/2480
-    # --verify_dataset_integrity not working in nnunetv2==2.4.2 do we need to update this when fixed
-    # https://github.com/MIC-DKFZ/nnUNet/issues/2144
-    "nnunetv2<=2.4.2",
+    "nnunetv2",
     "psutil",
 ]
 
@@ -76,6 +72,8 @@ totalspineseg_extract_levels = "totalspineseg.utils.extract_levels:main"
 totalspineseg_extract_alternate = "totalspineseg.utils.extract_alternate:main"
 totalspineseg_install_weights = "totalspineseg.utils.install_weights:main"
 totalspineseg_predict_nnunet = "totalspineseg.utils.predict_nnunet:main"
+totalspineseg_measure_seg = "totalspineseg.utils.measure_seg:main"
+totalspineseg_generate_reports = "totalspineseg.utils.generate_reports:main"
 
 [build-system]
 requires = ["pip>=23", "setuptools>=67"]
