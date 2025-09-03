@@ -102,7 +102,7 @@ def generate_reports(
             for struc in control_data.keys():
                 for struc_name in control_data[struc].keys():
                     for metric in control_data[struc][struc_name].keys():
-                        if metric != 'intensity':
+                        if not 'intensity' in metric:
                             # Add subject to all_values
                             subject_value = control_data[struc][struc_name][metric]
                             if subject_value != -1:
@@ -404,19 +404,6 @@ def rescale_with_discs(disc_levels, metric_list, gap_dict):
     slice_interp += list(range(start_disc_gap, start_disc_gap + len(interp_values)))
     return interp_values, slice_interp
 
-def plot_intensity_profile(subject_data, ofolder_path, structure):
-    for struc in subject_data.name:
-        struc_data = subject_data[subject_data['name'] == struc]
-        struc_idx = struc_data.index[0]
-        plt.figure()
-        intensity_profile = convert_str_to_list(struc_data['intensity_profile'][struc_idx])
-        plt.bar(range(len(intensity_profile)), intensity_profile)
-        plt.title(f"{structure} {struc} intensity profile")
-        plt.xlabel("Z index")
-        plt.ylabel("Intensity")
-        plt.savefig(str(ofolder_path / f"{structure}_{struc}_intensity_profile.png"))
-        plt.close()
-
 def create_dict_from_subject_data(subject_data, intensity_profile=True):
     """
     Create a dictionary from the subject data DataFrame.
@@ -433,9 +420,9 @@ def create_dict_from_subject_data(subject_data, intensity_profile=True):
         struc_data = subject_data[subject_data['name'] == struc]
         struc_idx = struc_data.index[0]
         for column in struc_data.columns[2:]:
-            if column == 'intensity_profile':
-                if intensity_profile:
-                    struc_dict['intensity'] = convert_str_to_list(struc_data[column][struc_idx])
+            if 'intensity' in column:
+                if intensity_profile and column == 'intensity_counts':
+                    struc_dict['intensity'] = [convert_str_to_list(struc_data['intensity_counts'].iloc[0]), convert_str_to_list(struc_data['intensity_bins'].iloc[0])]
             else:
                 if column != 'center':
                     struc_dict[column] = struc_data[column][struc_idx]
@@ -516,7 +503,7 @@ def create_global_figures(subject_data, all_values_df, discs_gap, median_dict, i
         plt.savefig(str(ofolder_path / f"compared_{struc}.png"))
     
     # Create vertebrae, foramens figures
-    for struc in ['foramens', 'vertebrae']:
+    for struc in ['foramens']:
         # Create a subplot for each subject and overlay a red line corresponding to their value
         struc_names = np.array(list(subject_data[struc].keys()))
         struc_names = struc_names[np.isin(struc_names, list(all_values_df[struc].keys()))].tolist()
@@ -577,7 +564,7 @@ def create_global_figures(subject_data, all_values_df, discs_gap, median_dict, i
         plt.savefig(str(ofolder_path / f"compared_{struc}.png"))
     
     # Create discs figures
-    for struc in ['discs']:
+    for struc in ['discs', 'vertebrae']:
         # Create a subplot for each subject and overlay a red line corresponding to their value
         struc_names = np.array(list(subject_data[struc].keys()))
         struc_names = struc_names[np.isin(struc_names, list(all_values_df[struc].keys()))].tolist()
@@ -618,7 +605,7 @@ def create_global_figures(subject_data, all_values_df, discs_gap, median_dict, i
             for metric in metrics:
                 ax = axes[idx]
                 subject_value = subject_data[struc][struc_name][metric]
-                if metric != 'intensity':
+                if not 'intensity' in metric:
                     all_values_data = all_values_df[struc][struc_name][metric]
                     # Plot metric for subject
                     # If subject_value >= median_value, make the violin plot transparent
@@ -630,9 +617,9 @@ def create_global_figures(subject_data, all_values_df, discs_gap, median_dict, i
                     if subject_value != -1:
                         axes[idx].axvline(x=subject_value, color='red', linestyle='--')
                 else:
-                    axes[idx].bar(range(len(subject_value)), subject_value)
-                    axes[idx].set_xlabel("Slice index")
-                    axes[idx].set_ylabel("Intensity")
+                    axes[idx].stairs(subject_value[0], subject_value[1])
+                    axes[idx].set_xlabel("Intensity")
+                    axes[idx].set_ylabel("Counts")
                 fig.tight_layout()
                 idx += 1
             
@@ -640,7 +627,7 @@ def create_global_figures(subject_data, all_values_df, discs_gap, median_dict, i
 
 
 def convert_str_to_list(string):
-    return [float(item.strip()) for item in string[1:-1].split()]
+    return [float(item.strip()) for item in string[1:-1].split(',')]
 
 if __name__ == "__main__":
     test_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/out/metrics_output'
