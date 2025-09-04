@@ -367,8 +367,6 @@ def measure_seg(img, seg, label, mapping):
                                 "name": vert,
                                 "AP_thickness": properties['AP_thickness'],
                                 "median_thickness": properties['median_thickness'],
-                                "intensity_counts": properties['intensity_counts'],
-                                "intensity_bins": properties['intensity_bins'],
                                 "center": properties['center'],
                                 "volume": properties['volume']
                             }
