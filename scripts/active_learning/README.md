@@ -7,9 +7,9 @@ This README explains the steps that were performed to improve the quality of the
 
 Due to the time-consuming nature of manually segmenting the anatomical structures identified by TotalSpineSeg namely the spinal cord, spinal canal, vertebrae, and intervertebral discs, the [PAM50 atlas](https://pubmed.ncbi.nlm.nih.gov/29061527/) was registered to the native space of each scan that included the cervical and/or thoracic regions to serve as ground truth segmentation. However, because of inter-subject anatomical variability, the atlas did not perfectly align with every subject anatomy. These subtle misalignments introduced inconsistencies that propagated into the model’s predictions, often resulting in over- or under-segmentation of certain structures. This issue affects models trained up to and including release `r20250224`.
 
-## Refinement strategy
+## Refinement of the existing ground truth (T2w)
 
-These refinement will be done using existing contrasts specific deep learning models and manual corrections of the predictions.
+These ground truth refinements will be done using existing contrasts specific deep learning models and manual corrections of the predictions.
 
 ### Canal segmentations
 
