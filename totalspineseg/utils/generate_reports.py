@@ -119,25 +119,32 @@ def generate_reports(
 
         # TODO : save all values
 
-    # Create median dictionary
+    # Create median and std dictionary
     median_dict = {}
+    new_all_values = copy.deepcopy(all_values)
     if not quiet: print("\n" "Computing median metrics:")
     for struc in tqdm(all_values.keys(), disable=quiet):
         if struc in ['foramens', 'discs', 'vertebrae']:
             for struc_name in all_values[struc].keys():
                 for metric, values in all_values[struc][struc_name].items():
+                    # Discard values at 4 times the std from the median
                     median_value = np.median(values)
+                    std_value = np.std(values)
+                    new_values = [v for v in values if v >= median_value - 4*std_value and v <= median_value + 4*std_value and v != -1]
+                    new_all_values[struc][struc_name][metric] = new_values
+                    median_value = np.median(new_values)
+                    std_value = np.std(new_values)
                     if struc not in median_dict:
-                        median_dict[struc] = {struc_name: {metric: median_value}}
+                        median_dict[struc] = {struc_name: {metric: {'median': median_value, 'std': std_value}}}
                     else:
                         if struc_name not in median_dict[struc]:
-                            median_dict[struc][struc_name] = {metric: median_value}
+                            median_dict[struc][struc_name] = {metric: {'median': median_value, 'std': std_value}}
                         else:
                             if metric not in median_dict[struc][struc_name]:
-                                median_dict[struc][struc_name][metric] = median_value
+                                median_dict[struc][struc_name][metric] = {'median': median_value, 'std': std_value}
 
     # Convert all_values to dataframe
-    all_values_df = convert_to_df(all_values)
+    all_values_df = convert_to_df(new_all_values)
     
     # Create global figures for test data subjects
     discs_gap = all_values['canal']['canal']['discs_gap'] 
@@ -592,11 +599,16 @@ def create_global_figures(subject_data, all_values_df, discs_gap, median_dict, i
                 all_values_data = all_values_df[struc][struc_name][metric]
 
                 # Plot metric for subject
-                # If subject_value >= median_value, make the violin plot transparent
-                if subject_value >= median_dict[struc][struc_name][metric] or subject_value == -1:
+                if subject_value == -1:
                     sns.violinplot(x='values', data=all_values_data, ax=ax, cut=0, bw_method=0.7, color='gray', alpha=0.2)
+                elif subject_value < median_dict[struc][struc_name][metric]['median'] - 0.8*median_dict[struc][struc_name][metric]['std']:
+                    sns.violinplot(x='values', data=all_values_data, ax=ax, cut=0, bw_method=0.7, color='orange')
+                elif subject_value > median_dict[struc][struc_name][metric]['median'] + 0.8*median_dict[struc][struc_name][metric]['std']:
+                    # Highlight the violin plot
+                    sns.violinplot(x='values', data=all_values_data, ax=ax, cut=0, bw_method=0.7, color='green')
                 else:
-                    sns.violinplot(x='values', data=all_values_data, ax=ax, cut=0, bw_method=0.7)
+                    sns.violinplot(x='values', data=all_values_data, ax=ax, cut=0, bw_method=0.7, color='gray', alpha=0.2)
+                    
                 ax.tick_params(axis='x', rotation=45, labelsize=12)
                 if subject_value != -1:
                     axes[idx].axvline(x=subject_value, color='red', linestyle='--')
@@ -650,11 +662,17 @@ def create_global_figures(subject_data, all_values_df, discs_gap, median_dict, i
                 if not 'intensity' in metric:
                     all_values_data = all_values_df[struc][struc_name][metric]
                     # Plot metric for subject
-                    # If subject_value >= median_value, make the violin plot transparent
-                    if subject_value >= median_dict[struc][struc_name][metric] or subject_value == -1:
+                    if subject_value == -1:
                         sns.violinplot(x='values', data=all_values_data, ax=ax, cut=0, bw_method=0.7, color='gray', alpha=0.2)
+                    elif subject_value < median_dict[struc][struc_name][metric]['median'] - 0.8*median_dict[struc][struc_name][metric]['std']:
+                        # Highlight the violin plot in orange
+                        sns.violinplot(x='values', data=all_values_data, ax=ax, cut=0, bw_method=0.7, color='orange')
+                    elif subject_value > median_dict[struc][struc_name][metric]['median'] + 0.8*median_dict[struc][struc_name][metric]['std']:
+                        # Highlight the violin plot in green
+                        sns.violinplot(x='values', data=all_values_data, ax=ax, cut=0, bw_method=0.7, color='green')
                     else:
-                        sns.violinplot(x='values', data=all_values_data, ax=ax, cut=0, bw_method=0.7)
+                        sns.violinplot(x='values', data=all_values_data, ax=ax, cut=0, bw_method=0.7, color='gray', alpha=0.2)
+
                     ax.tick_params(axis='x', rotation=45, labelsize=12)
                     if subject_value != -1:
                         axes[idx].axvline(x=subject_value, color='red', linestyle='--')
