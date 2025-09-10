@@ -319,6 +319,11 @@ def compute_foramens_metrics(data_dict):
     # Compute Foramen metrics
     for struc_name in data_dict['foramens'].keys():
         top_vertebra = struc_name.replace('foramens_','').split('-')[0]
+        if not top_vertebra in data_dict['vertebrae']:
+            data_dict['foramens'][struc_name]['right_surface'] = -1
+            data_dict['foramens'][struc_name]['left_surface'] = -1
+            data_dict['foramens'][struc_name]['asymmetry R/L'] = -1
+            continue
         # Normalize foramen surfaces with top vertebra AP thickness
         for surface in ['right_surface', 'left_surface']:
             data_dict['foramens'][struc_name][surface] = data_dict['foramens'][struc_name][surface] / (data_dict['vertebrae'][top_vertebra]['AP_thickness']*data_dict['vertebrae'][top_vertebra]['median_thickness'])
