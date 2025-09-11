@@ -36,7 +36,7 @@ CURR_DIR="$(realpath .)"
 cd "$bids"
 
 datasets=(
-    git@data.neuro.polymtl.ca:p118739/whole-spine-mirror.git # TODO: Update link to whole spine
+    git@data.neuro.polymtl.ca:datasets/whole-spine.git
     git@data.neuro.polymtl.ca:datasets/spider-challenge-2023.git
     git@github.com:spine-generic/data-multi-subject.git
 )
@@ -65,10 +65,6 @@ for i in "${!datasets[@]}"; do
     # Move back to the parent directory to process the next dataset
     cd ..
 done
-
-# Rename whole-spine
-# TODO: remove this step in the future
-mv whole-spine-mirror whole-spine
 
 keys=(
     IMAGE
