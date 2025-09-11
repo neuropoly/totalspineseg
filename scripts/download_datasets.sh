@@ -41,16 +41,16 @@ datasets=(
     git@github.com:spine-generic/data-multi-subject.git
 )
 
-branches=(
-    nm/add_spine_and_canal
-    nm/update_some_labels
-    nm/add_spine_and_canal
+commits=(
+    45bc28f3cf522feec5160e2f145acd03759ede39
+    d9be04cfb27da100fe03d968e220cccebbbc9a3f
+    646e4bf21c4182a2f8e9f5ee4892d4cd7cbe0dc3
 )
 
 # Clone datasets and checkout on the right branch
 for i in "${!datasets[@]}"; do
     ds=${datasets[i]}
-    branch=${branches[i]}
+    commit=${commits[i]}
     dsn=$(basename $ds .git)
 
     # Clone the dataset from the specified repository
@@ -59,8 +59,8 @@ for i in "${!datasets[@]}"; do
     # Enter the dataset directory
     cd "$dsn"
 
-    # Checkout on the branch
-    git checkout "$branch"
+    # Checkout on the commit
+    git checkout "$commit"
 
     # Move back to the parent directory to process the next dataset
     cd ..
