@@ -200,7 +200,7 @@ class nnUNetTrainerDAExt(nnUNetTrainer):
                 noise=True,
                 swap=False,
                 random_pick=True
-            ), apply_probability=0.1
+            ), apply_probability=0.01
         ))
 
         ## Spatial transforms
@@ -212,7 +212,7 @@ class nnUNetTrainerDAExt(nnUNetTrainer):
                 elastic=True,
                 anisotropy=True,
                 random_pick=True
-            ), apply_probability=0.1
+            ), apply_probability=0.01
         ))
         ### End of customs
 
