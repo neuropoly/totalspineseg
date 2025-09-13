@@ -185,7 +185,7 @@ class nnUNetTrainerDAExt(nnUNetTrainer):
             ShapeTransform(
                 shape_min=1, 
                 ignore_axes=(1,2)
-            ), apply_probability=0.4
+            ), apply_probability=0.3
         ))
         
         ## Artifacts generation
@@ -200,7 +200,7 @@ class nnUNetTrainerDAExt(nnUNetTrainer):
                 noise=True,
                 swap=False,
                 random_pick=True
-            ), apply_probability=0.01
+            ), apply_probability=0.0
         ))
 
         ## Spatial transforms
@@ -212,7 +212,7 @@ class nnUNetTrainerDAExt(nnUNetTrainer):
                 elastic=True,
                 anisotropy=True,
                 random_pick=True
-            ), apply_probability=0.01
+            ), apply_probability=0.0
         ))
         ### End of customs
 
