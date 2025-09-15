@@ -62,7 +62,7 @@ export nnUNet_preprocessed="$TOTALSPINESEG_DATA"/nnUNet/preprocessed
 export nnUNet_results="$TOTALSPINESEG_DATA"/nnUNet/results
 export nnUNet_exports="$TOTALSPINESEG_DATA"/nnUNet/exports
 
-nnUNetTrainer=${3:-nnUNetTrainerDAExt}
+nnUNetTrainer=${3:-nnUNetTrainerDA5} # nnUNetTrainerDAExt} use DA5 temporarily as DAExt is too slow to train for now
 nnUNetPlanner=${4:-nnUNetPlannerResEncL}
 nnUNetPlans=${5:-nnUNetPlans}
 configuration=3d_fullres
