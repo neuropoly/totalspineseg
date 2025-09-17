@@ -176,3 +176,9 @@ cython_debug/
 
 # Extra files
 /totalspineseg/models/nnUNet
+
+# Files
+*.png
+*.csv
+*.nii.gz
+*.nii
