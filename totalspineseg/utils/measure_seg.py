@@ -694,17 +694,6 @@ def measure_vertebra(img_data, seg_vert_data, seg_canal_data, canal_centerline, 
         'AP_thickness': AP_thickness*pr,
         'volume': volume,
     }
-
-    # Recreate volume for visualization
-    rotate_inv = np.linalg.inv(coordinate_system)
-    rot_coords = coords @ rotate_inv
-    rot_coords = rot_coords - np.min(rot_coords, axis=0)
-    vert_seg = np.zeros((int(np.round(np.max(rot_coords[:,0]))), int(np.round(np.max(rot_coords[:,1]))), int(np.round(np.max(rot_coords[:,2])))))
-    for i, coord in enumerate(rot_coords):
-        if projections[i]>0: # vertebral body
-            vert_seg[int(np.round(coord[0]-1)), int(np.round(coord[1]-1)), int(np.round(coord[2]-1))]=2
-        else:
-            vert_seg[int(np.round(coord[0]-1)), int(np.round(coord[1]-1)), int(np.round(coord[2]-1))]=1
     
     # Recreate body volume without rotation
     body_array = np.zeros_like(seg_vert_data)
@@ -725,8 +714,15 @@ def measure_vertebra(img_data, seg_vert_data, seg_canal_data, canal_centerline, 
     ymin, zmin = [v - padding if v - padding >= 0 else 0 for v in (ymin, zmin)]
     vert_img = img_vert[xmin:xmax, ymin:ymax, zmin:zmax]
     vert_img = vert_img[int((xmax-xmin)//2)]
+    vert_img_bgr = np.stack([vert_img]*3, axis=-1)
 
-    img_dict = {'seg':vert_seg, 'img':vert_img}
+    # Overlay vertebrae segmentation on image
+    vert_seg = seg_vert_data[xmin:xmax, ymin:ymax, zmin:zmax]
+    vert_seg = vert_seg[int((xmax-xmin)//2)]
+    vert_seg_bgr = vert_img_bgr.copy()
+    vert_seg_bgr[vert_seg > 0] = [0, 0, 1] # Red overlay
+
+    img_dict = {'seg':vert_seg_bgr, 'img':vert_img_bgr}
 
     return properties, img_dict, body_array, True
 
