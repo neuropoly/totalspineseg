@@ -295,25 +295,26 @@ def measure_seg(img, seg, label, mapping):
             seg_disc_data = (seg.data == mapping[struc]).astype(int)
             # Check if disc is more than one slice
             if (seg_disc_data.sum(axis=0).sum(axis=0)).astype(bool).sum() > 1:
-                properties, img_dict = measure_disc(img_data=img.data, seg_disc_data=seg_disc_data, median_csf_signal=median_csf_signal, pr=pr)
+                properties, img_dict, add_struc = measure_disc(img_data=img.data, seg_disc_data=seg_disc_data, median_csf_signal=median_csf_signal, pr=pr)
 
-                # Save image
-                imgs[f'discs_{struc}_seg'] = img_dict['seg']
-                imgs[f'discs_{struc}_img'] = img_dict['img']
+                if add_struc:
+                    # Save image
+                    imgs[f'discs_{struc}_seg'] = img_dict['seg']
+                    imgs[f'discs_{struc}_img'] = img_dict['img']
 
-                # Create a row
-                row = {
-                    "structure": "disc",
-                    "name": struc,
-                    "eccentricity": properties['eccentricity'],
-                    "solidity": properties['solidity'],
-                    "median_thickness": properties['median_thickness'],
-                    "intensity_counts": properties['intensity_counts'],
-                    "intensity_bins": properties['intensity_bins'],
-                    "center": properties['center'],
-                    "volume": properties['volume']
-                }
-                rows.append(row)
+                    # Create a row
+                    row = {
+                        "structure": "disc",
+                        "name": struc,
+                        "eccentricity": properties['eccentricity'],
+                        "solidity": properties['solidity'],
+                        "median_thickness": properties['median_thickness'],
+                        "intensity_counts": properties['intensity_counts'],
+                        "intensity_bins": properties['intensity_bins'],
+                        "center": properties['center'],
+                        "volume": properties['volume']
+                    }
+                    rows.append(row)
     metrics['discs'] = rows
     
     # Compute metrics onto vertebrae and foramens
@@ -353,42 +354,45 @@ def measure_seg(img, seg, label, mapping):
                     # Check if vertebra is more than one slice
                     if (seg_vert_data.sum(axis=0).sum(axis=0)).astype(bool).sum() > 1:
                         if not vert in vert_list:
-                            properties, img_dict, body_array = measure_vertebra(img_data=img.data, seg_vert_data=seg_vert_data, seg_canal_data=seg_canal.data, canal_centerline=centerline, pr=pr)
-                            # Save image
-                            imgs[f'vertebrae_{vert}_seg'] = img_dict['seg']
-                            imgs[f'vertebrae_{vert}_img'] = img_dict['img']
+                            properties, img_dict, body_array, add_struc = measure_vertebra(img_data=img.data, seg_vert_data=seg_vert_data, seg_canal_data=seg_canal.data, canal_centerline=centerline, pr=pr)
+                            
+                            if add_struc:
+                                # Save image
+                                imgs[f'vertebrae_{vert}_seg'] = img_dict['seg']
+                                imgs[f'vertebrae_{vert}_img'] = img_dict['img']
 
-                            # Add vertebral bodies
-                            seg_bin.data[body_array.astype(bool)] = 1
+                                # Add vertebral bodies
+                                seg_bin.data[body_array.astype(bool)] = 1
 
-                            # Create a row per position/thickness point
-                            vertebrae_row = {
-                                "structure": "vertebra",
-                                "name": vert,
-                                "AP_thickness": properties['AP_thickness'],
-                                "median_thickness": properties['median_thickness'],
-                                "center": properties['center'],
-                                "volume": properties['volume']
-                            }
-                            vertebrae_rows.append(vertebrae_row)
-                            vert_list.append(vert)
+                                # Create a row per position/thickness point
+                                vertebrae_row = {
+                                    "structure": "vertebra",
+                                    "name": vert,
+                                    "AP_thickness": properties['AP_thickness'],
+                                    "median_thickness": properties['median_thickness'],
+                                    "center": properties['center'],
+                                    "volume": properties['volume']
+                                }
+                                vertebrae_rows.append(vertebrae_row)
+                                vert_list.append(vert)
                     seg_foramen_data += seg_vert_data
 
                 # Compute foramens properties
-                foramens_areas, foramens_imgs = measure_foramens(seg_foramen_data=seg_foramen_data, canal_centerline=centerline, pr=pr)
+                if top_vert in vert_list and bottom_vert in vert_list: # Both vertebrae were measured and are complete
+                    foramens_areas, foramens_imgs = measure_foramens(seg_foramen_data=seg_foramen_data, canal_centerline=centerline, pr=pr)
                 
-                # Save image
-                for side,image in foramens_imgs.items():
-                    imgs[f'{foramens_name}_{side}'] = image
-                
-                # Save foramen metrics
-                foramens_row = {
-                    "structure": "foramen",
-                    "name": foramens_name,
-                    "right_surface": foramens_areas['right'],
-                    "left_surface": foramens_areas['left']
-                }
-                foramens_rows.append(foramens_row)
+                    # Save image
+                    for side,image in foramens_imgs.items():
+                        imgs[f'{foramens_name}_{side}'] = image
+                    
+                    # Save foramen metrics
+                    foramens_row = {
+                        "structure": "foramen",
+                        "name": foramens_name,
+                        "right_surface": foramens_areas['right'],
+                        "left_surface": foramens_areas['left']
+                    }
+                    foramens_rows.append(foramens_row)
     metrics['vertebrae'] = vertebrae_rows
     metrics['foramens'] = foramens_rows
     
@@ -422,6 +426,11 @@ def measure_disc(img_data, seg_disc_data, median_csf_signal, pr):
     '''
     # Fetch coords from image
     coords = np.argwhere(seg_disc_data > 0)
+    
+    # Exclude discs touching image boundary
+    if coords[:,2].max() == seg_disc_data.shape[2]-1 or coords[:,2].min() == 0:
+        return None, None, False
+    
     values = np.array([img_data[c[0], c[1], c[2]] for c in coords])
 
     # Normalize disc intensity using median CSF signal
@@ -467,7 +476,7 @@ def measure_disc(img_data, seg_disc_data, median_csf_signal, pr):
     disc_img = disc_img[int((xmax-xmin)//2)]
 
     img_dict = {'seg':disc_seg, 'img':disc_img}
-    return properties, img_dict
+    return properties, img_dict, True
 
 def measure_csf(img_data, seg_csf_data):
     '''
@@ -599,6 +608,10 @@ def measure_vertebra(img_data, seg_vert_data, seg_canal_data, canal_centerline, 
     # Extract vertebra coords
     coords = np.argwhere(seg_vert_data > 0)
 
+    # Exclude vertebrae touching image boundary
+    if coords[:,2].max() == seg_vert_data.shape[2]-1 or coords[:,2].min() == 0:
+        return None, None, None, False
+
     # Extract z position (SI) of the vertebra
     vert_pos = np.mean(coords,axis=0)
     z_mean = vert_pos[-1]
@@ -708,7 +721,7 @@ def measure_vertebra(img_data, seg_vert_data, seg_canal_data, canal_centerline, 
 
     img_dict = {'seg':vert_seg, 'img':vert_img}
 
-    return properties, img_dict, body_array
+    return properties, img_dict, body_array, True
 
 def measure_foramens(seg_foramen_data, canal_centerline, pr):
     '''
