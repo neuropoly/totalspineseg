@@ -751,7 +751,7 @@ def measure_foramens(seg_foramen_data, canal_centerline, pr):
 
     # Extract z position (SI) of the disc center of mass
     disc_coords = np.argwhere(seg_foramen_data == 2)
-    disc_pos = np.mean(coords,axis=0)
+    disc_pos = np.mean(disc_coords,axis=0)
     z_mean = disc_pos[-1]
 
     # Find closest point and derivative onto the canal centerline
@@ -838,12 +838,12 @@ def measure_foramens(seg_foramen_data, canal_centerline, pr):
         y_coords = np.round(y_coords).astype(int)
 
         # Create image
-        img = np.zeros((np.max(x_coords), np.max(y_coords)))
+        seg = np.zeros((np.max(x_coords), np.max(y_coords)))
         for x, y in zip(x_coords, y_coords):
-            img[x-1, y-1]=1
+            seg[x-1, y-1]=1
 
         # Inverse image
-        labeled_bg = morphology.remove_small_objects(~img.astype(bool), min_size=64)
+        labeled_bg = morphology.remove_small_objects(~seg.astype(bool), min_size=64)
 
         # Padd image to connect exterior components
         labeled_bg = np.pad(labeled_bg, pad_width=(5,5), mode='constant', constant_values=1)
