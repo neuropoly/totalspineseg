@@ -653,7 +653,7 @@ def create_global_figures(subject_data, all_values_df, discs_gap, median_dict, i
             seg = plt.imread(str(imgs_path / f'{img_name}_seg.png'))
             axes[idx+1].imshow(np.rot90(img), cmap='gray')
             axes[idx+1].set_axis_off()
-            axes[idx+2].imshow(seg)
+            axes[idx+2].imshow(np.rot90(seg))
             axes[idx+2].set_axis_off()
             idx += 3
             for metric in metrics:
