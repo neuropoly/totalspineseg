@@ -223,13 +223,10 @@ def _measure_seg(
     for name, img in imgs.items():
         img_name = f'{name}.png'
         img_path = imgs_folder_path / img_name
-        if len(img.shape) == 3:
-            save_isometric_png(img, img_path)
+        if 'foramen' in img_name:
+            cv2.imwrite(img_path, img*125)
         else:
-            if 'foramen' in img_name:
-                cv2.imwrite(img_path, img*125)
-            else:
-                cv2.imwrite(img_path, img*255)
+            cv2.imwrite(img_path, img*255)
     
 def measure_seg(img, seg, label, mapping):
     '''
