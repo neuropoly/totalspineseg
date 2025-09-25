@@ -461,7 +461,7 @@ def measure_disc(img_data, seg_disc_data, median_csf_signal, pr):
     }
 
     # Recreate volume for visualization
-    disc_seg, (xmin, xmax, ymin, ymax, zmin, zmax) = crop_around_binary(seg_disc_data)
+    _, (xmin, xmax, ymin, ymax, zmin, zmax) = crop_around_binary(seg_disc_data)
 
     # Normalize image intensity
     p10 = np.percentile(img_data, 5)
@@ -474,8 +474,15 @@ def measure_disc(img_data, seg_disc_data, median_csf_signal, pr):
     ymin, zmin = [v - padding if v - padding >= 0 else 0 for v in (ymin, zmin)]
     disc_img = img_disc[xmin:xmax, ymin:ymax, zmin:zmax]
     disc_img = disc_img[int((xmax-xmin)//2)]
+    disc_img_bgr = np.stack([disc_img]*3, axis=-1)
 
-    img_dict = {'seg':disc_seg, 'img':disc_img}
+    # Overlay disc segmentation on image
+    disc_seg = seg_disc_data[xmin:xmax, ymin:ymax, zmin:zmax]
+    disc_seg = disc_seg[int((xmax-xmin)//2)]
+    disc_seg_bgr = disc_img_bgr.copy()
+    disc_seg_bgr[disc_seg > 0] = [0, 0, 1] # Red overlay
+
+    img_dict = {'seg':disc_seg_bgr, 'img':disc_img_bgr}
     return properties, img_dict, True
 
 def measure_csf(img_data, seg_csf_data):
