@@ -394,7 +394,7 @@ def measure_seg(img, seg, label, mapping):
             seg_disc_data = (seg.data == mapping[struc]).astype(int)
             # Check if disc is more than one slice
             if (seg_disc_data.sum(axis=0).sum(axis=0)).astype(bool).sum() > 1:
-                properties, img_dict, add_struc = measure_disc(img_data=img.data, seg_disc_data=seg_disc_data, spine_centerline=spine_centerline, median_csf_signal=median_csf_signal, pr=pr)
+                properties, img_dict, add_struc = measure_disc(img_data=img.data, seg_disc_data=seg_disc_data, centerline=centerline, median_csf_signal=median_csf_signal, pr=pr)
 
                 if add_struc:
                     # Save image
@@ -418,7 +418,7 @@ def measure_seg(img, seg, label, mapping):
 
     return metrics, imgs
 
-def measure_disc(img_data, seg_disc_data, spine_centerline, median_csf_signal, pr):
+def measure_disc(img_data, seg_disc_data, centerline, median_csf_signal, pr):
     '''
     Calculate metrics from binary disc segmentation
     '''
@@ -434,13 +434,13 @@ def measure_disc(img_data, seg_disc_data, spine_centerline, median_csf_signal, p
     # Normalize disc intensity using median CSF signal
     values = values / median_csf_signal
 
-    # Find closest point and derivative onto the spine centerline
+    # Find closest point and derivative onto the centerline
     z_mean = np.mean(coords, axis=0)[-1]
-    closest_spine_idx = np.argmin(abs(spine_centerline['position'][2]-z_mean))
-    spine_pos, spine_deriv = spine_centerline['position'][:,closest_spine_idx], spine_centerline['derivative'][:,closest_spine_idx]
+    closest_centerline_idx = np.argmin(abs(centerline['position'][2]-z_mean))
+    centerline_pos, centerline_deriv = centerline['position'][:,closest_centerline_idx], centerline['derivative'][:,closest_centerline_idx]
 
-    # Use spine deriv to compute discs metrics
-    ellipsoid = fit_ellipsoid(coords, spine_deriv)
+    # Use centerline deriv to compute discs metrics
+    ellipsoid = fit_ellipsoid(coords, centerline_deriv)
 
     # Extract intensity histogram
     intensity_counts, intensity_bins = np.histogram(values, range=(0, 2.5), bins=100)
@@ -869,7 +869,7 @@ def measure_foramens(seg_foramen_data, canal_centerline, pr):
             foramens_imgs[side] = labeled_bg
     return foramens_areas, foramens_imgs
 
-def fit_ellipsoid(coords, spine_deriv):
+def fit_ellipsoid(coords, centerline_deriv):
     # Compute the center of mass of the disc
     center = coords.mean(axis=0)
 
@@ -877,7 +877,7 @@ def fit_ellipsoid(coords, spine_deriv):
     coords_centered = coords - center
 
     # Create two perpendicular vectors u1 and u2
-    v = spine_deriv / np.linalg.norm(spine_deriv)  # Normalize the vector
+    v = centerline_deriv / np.linalg.norm(centerline_deriv)  # Normalize the vector
     tmp = np.array([1, 0, 0]) # Init temporary non colinear vector
     u1 = np.cross(v, tmp)
     u1 /= np.linalg.norm(u1)
