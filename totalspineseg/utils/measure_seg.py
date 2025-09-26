@@ -14,6 +14,7 @@ import platform
 import csv
 import warnings
 import cv2
+from sklearn.mixture import GaussianMixture
 
 from totalspineseg.utils.image import Image, resample_nib, zeros_like
 import pyvista as pv
@@ -417,7 +418,7 @@ def measure_seg(img, seg, label, mapping):
 
     return metrics, imgs
 
-def measure_disc(img_data, seg_disc_data, centerline, median_csf_signal, pr):
+def measure_disc(img_data, seg_disc_data, centerline, csf_signal, pr):
     '''
     Calculate metrics from binary disc segmentation
     '''
@@ -430,8 +431,8 @@ def measure_disc(img_data, seg_disc_data, centerline, median_csf_signal, pr):
     
     values = np.array([img_data[c[0], c[1], c[2]] for c in coords])
 
-    # Normalize disc intensity using median CSF signal
-    values = values / median_csf_signal
+    # Normalize disc intensity using CSF signal
+    values = values / csf_signal
 
     # Find closest point and derivative onto the centerline
     z_mean = np.mean(coords, axis=0)[-1]
@@ -441,12 +442,12 @@ def measure_disc(img_data, seg_disc_data, centerline, median_csf_signal, pr):
     # Use centerline deriv to compute discs metrics
     ellipsoid = fit_ellipsoid(coords, centerline_deriv)
 
-    # Extract intensity histogram
-    intensity_counts, intensity_bins = np.histogram(values, range=(0, 2.5), bins=100)
-
     # Extract SI thickness
     bin_size = max(2//pr, 1) # Put 1 bin per 2 mm
     median_thickness = compute_thickness_profile(coords, ellipsoid['rotation_matrix'], bin_size=bin_size)
+
+    # Use gaussian mixture models to identify intensity peaks
+    peaks = find_intensity_peaks(values)
 
     # Extract disc volume
     voxel_volume = pr**3
@@ -455,14 +456,13 @@ def measure_disc(img_data, seg_disc_data, centerline, median_csf_signal, pr):
     properties = {
         'center': np.round(ellipsoid['center']),
         'median_thickness': median_thickness*pr,
-        'intensity_counts': intensity_counts.tolist(),
-        'intensity_bins': intensity_bins.tolist(),
+        'intensity_peaks_gap': peaks[-1] - peaks[0],
         'volume': volume,
         'eccentricity': ellipsoid['eccentricity'],
         'solidity': ellipsoid['solidity']
     }
 
-    # Recreate volume for visualization
+    # Center volume for visualization
     _, (xmin, xmax, ymin, ymax, zmin, zmax) = crop_around_binary(seg_disc_data)
 
     # Normalize image intensity
@@ -867,6 +867,36 @@ def measure_foramens(seg_foramen_data, canal_centerline, pr):
             foramens_areas[side] = -1
             foramens_imgs[side] = labeled_bg
     return foramens_areas, foramens_imgs
+
+def find_intensity_peaks(values):
+    '''
+    Find intensity peaks in the histogram of values using a gaussian mixture model
+
+    Parameters:
+        values: (N,) array of intensity values corresponding to the coords
+
+    Returns:
+        peaks: list of floats representing the intensity peaks
+    '''
+
+    # Fit Gaussian Mixture Model with 2 components
+    gmm = GaussianMixture(n_components=2, random_state=0)
+    gmm.fit(values.reshape(-1, 1))
+
+    # Extract means and weights of the components
+    means = gmm.means_.flatten()
+    weights = gmm.weights_.flatten()
+
+    # Sort components by their means
+    sorted_indices = np.argsort(means)
+    means = means[sorted_indices]
+    weights = weights[sorted_indices]
+
+    # Filter out components with very low weight
+    weight_threshold = 0.05
+    significant_means = means[weights > weight_threshold]
+
+    return significant_means.tolist()
 
 def fit_ellipsoid(coords, centerline_deriv):
     # Compute the center of mass of the disc
