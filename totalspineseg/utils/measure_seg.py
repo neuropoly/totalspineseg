@@ -270,7 +270,7 @@ def measure_seg(img, seg, label, mapping):
     # Measure CSF signal
     seg_csf_data = (seg.data == mapping['CSF']).astype(int)
     properties = measure_csf(img.data, seg_csf_data)
-    median_csf_signal = np.max(list(properties['slice_signal'].values()))
+    csf_signal = np.percentile(list(properties['slice_signal'].values()), 90)
 
     rows = []
     for i, (k, v) in enumerate(properties['slice_signal'].items()):
