@@ -224,10 +224,12 @@ def _measure_seg(
     for name, img in imgs.items():
         img_name = f'{name}.png'
         img_path = imgs_folder_path / img_name
+        # Scale image to [0, 255] and convert to uint8
         if 'foramen' in img_name:
-            cv2.imwrite(img_path, img*125)
+            img_to_save = np.clip(img * 125, 0, 255).astype(np.uint8)
         else:
-            cv2.imwrite(img_path, img*255)
+            img_to_save = np.clip(img * 255, 0, 255).astype(np.uint8)
+        cv2.imwrite(str(img_path), img_to_save)
     
 def measure_seg(img, seg, label, mapping):
     '''
@@ -483,6 +485,23 @@ def measure_disc(img_data, seg_disc_data, centerline, csf_signal, pr):
     disc_seg = disc_seg[int((xmax-xmin)//2)]
     disc_seg_bgr = disc_img_bgr.copy()
     disc_seg_bgr[disc_seg > 0] = [0, 0, 1] # Red overlay
+
+    # # Overlay centerline_deriv vector in yellow onto the disc_img_bgr
+    # center_y, center_z = disc_img_bgr.shape[0] // 2, disc_img_bgr.shape[1] // 2
+    # # Project the centerline_deriv vector onto the YZ plane (since we are slicing along X)
+    # deriv_yz = centerline_deriv[1:3]
+    # deriv_yz = deriv_yz / (np.linalg.norm(deriv_yz) + 1e-8)
+    # length = min(disc_img_bgr.shape[0], disc_img_bgr.shape[1]) // 3
+    # end_y = int(center_y + deriv_yz[0] * length)
+    # end_z = int(center_z + deriv_yz[1] * length)
+    # cv2.arrowedLine(
+    #     disc_img_bgr,
+    #     (center_z, center_y),
+    #     (end_z, end_y),
+    #     color=(0, 1, 1),  # Yellow in BGR
+    #     thickness=2,
+    #     tipLength=0.2
+    # )
 
     img_dict = {'seg':disc_seg_bgr, 'img':disc_img_bgr}
     return properties, img_dict, True
@@ -863,7 +882,7 @@ def measure_foramens(seg_foramen_data, canal_centerline, pr):
             foramen_area = np.argwhere(foramen_mask > 0).shape[0]*pixel_surface #mm2
             foramens_areas[side] = foramen_area
         else:
-            print('Error with foramen, possibly not closed shape.')
+            #print('Error with foramen, possibly not closed shape.')
             foramens_areas[side] = -1
             foramens_imgs[side] = labeled_bg
     return foramens_areas, foramens_imgs
