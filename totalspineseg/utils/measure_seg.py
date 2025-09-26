@@ -284,35 +284,6 @@ def measure_seg(img, seg, label, mapping):
 
         rows.append(row)
     metrics['csf'] = rows
-
-    # Compute metrics onto intervertebral discs
-    rows = []
-    for struc in mapping.keys():
-        if mapping[struc] in unique_seg and '-' in struc: # Intervertbral disc in segmentation
-            seg_disc_data = (seg.data == mapping[struc]).astype(int)
-            # Check if disc is more than one slice
-            if (seg_disc_data.sum(axis=0).sum(axis=0)).astype(bool).sum() > 1:
-                properties, img_dict, add_struc = measure_disc(img_data=img.data, seg_disc_data=seg_disc_data, median_csf_signal=median_csf_signal, pr=pr)
-
-                if add_struc:
-                    # Save image
-                    imgs[f'discs_{struc}_seg'] = img_dict['seg']
-                    imgs[f'discs_{struc}_img'] = img_dict['img']
-
-                    # Create a row
-                    row = {
-                        "structure": "disc",
-                        "name": struc,
-                        "eccentricity": properties['eccentricity'],
-                        "solidity": properties['solidity'],
-                        "median_thickness": properties['median_thickness'],
-                        "intensity_counts": properties['intensity_counts'],
-                        "intensity_bins": properties['intensity_bins'],
-                        "center": properties['center'],
-                        "volume": properties['volume']
-                    }
-                    rows.append(row)
-    metrics['discs'] = rows
     
     # Compute metrics onto vertebrae and foramens
     foramens_rows = []
@@ -415,9 +386,39 @@ def measure_seg(img, seg, label, mapping):
             row[key] = properties[key][slice_nb]
         rows.append(row)
     metrics['canal'] = rows
+
+    # Compute metrics onto intervertebral discs
+    rows = []
+    for struc in mapping.keys():
+        if mapping[struc] in unique_seg and '-' in struc: # Intervertbral disc in segmentation
+            seg_disc_data = (seg.data == mapping[struc]).astype(int)
+            # Check if disc is more than one slice
+            if (seg_disc_data.sum(axis=0).sum(axis=0)).astype(bool).sum() > 1:
+                properties, img_dict, add_struc = measure_disc(img_data=img.data, seg_disc_data=seg_disc_data, spine_centerline=spine_centerline, median_csf_signal=median_csf_signal, pr=pr)
+
+                if add_struc:
+                    # Save image
+                    imgs[f'discs_{struc}_seg'] = img_dict['seg']
+                    imgs[f'discs_{struc}_img'] = img_dict['img']
+
+                    # Create a row
+                    row = {
+                        "structure": "disc",
+                        "name": struc,
+                        "eccentricity": properties['eccentricity'],
+                        "solidity": properties['solidity'],
+                        "median_thickness": properties['median_thickness'],
+                        "intensity_counts": properties['intensity_counts'],
+                        "intensity_bins": properties['intensity_bins'],
+                        "center": properties['center'],
+                        "volume": properties['volume']
+                    }
+                    rows.append(row)
+    metrics['discs'] = rows
+
     return metrics, imgs
 
-def measure_disc(img_data, seg_disc_data, median_csf_signal, pr):
+def measure_disc(img_data, seg_disc_data, spine_centerline, median_csf_signal, pr):
     '''
     Calculate metrics from binary disc segmentation
     '''
@@ -433,8 +434,13 @@ def measure_disc(img_data, seg_disc_data, median_csf_signal, pr):
     # Normalize disc intensity using median CSF signal
     values = values / median_csf_signal
 
-    # Identify the smallest elipsoid that can fit the disc
-    ellipsoid = fit_ellipsoid(coords)
+    # Find closest point and derivative onto the spine centerline
+    z_mean = np.mean(coords, axis=0)[-1]
+    closest_spine_idx = np.argmin(abs(spine_centerline['position'][2]-z_mean))
+    spine_pos, spine_deriv = spine_centerline['position'][:,closest_spine_idx], spine_centerline['derivative'][:,closest_spine_idx]
+
+    # Use spine deriv to compute discs metrics
+    ellipsoid = fit_ellipsoid(coords, spine_deriv)
 
     # Extract intensity histogram
     intensity_counts, intensity_bins = np.histogram(values, range=(0, 2.5), bins=100)
@@ -863,46 +869,52 @@ def measure_foramens(seg_foramen_data, canal_centerline, pr):
             foramens_imgs[side] = labeled_bg
     return foramens_areas, foramens_imgs
 
-def fit_ellipsoid(coords):
+def fit_ellipsoid(coords, spine_deriv):
     # Compute the center of mass of the disc
     center = coords.mean(axis=0)
 
     # Center the coordinates
     coords_centered = coords - center
 
-    # Compute covariance matrix
-    cov = np.cov(coords_centered, rowvar=False)
+    # Create two perpendicular vectors u1 and u2
+    v = spine_deriv / np.linalg.norm(spine_deriv)  # Normalize the vector
+    tmp = np.array([1, 0, 0]) # Init temporary non colinear vector
+    u1 = np.cross(v, tmp)
+    u1 /= np.linalg.norm(u1)
+    u2 = np.cross(v, u1)
+    u2 /= np.linalg.norm(u2)
+    rotation_matrix = np.stack((u1, u2, v), axis=0)
 
-    # Eigen-decomposition
-    eigvals, eigvecs = np.linalg.eigh(cov)  # Use eigh for symmetric matrix
+    # Project coords in plane u1u2
+    u1_coords = np.dot(coords_centered, u1)
+    u2_coords = np.dot(coords_centered, u2)
 
-    # Reorder vectors to be close to default coordinate system
-    new_order = np.argmax(abs(eigvecs), axis=1)
-    if len(new_order) != len(set(new_order)): # Check if no axis are overwritten
-        raise ValueError("One eigen vector was overwritten")
-    eigvecs = eigvecs[:,new_order]
-    eigvals = eigvals[new_order]
+    # Recreate 2 image of projected disc
+    seg = np.zeros((np.max(u1_coords), np.max(u2_coords)))
+    for x, y in zip(u1_coords, u2_coords):
+        seg[x-1, y-1]=1
+    seg = morphology.remove_small_objects(seg.astype(bool), min_size=64)
 
-    # Extract axis length from eigen values
-    radii = np.sqrt(eigvals) * 2  # Multiply by 2 for full axis length
-
-    # Compute eccentricity in the RL-AP plane
-    eccentricity = np.sqrt(1 - (np.min(eigvals[:2]) / np.max(eigvals[:2]))) if np.max(eigvals[:2]) > 0 else 0
+    # Fit 2D ellipse to projected coordinates in u1u2 plane
+    regions = measure.regionprops(seg)
+    if len(regions) != 1:
+        raise ValueError("Error when fitting ellipse to disc")
+    region = regions[0]
 
     # Compute solidity = volume / convex_hull_volume
     volume = coords.shape[0]  # Ellipsoid volume
-    try:
-        hull = scipy.spatial.ConvexHull(coords)
-        solidity = volume / hull.volume if hull.volume > 0 else 0
-    except:
-        solidity = -1  # Fallback if Qhull fails
+
+    # Deal with https://github.com/spinalcordtoolbox/spinalcordtoolbox/issues/2307
+    if any(x in platform.platform() for x in ['Darwin-15', 'Darwin-16']):
+        solidity = -1
+    else:
+        solidity = region.solidity
 
     # Results
     ellipsoid = {
         'center': center,
-        'axes_lengths': radii,
-        'rotation_matrix': eigvecs,  # columns = directions of axes
-        'eccentricity': eccentricity,
+        'rotation_matrix': rotation_matrix,
+        'eccentricity': region.eccentricity,
         'solidity': solidity,
         'volume': volume
     }
