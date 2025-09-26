@@ -284,6 +284,34 @@ def measure_seg(img, seg, label, mapping):
 
         rows.append(row)
     metrics['csf'] = rows
+
+    # Compute metrics onto intervertebral discs
+    rows = []
+    for struc in mapping.keys():
+        if mapping[struc] in unique_seg and '-' in struc: # Intervertbral disc in segmentation
+            seg_disc_data = (seg.data == mapping[struc]).astype(int)
+            # Check if disc is more than one slice
+            if (seg_disc_data.sum(axis=0).sum(axis=0)).astype(bool).sum() > 1:
+                properties, img_dict, add_struc = measure_disc(img_data=img.data, seg_disc_data=seg_disc_data, centerline=centerline, csf_signal=csf_signal, pr=pr)
+
+                if add_struc:
+                    # Save image
+                    imgs[f'discs_{struc}_seg'] = img_dict['seg']
+                    imgs[f'discs_{struc}_img'] = img_dict['img']
+
+                    # Create a row
+                    row = {
+                        "structure": "disc",
+                        "name": struc,
+                        "eccentricity": properties['eccentricity'],
+                        "solidity": properties['solidity'],
+                        "intensity_peaks_gap": properties['intensity_peaks_gap'],
+                        "median_thickness": properties['median_thickness'],
+                        "center": properties['center'],
+                        "volume": properties['volume']
+                    }
+                    rows.append(row)
+    metrics['discs'] = rows
     
     # Compute metrics onto vertebrae and foramens
     foramens_rows = []
@@ -386,35 +414,6 @@ def measure_seg(img, seg, label, mapping):
             row[key] = properties[key][slice_nb]
         rows.append(row)
     metrics['canal'] = rows
-
-    # Compute metrics onto intervertebral discs
-    rows = []
-    for struc in mapping.keys():
-        if mapping[struc] in unique_seg and '-' in struc: # Intervertbral disc in segmentation
-            seg_disc_data = (seg.data == mapping[struc]).astype(int)
-            # Check if disc is more than one slice
-            if (seg_disc_data.sum(axis=0).sum(axis=0)).astype(bool).sum() > 1:
-                properties, img_dict, add_struc = measure_disc(img_data=img.data, seg_disc_data=seg_disc_data, centerline=centerline, median_csf_signal=median_csf_signal, pr=pr)
-
-                if add_struc:
-                    # Save image
-                    imgs[f'discs_{struc}_seg'] = img_dict['seg']
-                    imgs[f'discs_{struc}_img'] = img_dict['img']
-
-                    # Create a row
-                    row = {
-                        "structure": "disc",
-                        "name": struc,
-                        "eccentricity": properties['eccentricity'],
-                        "solidity": properties['solidity'],
-                        "median_thickness": properties['median_thickness'],
-                        "intensity_counts": properties['intensity_counts'],
-                        "intensity_bins": properties['intensity_bins'],
-                        "center": properties['center'],
-                        "volume": properties['volume']
-                    }
-                    rows.append(row)
-    metrics['discs'] = rows
 
     return metrics, imgs
 
