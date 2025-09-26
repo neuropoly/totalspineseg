@@ -48,6 +48,7 @@ dependencies = [
     # https://github.com/MIC-DKFZ/nnUNet/issues/2144
     "nnunetv2<=2.4.2",
     "psutil",
+    "blosc2<3.9.0"
 ]
 
 [project.urls]
