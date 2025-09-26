@@ -888,12 +888,18 @@ def fit_ellipsoid(coords, centerline_deriv):
     # Project coords in plane u1u2
     u1_coords = np.dot(coords_centered, u1)
     u2_coords = np.dot(coords_centered, u2)
+    # Center the image onto the segmentation
+    u1_coords = u1_coords - np.min(u1_coords)
+    u2_coords = u2_coords - np.min(u2_coords)
+    # Round coordinates
+    u1_coords = np.round(u1_coords).astype(int)
+    u2_coords = np.round(u2_coords).astype(int)
 
     # Recreate 2 image of projected disc
-    seg = np.zeros((np.max(u1_coords), np.max(u2_coords)))
+    seg = np.zeros((np.max(u1_coords)+5, np.max(u2_coords)+5))
     for x, y in zip(u1_coords, u2_coords):
         seg[x-1, y-1]=1
-    seg = morphology.remove_small_objects(seg.astype(bool), min_size=64)
+    seg = morphology.remove_small_objects(seg.astype(bool), min_size=64).astype(int)
 
     # Fit 2D ellipse to projected coordinates in u1u2 plane
     regions = measure.regionprops(seg)
