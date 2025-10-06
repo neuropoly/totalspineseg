@@ -40,7 +40,7 @@ For comparison, we also trained a single model (`Dataset103`) that outputs indiv
 ## Datasets
 
 The totalspineseg model was trained on these 3 main datasets:
-- Private whole-spine dataset (Internal access: `git@data.neuro.polymtl.ca:datasets/whole-spine.git`).
+- [whole-spine](https://openneuro.org/datasets/ds005616/versions/1.0.0) dataset (Internal access: `git@data.neuro.polymtl.ca:datasets/whole-spine.git`).
 - [SPIDER](https://doi.org/10.5281/zenodo.10159290) project dataset (Internal access: `git@data.neuro.polymtl.ca:datasets/spider-challenge-2023.git`)
 - [Spine Generic Project](https://github.com/spine-generic), including single and multi subject datasets (Public access: `git@github.com:spine-generic/data-single-subject.git` and `git@github.com:spine-generic/data-multi-subject.git`).
 
