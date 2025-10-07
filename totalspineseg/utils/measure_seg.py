@@ -198,7 +198,10 @@ def _measure_seg(
             mapping=mapping,
         )
     except ValueError as e:
-        print(f'Error: {seg_path}, {e}')
+        print(f'ValueError: {seg_path}, {e}')
+        return
+    except KeyError as e:
+        print(f'KeyError: {seg_path}, {e}')
         return
     
     # Create output folders if does not exists
@@ -211,14 +214,15 @@ def _measure_seg(
 
     # Save csv files
     for struc in metrics.keys():
-        csv_name = f'{struc}.csv'
-        csv_path = csv_folder_path / csv_name
-        fieldnames=list(metrics[struc][0].keys())
-        with open(str(csv_path), mode='w', newline='') as f:
-            writer = csv.DictWriter(f, fieldnames=fieldnames)
-            writer.writeheader()
-            for row in metrics[struc]:
-                writer.writerow(row)
+        if len(metrics[struc]) != 0:
+            csv_name = f'{struc}.csv'
+            csv_path = csv_folder_path / csv_name
+            fieldnames=list(metrics[struc][0].keys())
+            with open(str(csv_path), mode='w', newline='') as f:
+                writer = csv.DictWriter(f, fieldnames=fieldnames)
+                writer.writeheader()
+                for row in metrics[struc]:
+                    writer.writerow(row)
     
     # Save images
     for name, img in imgs.items():
