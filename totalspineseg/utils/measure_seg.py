@@ -19,6 +19,7 @@ from sklearn.mixture import GaussianMixture
 from totalspineseg.utils.image import Image, resample_nib, zeros_like
 import pyvista as pv
 from skimage.morphology import ball, binary_dilation
+from scipy.ndimage import binary_erosion
 import totalspineseg.resources as ressources
 
 warnings.filterwarnings("ignore")
@@ -437,11 +438,6 @@ def measure_disc(img_data, seg_disc_data, centerline, csf_signal, pr):
     # Exclude discs touching image boundary
     if coords[:,2].max() == seg_disc_data.shape[2]-1 or coords[:,2].min() == 0:
         return None, None, False
-    
-    values = np.array([img_data[c[0], c[1], c[2]] for c in coords])
-
-    # Normalize disc intensity using CSF signal
-    values = values / csf_signal
 
     # Find closest point and derivative onto the centerline
     z_mean = np.mean(coords, axis=0)[-1]
@@ -455,8 +451,36 @@ def measure_disc(img_data, seg_disc_data, centerline, csf_signal, pr):
     bin_size = max(2//pr, 1) # Put 1 bin per 2 mm
     median_thickness = compute_thickness_profile(coords, ellipsoid['rotation_matrix'], bin_size=bin_size)
 
-    # Use gaussian mixture models to identify intensity peaks
-    peaks = find_intensity_peaks(values)
+    # Extract disc intensity
+    # Errode segmentation to avoid partial volume effects and limit the impact of oversegmentation
+    erosion_size = max(int(int(median_thickness)/ 4), 1) # in voxels
+    inner_mask = binary_erosion(seg_disc_data.astype(bool), structure=ball(erosion_size))
+    inner_coords = np.argwhere(inner_mask > 0)
+    
+    # Check if inner disc is not empty
+    if len(inner_coords) != 0:
+        inner_values = np.array([img_data[c[0], c[1], c[2]] for c in inner_coords])
+
+        outer_mask = seg_disc_data.astype(bool).copy()
+        outer_mask[inner_mask] = 0
+        outer_coords = np.argwhere(outer_mask > 0)
+        outer_values = np.array([img_data[c[0], c[1], c[2]] for c in outer_coords])
+
+        # Normalize disc intensity using CSF signal
+        inner_values = inner_values / csf_signal
+        outer_values = outer_values / csf_signal
+
+        # Use gaussian mixture model to find two main peaks in the disc intensity distribution
+        inner_peaks = find_intensity_peaks(inner_values)
+        outer_peaks = find_intensity_peaks(outer_values)
+        min_peak = outer_peaks[0]
+        max_peak = inner_peaks[-1]
+    else:
+        values = np.array([img_data[c[0], c[1], c[2]] for c in coords])
+        values = values / csf_signal # Normalize disc intensity using CSF signal
+        peaks = find_intensity_peaks(values)
+        min_peak = peaks[0]
+        max_peak = peaks[-1]
 
     # Extract disc volume
     voxel_volume = pr**3
@@ -465,7 +489,7 @@ def measure_disc(img_data, seg_disc_data, centerline, csf_signal, pr):
     properties = {
         'center': np.round(ellipsoid['center']),
         'median_thickness': median_thickness*pr,
-        'intensity_peaks_gap': peaks[-1] - peaks[0],
+        'intensity_peaks_gap': max_peak - min_peak,
         'volume': volume,
         'eccentricity': ellipsoid['eccentricity'],
         'solidity': ellipsoid['solidity']
