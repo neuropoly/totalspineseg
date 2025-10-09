@@ -280,7 +280,7 @@ def measure_seg(img, seg, label, mapping):
     # Measure CSF signal
     seg_csf_data = (seg.data == mapping['CSF']).astype(int)
     properties = measure_csf(img.data, seg_csf_data)
-    csf_signal = np.percentile(list(properties['slice_signal'].values()), 90)
+    csf_signal = properties['csf_signal']
 
     rows = []
     for i, (k, v) in enumerate(properties['slice_signal'].items()):
@@ -521,9 +521,13 @@ def measure_csf(img_data, seg_csf_data):
     X, Y, Z = seg_csf_data.nonzero()
     min_z_index, max_z_index = min(Z), max(Z)
 
+    coords = np.argwhere(seg_csf_data > 0)
+    values = np.array([img_data[c[0], c[1], c[2]] for c in coords])
+
     # Loop across z axis
     properties = {
-        'slice_signal':{}
+        'slice_signal':{},
+        'csf_signal': np.percentile(values, 90)
     }
     for iz in range(min_z_index, max_z_index + 1):
         # Extract csf coordinates in the slice
