@@ -295,34 +295,6 @@ def measure_seg(img, seg, label, mapping):
 
         rows.append(row)
     metrics['csf'] = rows
-
-    # Compute metrics onto intervertebral discs
-    rows = []
-    for struc in mapping.keys():
-        if mapping[struc] in unique_seg and '-' in struc: # Intervertbral disc in segmentation
-            seg_disc_data = (seg.data == mapping[struc]).astype(int)
-            # Check if disc is more than one slice
-            if (seg_disc_data.sum(axis=0).sum(axis=0)).astype(bool).sum() > 1:
-                properties, img_dict, add_struc = measure_disc(img_data=img.data, seg_disc_data=seg_disc_data, centerline=centerline, csf_signal=csf_signal, pr=pr)
-
-                if add_struc:
-                    # Save image
-                    imgs[f'discs_{struc}_seg'] = img_dict['seg']
-                    imgs[f'discs_{struc}_img'] = img_dict['img']
-
-                    # Create a row
-                    row = {
-                        "structure": "disc",
-                        "name": struc,
-                        "eccentricity": properties['eccentricity'],
-                        "solidity": properties['solidity'],
-                        "intensity_peaks_gap": properties['intensity_peaks_gap'],
-                        "median_thickness": properties['median_thickness'],
-                        "center": properties['center'],
-                        "volume": properties['volume']
-                    }
-                    rows.append(row)
-    metrics['discs'] = rows
     
     # Compute metrics onto vertebrae and foramens
     foramens_rows = []
@@ -378,7 +350,8 @@ def measure_seg(img, seg, label, mapping):
                                     "AP_thickness": properties['AP_thickness'],
                                     "median_thickness": properties['median_thickness'],
                                     "center": properties['center'],
-                                    "volume": properties['volume']
+                                    "volume": properties['volume'],
+                                    "median_signal": properties['median_signal']
                                 }
                                 vertebrae_rows.append(vertebrae_row)
                                 vert_list.append(vert)
@@ -402,6 +375,10 @@ def measure_seg(img, seg, label, mapping):
                     foramens_rows.append(foramens_row)
     metrics['vertebrae'] = vertebrae_rows
     metrics['foramens'] = foramens_rows
+
+    # Extract signal homogeneity from vertebrae signal
+    vert_signal = [vert_dict['median_signal'] for vert_dict in vertebrae_rows]
+    vert_signal_dict = {vert_dict["name"]: vert_dict['median_signal']/np.max(vert_signal) for vert_dict in vertebrae_rows}
     
     # Create spine centerline using vertebral bodies and discs
     if 50 in unique_seg: # Add sacrum
@@ -425,6 +402,43 @@ def measure_seg(img, seg, label, mapping):
             row[key] = properties[key][slice_nb]
         rows.append(row)
     metrics['canal'] = rows
+
+    # Compute metrics onto intervertebral discs
+    rows = []
+    for struc in mapping.keys():
+        if mapping[struc] in unique_seg and '-' in struc: # Intervertbral disc in segmentation
+            seg_disc_data = (seg.data == mapping[struc]).astype(int)
+            # Check if disc is more than one slice
+            if (seg_disc_data.sum(axis=0).sum(axis=0)).astype(bool).sum() > 1:
+                lower_vert = struc.split('-')[0]
+                upper_vert = struc.split('-')[1]
+                # Apply intensity coeff based on vertebrae signal homogeneity to account for signal loss
+                if lower_vert in vert_signal_dict and upper_vert in vert_signal_dict:
+                    intensity_coeff = (vert_signal_dict[lower_vert] + vert_signal_dict[upper_vert]) / 2
+                elif upper_vert in vert_signal_dict:
+                    intensity_coeff = vert_signal_dict[upper_vert]
+                else:
+                    intensity_coeff = 1
+                properties, img_dict, add_struc = measure_disc(img_data=img.data, seg_disc_data=seg_disc_data, centerline=centerline, csf_signal=csf_signal*intensity_coeff, pr=pr)
+
+                if add_struc:
+                    # Save image
+                    imgs[f'discs_{struc}_seg'] = img_dict['seg']
+                    imgs[f'discs_{struc}_img'] = img_dict['img']
+
+                    # Create a row
+                    row = {
+                        "structure": "disc",
+                        "name": struc,
+                        "eccentricity": properties['eccentricity'],
+                        "solidity": properties['solidity'],
+                        "intensity_peaks_gap": properties['intensity_peaks_gap'],
+                        "median_thickness": properties['median_thickness'],
+                        "center": properties['center'],
+                        "volume": properties['volume']
+                    }
+                    rows.append(row)
+    metrics['discs'] = rows
 
     return metrics, imgs
 
@@ -450,7 +464,7 @@ def measure_disc(img_data, seg_disc_data, centerline, csf_signal, pr):
     # Extract SI thickness
     bin_size = max(2//pr, 1) # Put 1 bin per 2 mm
     median_thickness = compute_thickness_profile(coords, ellipsoid['rotation_matrix'], bin_size=bin_size)
-
+    
     # Extract disc intensity
     # Errode segmentation to avoid partial volume effects and limit the impact of oversegmentation
     erosion_size = max(int(int(median_thickness)/ 4), 1) # in voxels
@@ -748,6 +762,7 @@ def measure_vertebra(img_data, seg_vert_data, seg_canal_data, canal_centerline, 
         'median_thickness': median_thickness*pr,
         'AP_thickness': AP_thickness*pr,
         'volume': volume,
+        'median_signal': np.median(values)
     }
     
     # Recreate body volume without rotation
@@ -1343,9 +1358,17 @@ if __name__ == '__main__':
     # seg_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/out/step2_output/sub-001_ses-A_acq-isotropic_T2w.nii.gz'
     # label_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/out/step1_levels/sub-001_ses-A_acq-isotropic_T2w.nii.gz'
 
-    img_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/spider_output/input/sub-039_acq-lowresSag_T2w_0000.nii.gz'
-    seg_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/spider_output/step2_output/sub-039_acq-lowresSag_T2w.nii.gz'
-    label_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/spider_output/step1_levels/sub-039_acq-lowresSag_T2w.nii.gz'
+    # img_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/spider_output/input/sub-039_acq-lowresSag_T2w_0000.nii.gz'
+    # seg_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/spider_output/step2_output/sub-039_acq-lowresSag_T2w.nii.gz'
+    # label_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/spider_output/step1_levels/sub-039_acq-lowresSag_T2w.nii.gz'
+    
+    img_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/lbp_sag_out/input/sub-nMRI010_ses-Pre_acq-sagittalStirirfse_T2w_0000.nii.gz'
+    seg_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/lbp_sag_out/step2_output/sub-nMRI010_ses-Pre_acq-sagittalStirirfse_T2w.nii.gz'
+    label_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/lbp_sag_out/step1_levels/sub-nMRI010_ses-Pre_acq-sagittalStirirfse_T2w.nii.gz'
+    
+    img_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/lbp_sag_out/input/sub-nMRI010_ses-Post2_acq-sagittalStir_T2w_0000.nii.gz'
+    seg_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/lbp_sag_out/step2_output/sub-nMRI010_ses-Post2_acq-sagittalStir_T2w.nii.gz'
+    label_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/lbp_sag_out/step1_levels/sub-nMRI010_ses-Post2_acq-sagittalStir_T2w.nii.gz'
 
     ofolder_path = 'test'
 
