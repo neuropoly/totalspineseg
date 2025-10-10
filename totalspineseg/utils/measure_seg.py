@@ -351,7 +351,8 @@ def measure_seg(img, seg, label, mapping):
                                     "median_thickness": properties['median_thickness'],
                                     "center": properties['center'],
                                     "volume": properties['volume'],
-                                    "median_signal": properties['median_signal']
+                                    "median_signal": properties['median_signal'],
+                                    "ap_attenuation": properties['ap_attenuation']
                                 }
                                 vertebrae_rows.append(vertebrae_row)
                                 vert_list.append(vert)
@@ -378,7 +379,7 @@ def measure_seg(img, seg, label, mapping):
 
     # Extract signal homogeneity from vertebrae signal
     vert_signal = [vert_dict['median_signal'] for vert_dict in vertebrae_rows]
-    vert_signal_dict = {vert_dict["name"]: vert_dict['median_signal']/np.max(vert_signal) for vert_dict in vertebrae_rows}
+    vert_signal_dict = {vert_dict["name"]: (vert_dict['median_signal']*vert_dict['ap_attenuation'])/np.max(vert_signal) for vert_dict in vertebrae_rows}
     
     # Create spine centerline using vertebral bodies and discs
     if 50 in unique_seg: # Add sacrum
@@ -464,6 +465,9 @@ def measure_disc(img_data, seg_disc_data, centerline, csf_signal, pr):
     # Extract SI thickness
     bin_size = max(2//pr, 1) # Put 1 bin per 2 mm
     median_thickness = compute_thickness_profile(coords, ellipsoid['rotation_matrix'], bin_size=bin_size)
+
+    if np.isnan(median_thickness):
+        return None, None, False
     
     # Extract disc intensity
     # Errode segmentation to avoid partial volume effects and limit the impact of oversegmentation
@@ -575,8 +579,7 @@ def measure_csf(img_data, seg_csf_data):
         slice_values = img_data[slice_csf]
 
         # Extract most represented value
-        hist, bin_edges = np.histogram(slice_values, bins=100)
-        signal = np.median(bin_edges[np.argsort(hist)[-10:]])
+        signal = np.percentile(slice_values, 90)
 
         # Save values
         properties['slice_signal'][iz] = signal
@@ -736,33 +739,48 @@ def measure_vertebra(img_data, seg_vert_data, seg_canal_data, canal_centerline, 
     # Find canal distance to vertebral body
     canal_slice_coords = np.argwhere(seg_canal_data[:,:,int(np.round(z_mean))]>0)
     projections = np.dot(canal_slice_coords-canal_pos[:2], w(u1, u2, best_theta)[:2])
-    AP_radius = projections.max()
+    anterior_radius = projections.max()
+    posterior_radius = projections.min()
 
     # Isolate vertebral body
-    anterior_pos = np.array([canal_pos[0], canal_pos[1]+AP_radius, canal_pos[2]])
-    projections = np.dot(coords-anterior_pos, w(u1, u2, best_theta))
-    body_coords = coords[projections>0]
+    anterior_pos = np.array([canal_pos[0], canal_pos[1]+anterior_radius, canal_pos[2]])
+    ant_projections = np.dot(coords-anterior_pos, w(u1, u2, best_theta))
+    body_coords = coords[ant_projections>0]
     body_pos = np.mean(body_coords,axis=0)
 
+    # Isolate processes
+    posterior_pos = np.array([canal_pos[0], canal_pos[1]+posterior_radius, canal_pos[2]])
+    projections = np.dot(coords-posterior_pos, w(u1, u2, best_theta))
+    process_coords = coords[projections<0]
+    process_pos = np.mean(process_coords,axis=0)
+
     # Fetch AP thickness
-    AP_thickness = np.max(projections)
+    AP_thickness = np.max(ant_projections)
 
     # Compute thickness profile vertebral body
     coordinate_system = np.stack((u, w(u1, u2, best_theta), v), axis=0)
-    values = np.array([img_data[c[0], c[1], c[2]] for c in body_coords])
     bin_size = max(2//pr, 1) # Put 1 bin per 2 mm
     median_thickness = compute_thickness_profile(body_coords, coordinate_system, bin_size=bin_size)
+    
+    if np.isnan(median_thickness):
+        return None, None, None, False
     
     # Extract vertebral body volume
     voxel_volume = pr**3
     volume = body_coords.shape[0]*voxel_volume # mm3
 
+    # Analyze vertebrae intensity
+    body_values = np.array([img_data[c[0], c[1], c[2]] for c in body_coords])
+    process_values = np.array([img_data[c[0], c[1], c[2]] for c in process_coords])
+    median_signal = (abs(posterior_radius)*np.median(body_values) + abs(anterior_radius)*np.median(process_values)) / (abs(posterior_radius)+abs(anterior_radius)+1e-8)
+    
     properties = {
         'center': np.round(body_pos),
         'median_thickness': median_thickness*pr,
         'AP_thickness': AP_thickness*pr,
         'volume': volume,
-        'median_signal': np.median(values)
+        'median_signal': median_signal,
+        'ap_attenuation': np.median(body_values)/median_signal
     }
     
     # Recreate body volume without rotation
@@ -1366,9 +1384,13 @@ if __name__ == '__main__':
     seg_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/lbp_sag_out/step2_output/sub-nMRI010_ses-Pre_acq-sagittalStirirfse_T2w.nii.gz'
     label_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/lbp_sag_out/step1_levels/sub-nMRI010_ses-Pre_acq-sagittalStirirfse_T2w.nii.gz'
     
-    img_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/lbp_sag_out/input/sub-nMRI010_ses-Post2_acq-sagittalStir_T2w_0000.nii.gz'
-    seg_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/lbp_sag_out/step2_output/sub-nMRI010_ses-Post2_acq-sagittalStir_T2w.nii.gz'
-    label_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/lbp_sag_out/step1_levels/sub-nMRI010_ses-Post2_acq-sagittalStir_T2w.nii.gz'
+    # img_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/lbp_sag_out/input/sub-nMRI010_ses-Post2_acq-sagittalStir_T2w_0000.nii.gz'
+    # seg_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/lbp_sag_out/step2_output/sub-nMRI010_ses-Post2_acq-sagittalStir_T2w.nii.gz'
+    # label_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/lbp_sag_out/step1_levels/sub-nMRI010_ses-Post2_acq-sagittalStir_T2w.nii.gz'
+    
+    # img_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/lbp_sag_out/input/sub-nMRI035_ses-Pre_acq-sagStir_T2w_0000.nii.gz'
+    # seg_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/lbp_sag_out/step2_output/sub-nMRI035_ses-Pre_acq-sagStir_T2w.nii.gz'
+    # label_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/lbp_sag_out/step1_levels/sub-nMRI035_ses-Pre_acq-sagStir_T2w.nii.gz'
 
     ofolder_path = 'test'
 
