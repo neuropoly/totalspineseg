@@ -22,7 +22,91 @@ from skimage.morphology import ball, binary_dilation
 from scipy.ndimage import binary_erosion
 import totalspineseg.resources as ressources
 
+import SimpleITK as sitk
+
+
 warnings.filterwarnings("ignore")
+
+
+def n4_bias_field_correction(image_data, mask, shrink_factor=2, number_of_histogram_bins=200, 
+                           maximum_number_of_iterations=[50, 50, 30, 20], 
+                           convergence_threshold=1e-6, spline_order=3):
+    """
+    Apply N4 bias field correction to MRI image data using SimpleITK.
+    
+    Parameters:
+    -----------
+    image_data : numpy.ndarray
+        3D MRI image data to be corrected
+    mask : numpy.ndarray
+        Binary mask defining the region for bias correction
+    shrink_factor : int, default=2
+        Factor to shrink the image for faster processing (1 = no shrinking, 2 = 2x faster, 4 = 4x faster)
+    number_of_histogram_bins : int, default=200
+        Number of histogram bins for bias field estimation
+    maximum_number_of_iterations : list, default=[50, 50, 50, 50]
+        Maximum iterations for each resolution level
+    convergence_threshold : float, default=1e-6
+        Convergence threshold for the algorithm
+    spline_order : int, default=3
+        B-spline order for bias field modeling
+        
+    Returns:
+    --------
+    numpy.ndarray
+        Bias-corrected image data
+    """
+    
+    try:
+        # Convert numpy array to SimpleITK image
+        sitk_image = sitk.GetImageFromArray(image_data.astype(np.float32))
+        sitk_mask = sitk.GetImageFromArray(mask.astype(np.uint8))
+        
+        # Set up N4 bias correction filter
+        corrector = sitk.N4BiasFieldCorrectionImageFilter()
+        corrector.SetMaximumNumberOfIterations(maximum_number_of_iterations)
+        corrector.SetConvergenceThreshold(convergence_threshold)
+        corrector.SetBiasFieldFullWidthAtHalfMaximum(0.15)
+        corrector.SetWienerFilterNoise(0.01)
+        corrector.SetNumberOfHistogramBins(number_of_histogram_bins)
+        corrector.SetSplineOrder(spline_order)
+
+        # Apply bias correction with optional shrinking for speed
+        if shrink_factor > 1:
+            # Shrink image and mask for faster processing
+            shrink_factors = [shrink_factor] * sitk_image.GetDimension()
+            sitk_image_shrunk = sitk.Shrink(sitk_image, shrink_factors)
+            sitk_mask_shrunk = sitk.Shrink(sitk_mask, shrink_factors)
+            
+            # Run N4 on shrunk images to get bias field
+            corrector.Execute(sitk_image_shrunk, sitk_mask_shrunk)
+            
+            # Get the log bias field from the shrunk processing
+            log_bias_field_shrunk = corrector.GetLogBiasFieldAsImage(sitk_image_shrunk)
+            
+            # Resample the bias field back to original resolution
+            resampler = sitk.ResampleImageFilter()
+            resampler.SetReferenceImage(sitk_image)
+            resampler.SetInterpolator(sitk.sitkBSpline)
+            resampler.SetDefaultPixelValue(0.0)
+            log_bias_field = resampler.Execute(log_bias_field_shrunk)
+            
+            # Apply bias correction to original image
+            bias_field = sitk.Exp(log_bias_field)
+            corrected_image = sitk.Divide(sitk_image, bias_field)
+        else:
+            # Apply bias correction directly without shrinking
+            corrected_image = corrector.Execute(sitk_image, sitk_mask)
+        
+        # Convert back to numpy array
+        corrected_data = sitk.GetArrayFromImage(corrected_image)
+
+        return corrected_data.astype(image_data.dtype)
+
+    except Exception as e:
+        print(f"Warning: N4 bias correction failed with error: {e}")
+        print("Returning original image without bias correction.")
+        return image_data
 
 
 def main():
@@ -254,6 +338,9 @@ def measure_seg(img, seg, label, mapping):
     pr = min([px, py, pz])
     seg = resample_nib(seg, new_size=[pr, pr, pr], new_size_type='mm', interpolation='nn', verbose=False)
     img = resample_nib(img, new_size=[pr, pr, pr], new_size_type='mm', interpolation='linear', verbose=False)
+
+    # Apply N4 algorithm to correct for intensity non uniformity
+    img.data = n4_bias_field_correction(img.data, seg.data > 0)
 
     # Normalize image intensity
     img.data = (img.data - np.mean(img.data)) / np.std(img.data) # Normalize with mean and std
