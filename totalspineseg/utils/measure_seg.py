@@ -344,7 +344,6 @@ def measure_seg(img, seg, label, mapping):
 
     # Normalize image intensity
     img.data = (img.data - np.mean(img.data)) / np.std(img.data) # Normalize with mean and std
-    img.data = (img.data - img.data.min()) / (img.data.max() - img.data.min() + 1e-8)
 
     # Create dict with z-slice and values for discs posterior tip
     disc_slices = {}
@@ -369,6 +368,12 @@ def measure_seg(img, seg, label, mapping):
     seg_csf_data = (seg.data == mapping['CSF']).astype(int)
     properties = measure_csf(img.data, seg_csf_data)
     csf_signal = properties['csf_signal']
+
+    p5 = np.percentile(img.data, 5)
+    p95 = np.percentile(img.data, 95)
+    img.data = (img.data - p5) / (csf_signal - p5 + 1e-8)
+    img.data = np.clip(img.data, 0, 1)
+    csf_signal = 1.0
 
     rows = []
     for i, (k, v) in enumerate(properties['slice_signal'].items()):
