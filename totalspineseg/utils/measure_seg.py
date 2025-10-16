@@ -518,14 +518,13 @@ def measure_seg(img, seg, label, mapping):
                     # Save image
                     imgs[f'discs_{struc}_seg'] = img_dict['seg']
                     imgs[f'discs_{struc}_img'] = img_dict['img']
-
                     # Create a row
                     row = {
                         "structure": "disc",
                         "name": struc,
                         "eccentricity": properties['eccentricity'],
                         "solidity": properties['solidity'],
-                        "intensity_peaks_gap": properties['intensity_peaks_gap'],
+                        "intensity_variation": properties['intensity_variation'],
                         "median_thickness": properties['median_thickness'],
                         "center": properties['center'],
                         "volume": properties['volume']
@@ -561,36 +560,16 @@ def measure_disc(img_data, seg_disc_data, centerline, csf_signal, pr):
     if np.isnan(median_thickness):
         return None, None, False
     
-    # Extract disc intensity
-    # Errode segmentation to avoid partial volume effects and limit the impact of oversegmentation
-    erosion_size = max(int(int(median_thickness)/ 4), 1) # in voxels
-    inner_mask = binary_erosion(seg_disc_data.astype(bool), structure=ball(erosion_size))
-    inner_coords = np.argwhere(inner_mask > 0)
-    
-    # Check if inner disc is not empty
-    if len(inner_coords) != 0:
-        inner_values = np.array([img_data[c[0], c[1], c[2]] for c in inner_coords])
+    # Extract disc intensity in middle of the disc
+    middle_RLslice = int(ellipsoid['center'][0])
+    values_2d = np.array([img_data[c[0], c[1], c[2]] for c in coords if middle_RLslice -1 <= c[0] < middle_RLslice + 1])
 
-        outer_mask = seg_disc_data.astype(bool).copy()
-        outer_mask[inner_mask] = 0
-        outer_coords = np.argwhere(outer_mask > 0)
-        outer_values = np.array([img_data[c[0], c[1], c[2]] for c in outer_coords])
-
-        # Normalize disc intensity using CSF signal
-        inner_values = inner_values / csf_signal
-        outer_values = outer_values / csf_signal
-
-        # Use gaussian mixture model to find two main peaks in the disc intensity distribution
-        inner_peaks = find_intensity_peaks(inner_values)
-        outer_peaks = find_intensity_peaks(outer_values)
-        min_peak = outer_peaks[0]
-        max_peak = inner_peaks[-1]
-    else:
-        values = np.array([img_data[c[0], c[1], c[2]] for c in coords])
-        values = values / csf_signal # Normalize disc intensity using CSF signal
-        peaks = find_intensity_peaks(values)
-        min_peak = peaks[0]
-        max_peak = peaks[-1]
+    # smooth values using a gaussian filter
+    values = values_2d / (csf_signal - min(values_2d)) # Normalize disc intensity using CSF signal
+    values_smooth = smooth(np.sort(values), 10)
+    peaks = find_intensity_peaks(values_smooth)
+    min_peak = peaks[0]
+    max_peak = peaks[-1]
 
     # Extract disc volume
     voxel_volume = pr**3
@@ -599,7 +578,7 @@ def measure_disc(img_data, seg_disc_data, centerline, csf_signal, pr):
     properties = {
         'center': np.round(ellipsoid['center']),
         'median_thickness': median_thickness*pr,
-        'intensity_peaks_gap': max_peak - min_peak,
+        'intensity_variation': (max_peak - min_peak) / max_peak if max_peak > 0 else 0,
         'volume': volume,
         'eccentricity': ellipsoid['eccentricity'],
         'solidity': ellipsoid['solidity']
@@ -1462,6 +1441,11 @@ def crop_around_binary(volume):
     cropped = volume[xmin:xmax+1, ymin:ymax+1, zmin:zmax+1]
 
     return cropped, (xmin, xmax, ymin, ymax, zmin, zmax)
+
+def smooth(y, box_pts):
+    box = np.ones(box_pts)/box_pts
+    y_smooth = np.convolve(y, box, mode='same')
+    return y_smooth
 
 if __name__ == '__main__':
     # img_path = '/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/out/input/sub-001_ses-A_acq-isotropic_T2w_0000.nii.gz'
