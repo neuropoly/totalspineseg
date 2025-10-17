@@ -42,10 +42,23 @@ dependencies = [
     "pillow",
     "nilearn",
     "SimpleITK",
-    "nnunetv2-neuropoly",
     "psutil",
     "blosc2<3.9.0"
 ]
+
+# Allow users to choose whichever version of `nnunetv2` they prefer
+#   - `pip install totalspineseg[nnunetv2]`       (tested, safe versions of `nnunetv2`)
+#   - `pip install totalspineseg nnunetv2==2.6.2` (specific version)
+#   - `pip install totalspineseg[neuropoly]`      (internal fork of `nnunetv2`)
+#
+# Note: Some older versions of `nnunetv2` have notable bugs:
+#   - nnunetv2==2.5.1 fails with nnUNetTrainer_DASegOrd0_NoMirroring
+#     (https://github.com/MIC-DKFZ/nnUNet/issues/2480)  <-- unclear if fixed?
+#   - nnunetv2==2.4.2 fails with --verify-dataset-integrity
+#     (https://github.com/MIC-DKFZ/nnUNet/issues/2144)  <-- fixed in future versions, but non-fatal
+[project.optional-dependencies]
+nnunetv2 = ["nnunetv2<=2.4.2"]
+neuropoly = ["nnunetv2-neuropoly"]
 
 [project.urls]
 homepage = "https://github.com/neuropoly/totalspineseg"
