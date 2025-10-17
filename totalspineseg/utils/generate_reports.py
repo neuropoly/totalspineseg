@@ -445,12 +445,8 @@ def compute_discs_metrics(data_dict):
         if top_vertebra in data_dict['vertebrae']:
             # Normalize disc height with top vertebra AP_thickness
             data_dict['discs'][struc_name]['DHI'] = data_dict['discs'][struc_name]['median_thickness'] / data_dict['vertebrae'][top_vertebra]['AP_thickness']
-
-            # Normalize disc volume with top vertebra volume
-            data_dict['discs'][struc_name]['volume'] = data_dict['discs'][struc_name]['volume'] / data_dict['vertebrae'][top_vertebra]['volume']
         else:
             data_dict['discs'][struc_name]['DHI'] = -1
-            data_dict['discs'][struc_name]['volume'] = -1
     return data_dict
 
 def compute_foramens_metrics(data_dict):
@@ -476,11 +472,6 @@ def compute_foramens_metrics(data_dict):
 
 def compute_vertebrae_metrics(data_dict):
     # Compute Vertebrae metrics
-    for struc_name in data_dict['vertebrae'].keys():
-        # Normalize foramen surfaces with top vertebra volume
-        for metric in data_dict['vertebrae'][struc_name].keys():
-            if metric != 'volume':
-                data_dict['vertebrae'][struc_name][metric] = data_dict['vertebrae'][struc_name][metric] / data_dict['vertebrae'][struc_name]['volume']
     return data_dict
 
 def rescale_canal(all_values, rev_mapping):
