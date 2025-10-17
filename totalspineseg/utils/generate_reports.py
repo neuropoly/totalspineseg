@@ -143,38 +143,37 @@ def generate_reports(
             for struc in control_data.keys():
                 for struc_name in control_data[struc].keys():
                     for metric in control_data[struc][struc_name].keys():
-                        if not 'intensity' in metric:
-                            # Add subject to all_values
-                            subject_value = control_data[struc][struc_name][metric]
-                            if subject_value != -1:
-                                if struc not in all_values['all']:
-                                    all_values['all'][struc] = {}
-                                if struc_name not in all_values['all'][struc]:
-                                    all_values['all'][struc][struc_name] = {}
-                                if metric not in all_values['all'][struc][struc_name]:
-                                    all_values['all'][struc][struc_name][metric] = []
-                                
-                                if sex_key is not None:
-                                    if struc not in all_values[sex_key]:
-                                        all_values[sex_key][struc] = {}
-                                    if struc_name not in all_values[sex_key][struc]:
-                                        all_values[sex_key][struc][struc_name] = {}
-                                    if metric not in all_values[sex_key][struc][struc_name]:
-                                        all_values[sex_key][struc][struc_name][metric] = []
+                        # Add subject to all_values
+                        subject_value = control_data[struc][struc_name][metric]
+                        if subject_value != -1:
+                            if struc not in all_values['all']:
+                                all_values['all'][struc] = {}
+                            if struc_name not in all_values['all'][struc]:
+                                all_values['all'][struc][struc_name] = {}
+                            if metric not in all_values['all'][struc][struc_name]:
+                                all_values['all'][struc][struc_name][metric] = []
+                            
+                            if sex_key is not None:
+                                if struc not in all_values[sex_key]:
+                                    all_values[sex_key][struc] = {}
+                                if struc_name not in all_values[sex_key][struc]:
+                                    all_values[sex_key][struc][struc_name] = {}
+                                if metric not in all_values[sex_key][struc][struc_name]:
+                                    all_values[sex_key][struc][struc_name][metric] = []
 
-                                if age_key is not None:
-                                    if struc not in all_values[age_key]:
-                                        all_values[age_key][struc] = {}
-                                    if struc_name not in all_values[age_key][struc]:
-                                        all_values[age_key][struc][struc_name] = {}
-                                    if metric not in all_values[age_key][struc][struc_name]:
-                                        all_values[age_key][struc][struc_name][metric] = []
+                            if age_key is not None:
+                                if struc not in all_values[age_key]:
+                                    all_values[age_key][struc] = {}
+                                if struc_name not in all_values[age_key][struc]:
+                                    all_values[age_key][struc][struc_name] = {}
+                                if metric not in all_values[age_key][struc][struc_name]:
+                                    all_values[age_key][struc][struc_name][metric] = []
 
-                                all_values['all'][struc][struc_name][metric].append(subject_value)
-                                if sex_key is not None:
-                                    all_values[sex_key][struc][struc_name][metric].append(subject_value)
-                                if age_key is not None:
-                                    all_values[age_key][struc][struc_name][metric].append(subject_value)
+                            all_values['all'][struc][struc_name][metric].append(subject_value)
+                            if sex_key is not None:
+                                all_values[sex_key][struc][struc_name][metric].append(subject_value)
+                            if age_key is not None:
+                                all_values[age_key][struc][struc_name][metric].append(subject_value)
 
         # Align canal and CSF for control group
         all_values, discs_gap, last_disc = rescale_canal(all_values, rev_mapping)
@@ -264,7 +263,10 @@ def create_figures(sub_folder, imgs_path, ofolder_subject, all_values, demograph
                             median_dict[group][struc][struc_name] = {metric: {'median': median_value, 'std': std_value}}
                         if metric not in median_dict[group][struc][struc_name]:
                             median_dict[group][struc][struc_name][metric] = {'median': median_value, 'std': std_value}
-
+    
+    # Compute discs gradings
+    subject_data = compute_discs_gradings(subject_data, new_all_values)
+    
     # Convert all_values to dataframe
     all_values_df = convert_to_df(new_all_values)
 
@@ -285,6 +287,42 @@ def create_figures(sub_folder, imgs_path, ofolder_subject, all_values, demograph
     # Create figures    
     ofolder_subject.mkdir(parents=True, exist_ok=True)
     create_global_figures(interp_data, all_values_df, discs_gap, last_disc, median_dict, imgs_path, rev_mapping, ofolder_subject)
+
+def compute_discs_gradings(subject_data, all_values):
+    for group in all_values.keys():
+        for disc in subject_data['discs'].keys():
+            # Grade disc based on height compared to median height in all_values
+            if 'grading' not in subject_data['discs'][disc]:
+                subject_data['discs'][disc]['grading'] = {}
+            median_height = None
+            std_height = None
+            if disc in all_values[group]['discs']:
+                if 'median_thickness' in all_values[group]['discs'][disc]:
+                    median_height = np.median(all_values[group]['discs'][disc]['median_thickness'])
+                    std_height = np.std(all_values[group]['discs'][disc]['median_thickness'])
+            if median_height is not None and std_height is not None:
+                disc_height = subject_data['discs'][disc]['median_thickness']
+                disc_intensity = subject_data['discs'][disc]['intensity_variation']
+                if disc_height <= 0.3*median_height:
+                    grade = 8
+                elif disc_height <= 0.6*median_height:
+                    grade = 7
+                elif disc_height <= 0.9*median_height:
+                    grade = 6
+                elif disc_intensity <= 0.2:
+                    grade = 5
+                elif disc_intensity <= 0.4:
+                    grade = 4
+                elif disc_intensity <= 0.55:
+                    grade = 3
+                elif disc_intensity <= 0.7:
+                    grade = 2
+                elif disc_intensity > 0.7:
+                    grade = 1
+                subject_data['discs'][disc]['grading'][group] = grade
+            else:
+                subject_data['discs'][disc]['grading'][group] = 'Error'
+    return subject_data
 
 def convert_to_df(all_values):
     new_values = copy.deepcopy(all_values)
@@ -392,7 +430,7 @@ def process_discs(subject_data):
 
 def process_vertebrae(subject_data):
     # Create dictionary from pandas dataframes with names as keys
-    subject_dict = create_dict_from_subject_data(subject_data, intensity_profile=False)
+    subject_dict = create_dict_from_subject_data(subject_data)
     return subject_dict
 
 def process_foramens(subject_data):
@@ -610,7 +648,7 @@ def previous_vertebra(vertebra):
             next_lower = f"C{int(vertebra[1:]) - 1}"
     return next_lower
 
-def create_dict_from_subject_data(subject_data, intensity_profile=True):
+def create_dict_from_subject_data(subject_data):
     """
     Create a dictionary from the subject data DataFrame.
 
@@ -626,12 +664,8 @@ def create_dict_from_subject_data(subject_data, intensity_profile=True):
         struc_data = subject_data[subject_data['name'] == struc]
         struc_idx = struc_data.index[0]
         for column in struc_data.columns[2:]:
-            if 'intensity' in column:
-                if intensity_profile and column == 'intensity_counts':
-                    struc_dict['intensity'] = [convert_str_to_list(struc_data['intensity_counts'].iloc[0]), convert_str_to_list(struc_data['intensity_bins'].iloc[0])]
-            else:
-                if column != 'center':
-                    struc_dict[column] = struc_data[column][struc_idx]
+            if column != 'center':
+                struc_dict[column] = struc_data[column][struc_idx]
         subject_dict[struc] = struc_dict
     return subject_dict
 
@@ -661,12 +695,12 @@ def create_global_figures(subject_data, all_values_df, discs_gap, last_disc, med
             idx = 0
             for i in range(ncols):
                 if i == 0:
-                    axes[i].text(0.5, 0.5, "Structure name", fontsize=45, ha='center', va='center')
+                    axes[i].text(0.5, 0.5, "Structure name", fontsize=45, ha='center', va='center', fontweight='bold')
                 else:
                     # Load image 
                     # img_path = os.path.join(ressources_path, f'imgs/{struc}_{metrics[i - 2]}.jpg')
                     # axes[i].imshow(plt.imread(img_path))
-                    axes[i].text(0.5, 0.5, metrics[i-1], fontsize=45, ha='center', va='center')
+                    axes[i].text(0.5, 0.5, metrics[i-1], fontsize=45, ha='center', va='center', fontweight='bold')
                 axes[i].set_axis_off()
                 idx += 1
             for struc_name in struc_names:
@@ -716,16 +750,16 @@ def create_global_figures(subject_data, all_values_df, discs_gap, last_disc, med
             idx = 0
             for i in range(ncols):
                 if i == 0:
-                    axes[i].text(0.5, 0.5, "Structure name", fontsize=45, ha='center', va='center')
+                    axes[i].text(0.5, 0.5, "Structure name", fontsize=45, ha='center', va='center', fontweight='bold')
                 elif i == 1:
-                    axes[i].text(0.5, 0.5, "Segmentation", fontsize=45, ha='center', va='center')
+                    axes[i].text(0.5, 0.5, "Segmentation", fontsize=45, ha='center', va='center', fontweight='bold')
                 else:
                     if os.path.exists(os.path.join(ressources_path, f'imgs/{struc}_{metrics[i - 2]}.jpg')):
                         # Load image 
                         img_path = os.path.join(ressources_path, f'imgs/{struc}_{metrics[i - 2]}.jpg')
                         axes[i].imshow(plt.imread(img_path))
                     else:
-                        axes[i].text(0.5, 0.5, metrics[i - 2], fontsize=45, ha='center', va='center')
+                        axes[i].text(0.5, 0.5, metrics[i - 2], fontsize=45, ha='center', va='center', fontweight='bold')
                 
                 axes[i].set_axis_off()
                 idx += 1
@@ -770,11 +804,83 @@ def create_global_figures(subject_data, all_values_df, discs_gap, last_disc, med
             plt.savefig(str(ofolder_path / f"compared_{group}_{struc}.png"))
 
         # Create discs figures
-        for struc in ['discs', 'vertebrae']:
+        metrics_dict = {
+            'discs': ['median_thickness', 'DHI', 'volume', 'eccentricity', 'solidity'],
+            'vertebrae': ['median_thickness', 'AP_thickness', 'volume']
+        }
+        for struc in ['discs']:
             # Create a subplot for each subject and overlay a red line corresponding to their value
             struc_names = np.array(list(subject_data[struc].keys()))
             struc_names = struc_names[np.isin(struc_names, list(all_values_df[group][struc].keys()))].tolist()
-            metrics = list(subject_data[struc][struc_names[0]].keys())
+            metrics = metrics_dict[struc]
+            nrows = len(struc_names) + 1
+            ncols = len(metrics) + 4
+            fig, axes = plt.subplots(nrows, ncols, figsize=(6 * ncols, 4 * nrows))
+            axes = axes.flatten()
+            idx = 0
+            for i in range(ncols):
+                if i == 0:
+                    axes[i].text(0.5, 0.5, "Structure name", fontsize=45, ha='center', va='center', fontweight='bold')
+                elif i == 1:
+                    axes[i].text(0.5, 0.5, "Disc grading", fontsize=45, ha='center', va='center', fontweight='bold')
+                elif i == 2:
+                    axes[i].text(0.5, 0.5, "Image", fontsize=45, ha='center', va='center', fontweight='bold')
+                elif i == 3:
+                    axes[i].text(0.5, 0.5, "Segmentation", fontsize=45, ha='center', va='center', fontweight='bold')
+                else:
+                    if os.path.exists(os.path.join(ressources_path, f'imgs/{struc}_{metrics[i - 4]}.jpg')):
+                        # Load image 
+                        img_path = os.path.join(ressources_path, f'imgs/{struc}_{metrics[i - 4]}.jpg')
+                        axes[i].imshow(plt.imread(img_path))
+                    else:
+                        axes[i].text(0.5, 0.5, metrics[i - 4], fontsize=45, ha='center', va='center', fontweight='bold')
+                axes[i].set_axis_off()
+                idx += 1
+            for struc_name in struc_names:
+                axes[idx].text(0.5, 0.5, struc_name, fontsize=45, ha='center', va='center')
+                axes[idx].set_axis_off()
+                grading = subject_data[struc][struc_name]['grading'][group]
+                axes[idx+1].text(0.5, 0.5, f'Grading {grading}', fontsize=45, ha='center', va='center')
+                axes[idx+1].set_axis_off()
+                # Load images
+                img_name = f'{struc}_{struc_name}'
+                img = plt.imread(str(imgs_path / f'{img_name}_img.png'))
+                seg = plt.imread(str(imgs_path / f'{img_name}_seg.png'))
+                axes[idx+2].imshow(np.rot90(img), cmap='gray')
+                axes[idx+2].set_axis_off()
+                axes[idx+3].imshow(np.rot90(seg))
+                axes[idx+3].set_axis_off()
+                idx += 4
+                for metric in metrics:
+                    ax = axes[idx]
+                    subject_value = subject_data[struc][struc_name][metric]
+                    all_values_data = all_values_df[group][struc][struc_name][metric]
+                    # Plot metric for subject
+                    if subject_value == -1:
+                        sns.violinplot(x='values', data=all_values_data, ax=ax, cut=0, bw_method=0.7, color='gray', alpha=0.2)
+                    elif subject_value < median_dict[group][struc][struc_name][metric]['median'] - 0.8*median_dict[group][struc][struc_name][metric]['std']:
+                        # Highlight the violin plot in orange
+                        sns.violinplot(x='values', data=all_values_data, ax=ax, cut=0, bw_method=0.7, color='orange')
+                    elif subject_value > median_dict[group][struc][struc_name][metric]['median'] + 0.8*median_dict[group][struc][struc_name][metric]['std']:
+                        # Highlight the violin plot in green
+                        sns.violinplot(x='values', data=all_values_data, ax=ax, cut=0, bw_method=0.7, color='green')
+                    else:
+                        sns.violinplot(x='values', data=all_values_data, ax=ax, cut=0, bw_method=0.7, color='gray', alpha=0.2)
+
+                    ax.tick_params(axis='x', rotation=45, labelsize=12)
+                    if subject_value != -1:
+                        axes[idx].axvline(x=subject_value, color='red', linestyle='--')
+
+                    fig.tight_layout()
+                    idx += 1
+
+            plt.savefig(str(ofolder_path / f"compared_{group}_{struc}.png"))
+        
+        for struc in ['vertebrae']:
+            # Create a subplot for each subject and overlay a red line corresponding to their value
+            struc_names = np.array(list(subject_data[struc].keys()))
+            struc_names = struc_names[np.isin(struc_names, list(all_values_df[group][struc].keys()))].tolist()
+            metrics = metrics_dict[struc]
             nrows = len(struc_names) + 1
             ncols = len(metrics) + 3
             fig, axes = plt.subplots(nrows, ncols, figsize=(6 * ncols, 4 * nrows))
@@ -782,18 +888,18 @@ def create_global_figures(subject_data, all_values_df, discs_gap, last_disc, med
             idx = 0
             for i in range(ncols):
                 if i == 0:
-                    axes[i].text(0.5, 0.5, "Structure name", fontsize=45, ha='center', va='center')
+                    axes[i].text(0.5, 0.5, "Structure name", fontsize=45, ha='center', va='center', fontweight='bold')
                 elif i == 1:
-                    axes[i].text(0.5, 0.5, "Image", fontsize=45, ha='center', va='center')
+                    axes[i].text(0.5, 0.5, "Image", fontsize=45, ha='center', va='center', fontweight='bold')
                 elif i == 2:
-                    axes[i].text(0.5, 0.5, "Segmentation", fontsize=45, ha='center', va='center')
+                    axes[i].text(0.5, 0.5, "Segmentation", fontsize=45, ha='center', va='center', fontweight='bold')
                 else:
                     if os.path.exists(os.path.join(ressources_path, f'imgs/{struc}_{metrics[i - 3]}.jpg')):
                         # Load image 
                         img_path = os.path.join(ressources_path, f'imgs/{struc}_{metrics[i - 3]}.jpg')
                         axes[i].imshow(plt.imread(img_path))
                     else:
-                        axes[i].text(0.5, 0.5, metrics[i - 3], fontsize=45, ha='center', va='center')
+                        axes[i].text(0.5, 0.5, metrics[i - 3], fontsize=45, ha='center', va='center', fontweight='bold')
                 axes[i].set_axis_off()
                 idx += 1
             for struc_name in struc_names:
@@ -811,27 +917,23 @@ def create_global_figures(subject_data, all_values_df, discs_gap, last_disc, med
                 for metric in metrics:
                     ax = axes[idx]
                     subject_value = subject_data[struc][struc_name][metric]
-                    if not 'intensity' in metric:
-                        all_values_data = all_values_df[group][struc][struc_name][metric]
-                        # Plot metric for subject
-                        if subject_value == -1:
-                            sns.violinplot(x='values', data=all_values_data, ax=ax, cut=0, bw_method=0.7, color='gray', alpha=0.2)
-                        elif subject_value < median_dict[group][struc][struc_name][metric]['median'] - 0.8*median_dict[group][struc][struc_name][metric]['std']:
-                            # Highlight the violin plot in orange
-                            sns.violinplot(x='values', data=all_values_data, ax=ax, cut=0, bw_method=0.7, color='orange')
-                        elif subject_value > median_dict[group][struc][struc_name][metric]['median'] + 0.8*median_dict[group][struc][struc_name][metric]['std']:
-                            # Highlight the violin plot in green
-                            sns.violinplot(x='values', data=all_values_data, ax=ax, cut=0, bw_method=0.7, color='green')
-                        else:
-                            sns.violinplot(x='values', data=all_values_data, ax=ax, cut=0, bw_method=0.7, color='gray', alpha=0.2)
-
-                        ax.tick_params(axis='x', rotation=45, labelsize=12)
-                        if subject_value != -1:
-                            axes[idx].axvline(x=subject_value, color='red', linestyle='--')
+                    all_values_data = all_values_df[group][struc][struc_name][metric]
+                    # Plot metric for subject
+                    if subject_value == -1:
+                        sns.violinplot(x='values', data=all_values_data, ax=ax, cut=0, bw_method=0.7, color='gray', alpha=0.2)
+                    elif subject_value < median_dict[group][struc][struc_name][metric]['median'] - 0.8*median_dict[group][struc][struc_name][metric]['std']:
+                        # Highlight the violin plot in orange
+                        sns.violinplot(x='values', data=all_values_data, ax=ax, cut=0, bw_method=0.7, color='orange')
+                    elif subject_value > median_dict[group][struc][struc_name][metric]['median'] + 0.8*median_dict[group][struc][struc_name][metric]['std']:
+                        # Highlight the violin plot in green
+                        sns.violinplot(x='values', data=all_values_data, ax=ax, cut=0, bw_method=0.7, color='green')
                     else:
-                        axes[idx].stairs(subject_value[0], subject_value[1])
-                        axes[idx].set_xlabel("Intensity")
-                        axes[idx].set_ylabel("Counts")
+                        sns.violinplot(x='values', data=all_values_data, ax=ax, cut=0, bw_method=0.7, color='gray', alpha=0.2)
+
+                    ax.tick_params(axis='x', rotation=45, labelsize=12)
+                    if subject_value != -1:
+                        axes[idx].axvline(x=subject_value, color='red', linestyle='--')
+
                     fig.tight_layout()
                     idx += 1
 
