@@ -85,11 +85,16 @@ cd TotalSpineSeg
    > **Note:** If you pull a new version from GitHub, make sure to rerun this command with the flag `--upgrade`
    ```bash
    git clone https://github.com/neuropoly/totalspineseg.git
-   python3 -m pip install -e totalspineseg
+   python3 -m pip install -e totalspineseg[nnunetv2]
    ```
    - PyPI installation (for inference only)
    ```
-   python3 -m pip install totalspineseg
+   python3 -m pip install totalspineseg[nnunetv2]
+   ```
+   - PyPI installation (with specific nnU-Net version)
+   ```bash
+   # Note: Use "[nnunetv2]" to stick to tested versions of nnunetv2
+   python3 -m pip install totalspineseg nnunetv2==2.6.2
    ```
 
 5. For CUDA GPU support, install **PyTorch<2.6** following the instructions on their [website](https://pytorch.org/). Be sure to add the `--upgrade` flag to your installation command to replace any existing PyTorch installation.
