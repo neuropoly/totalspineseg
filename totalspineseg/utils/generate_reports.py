@@ -195,23 +195,23 @@ def create_figures_mp(test_path, ofolder_path, all_values, demographics_test, re
     imgs_paths = [test_sub_folder / 'imgs' for test_sub_folder in test_sub_folders]
     ofolder_subjects = [ofolder_path / subject for subject in os.listdir(test_path)]
 
-    # process_map(
-    #     partial(
-    #         create_figures,
-    #         all_values=all_values,
-    #         demographics_test=demographics_test,
-    #         rev_mapping=rev_mapping,
-    #         discs_gap=discs_gap,
-    #         last_disc=last_disc
-    #     ),
-    #     test_sub_folders,
-    #     imgs_paths,
-    #     ofolder_subjects,
-    #     max_workers=max_workers,
-    #     chunksize=1,
-    #     disable=quiet,
-    # )
-    create_figures(test_sub_folders[0], imgs_paths[0], ofolder_subjects[0], all_values, demographics_test, rev_mapping, discs_gap, last_disc)
+    process_map(
+        partial(
+            create_figures,
+            all_values=all_values,
+            demographics_test=demographics_test,
+            rev_mapping=rev_mapping,
+            discs_gap=discs_gap,
+            last_disc=last_disc
+        ),
+        test_sub_folders,
+        imgs_paths,
+        ofolder_subjects,
+        max_workers=max_workers,
+        chunksize=1,
+        disable=quiet,
+    )
+    #create_figures(test_sub_folders[0], imgs_paths[0], ofolder_subjects[0], all_values, demographics_test, rev_mapping, discs_gap, last_disc)
 
 def create_figures(sub_folder, imgs_path, ofolder_subject, all_values, demographics_test, rev_mapping, discs_gap, last_disc):
     # Load subject data
@@ -732,6 +732,7 @@ def create_global_figures(subject_data, all_values_df, discs_gap, last_disc, med
                         top_pos += discs_gap
                         disc = previous_structure(disc)
 
+                    ax.set_xlabel('')
                     fig.tight_layout()
                     idx += 1
 
@@ -745,7 +746,7 @@ def create_global_figures(subject_data, all_values_df, discs_gap, last_disc, med
             metrics = metrics_dict[struc]
             nrows = len(struc_names) + 1
             ncols = len(metrics) + 2
-            fig, axes = plt.subplots(nrows, ncols, figsize=(6 * ncols, 4 * nrows))
+            fig, axes = plt.subplots(nrows, ncols, figsize=(6 * ncols, 6 * nrows))
             axes = axes.flatten()
             idx = 0
             for i in range(ncols):
@@ -798,6 +799,7 @@ def create_global_figures(subject_data, all_values_df, discs_gap, last_disc, med
                     ax.tick_params(axis='x', rotation=45, labelsize=12)
                     if subject_value != -1:
                         axes[idx].axvline(x=subject_value, color='red', linestyle='--')
+                    ax.set_xlabel('')
                     fig.tight_layout()
                     idx += 1
 
@@ -811,32 +813,33 @@ def create_global_figures(subject_data, all_values_df, discs_gap, last_disc, med
             metrics = metrics_dict[struc]
             nrows = len(struc_names) + 1
             ncols = len(metrics) + 4
-            fig, axes = plt.subplots(nrows, ncols, figsize=(10 * ncols, 6 * nrows))
+            fig, axes = plt.subplots(nrows, ncols, figsize=(9 * ncols, 7 * nrows))
+            fig.subplots_adjust(bottom=0)
             axes = axes.flatten()
             idx = 0
             for i in range(ncols):
                 if i == 0:
-                    axes[i].text(0.5, 0.5, "Structure name", fontsize=65, ha='center', va='center', fontweight='bold')
+                    axes[i].text(0.5, 0.5, "Structure name", fontsize=70, ha='center', va='center', fontweight='bold')
                 elif i == 1:
-                    axes[i].text(0.5, 0.5, "Disc grading", fontsize=65, ha='center', va='center', fontweight='bold')
+                    axes[i].text(0.5, 0.5, "Disc grading", fontsize=70, ha='center', va='center', fontweight='bold')
                 elif i == 2:
-                    axes[i].text(0.5, 0.5, "Image", fontsize=65, ha='center', va='center', fontweight='bold')
+                    axes[i].text(0.5, 0.5, "Image", fontsize=70, ha='center', va='center', fontweight='bold')
                 elif i == 3:
-                    axes[i].text(0.5, 0.5, "Segmentation", fontsize=65, ha='center', va='center', fontweight='bold')
+                    axes[i].text(0.5, 0.5, "Segmentation", fontsize=70, ha='center', va='center', fontweight='bold')
                 else:
                     if os.path.exists(os.path.join(ressources_path, f'imgs/{struc}_{metrics[i - 4]}.jpg')):
                         # Load image 
                         img_path = os.path.join(ressources_path, f'imgs/{struc}_{metrics[i - 4]}.jpg')
                         axes[i].imshow(plt.imread(img_path))
                     else:
-                        axes[i].text(0.5, 0.5, metrics[i - 4], fontsize=65, ha='center', va='center', fontweight='bold')
+                        axes[i].text(0.5, 0.5, metrics[i - 4], fontsize=70, ha='center', va='center', fontweight='bold')
                 axes[i].set_axis_off()
                 idx += 1
             for struc_name in struc_names:
-                axes[idx].text(0.5, 0.5, struc_name, fontsize=65, ha='center', va='center')
+                axes[idx].text(0.5, 0.5, struc_name, fontsize=70, ha='center', va='center')
                 axes[idx].set_axis_off()
                 grading = subject_data[struc][struc_name]['grading'][group]
-                axes[idx+1].text(0.5, 0.5, f'Grading {grading}', fontsize=65, ha='center', va='center')
+                axes[idx+1].text(0.5, 0.5, f'Grading {grading}', fontsize=70, ha='center', va='center')
                 axes[idx+1].set_axis_off()
                 # Load images
                 img_name = f'{struc}_{struc_name}'
@@ -866,7 +869,7 @@ def create_global_figures(subject_data, all_values_df, discs_gap, last_disc, med
                     ax.tick_params(axis='x', rotation=45, labelsize=30)
                     if subject_value != -1:
                         axes[idx].axvline(x=subject_value, color='red', linestyle='--')
-
+                    ax.set_xlabel('')
                     fig.tight_layout()
                     idx += 1
 
@@ -929,7 +932,7 @@ def create_global_figures(subject_data, all_values_df, discs_gap, last_disc, med
                     ax.tick_params(axis='x', rotation=45, labelsize=12)
                     if subject_value != -1:
                         axes[idx].axvline(x=subject_value, color='red', linestyle='--')
-
+                    ax.set_xlabel('')
                     fig.tight_layout()
                     idx += 1
 
