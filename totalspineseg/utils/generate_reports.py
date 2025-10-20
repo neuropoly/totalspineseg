@@ -456,7 +456,7 @@ def compute_foramens_metrics(data_dict):
         if not top_vertebra in data_dict['vertebrae']:
             data_dict['foramens'][struc_name]['right_surface'] = -1
             data_dict['foramens'][struc_name]['left_surface'] = -1
-            data_dict['foramens'][struc_name]['asymmetry R/L'] = -1
+            data_dict['foramens'][struc_name]['asymmetry_R-L'] = -1
         else:
             # Normalize foramen surfaces with top vertebra AP thickness
             for surface in ['right_surface', 'left_surface']:
@@ -465,9 +465,9 @@ def compute_foramens_metrics(data_dict):
 
             # Create asymmetry quotient
             if data_dict['foramens'][struc_name]['right_surface'] != -1 and data_dict['foramens'][struc_name]['left_surface'] != -1 and data_dict['foramens'][struc_name]['left_surface'] != 0:
-                data_dict['foramens'][struc_name]['asymmetry R/L'] = data_dict['foramens'][struc_name]['right_surface'] / data_dict['foramens'][struc_name]['left_surface']
+                data_dict['foramens'][struc_name]['asymmetry_R-L'] = data_dict['foramens'][struc_name]['right_surface'] / data_dict['foramens'][struc_name]['left_surface']
             else:
-                data_dict['foramens'][struc_name]['asymmetry R/L'] = -1
+                data_dict['foramens'][struc_name]['asymmetry_R-L'] = -1
     return data_dict
 
 def compute_vertebrae_metrics(data_dict):
