@@ -672,13 +672,20 @@ def create_global_figures(subject_data, all_values_df, discs_gap, last_disc, med
     """
     ressources_path = importlib.resources.files(ressources)
 
+    metrics_dict = {
+            'discs': ['median_thickness', 'DHI', 'volume', 'eccentricity', 'solidity'],
+            'vertebrae': ['median_thickness', 'AP_thickness', 'volume'],
+            'foramens': ['right_surface', 'left_surface', 'asymmetry_R-L'],
+            'canal': ['area', 'diameter_AP', 'diameter_RL', 'eccentricity', 'solidity'],
+        }
+
     # Create discs, vertebrae, foramens figures
     for group in all_values_df.keys():
-        for struc in ['canal', 'csf']:
+        for struc in ['canal']:
             # Create a subplot for each subject and overlay a red line corresponding to their value
             struc_names = np.array(list(subject_data[struc].keys()))
             struc_names = struc_names[np.isin(struc_names, list(all_values_df[group][struc].keys()))].tolist()
-            metrics = [m for m in list(subject_data[struc][struc_names[0]].keys()) if m != 'slice_interp']
+            metrics = metrics_dict[struc]
             nrows = len(struc_names) + 1
             ncols = len(metrics) + 1
             fig, axes = plt.subplots(nrows, ncols, figsize=(6 * ncols, 4 * nrows))
@@ -688,10 +695,12 @@ def create_global_figures(subject_data, all_values_df, discs_gap, last_disc, med
                 if i == 0:
                     axes[i].text(0.5, 0.5, "Structure name", fontsize=45, ha='center', va='center', fontweight='bold')
                 else:
-                    # Load image 
-                    # img_path = os.path.join(ressources_path, f'imgs/{struc}_{metrics[i - 2]}.jpg')
-                    # axes[i].imshow(plt.imread(img_path))
-                    axes[i].text(0.5, 0.5, metrics[i-1], fontsize=45, ha='center', va='center', fontweight='bold')
+                    if os.path.exists(os.path.join(ressources_path, f'imgs/{struc}_{metrics[i - 1]}.jpg')):
+                        # Load image 
+                        img_path = os.path.join(ressources_path, f'imgs/{struc}_{metrics[i - 1]}.jpg')
+                        axes[i].imshow(plt.imread(img_path))
+                    else:
+                        axes[i].text(0.5, 0.5, metrics[i-1], fontsize=45, ha='center', va='center', fontweight='bold')
                 axes[i].set_axis_off()
                 idx += 1
             for struc_name in struc_names:
@@ -733,7 +742,7 @@ def create_global_figures(subject_data, all_values_df, discs_gap, last_disc, med
             # Create a subplot for each subject and overlay a red line corresponding to their value
             struc_names = np.array(list(subject_data[struc].keys()))
             struc_names = struc_names[np.isin(struc_names, list(all_values_df[group][struc].keys()))].tolist()
-            metrics = list(subject_data[struc][struc_names[0]].keys())
+            metrics = metrics_dict[struc]
             nrows = len(struc_names) + 1
             ncols = len(metrics) + 2
             fig, axes = plt.subplots(nrows, ncols, figsize=(6 * ncols, 4 * nrows))
@@ -795,10 +804,6 @@ def create_global_figures(subject_data, all_values_df, discs_gap, last_disc, med
             plt.savefig(str(ofolder_path / f"compared_{group}_{struc}.png"))
 
         # Create discs figures
-        metrics_dict = {
-            'discs': ['median_thickness', 'DHI', 'volume', 'eccentricity', 'solidity'],
-            'vertebrae': ['median_thickness', 'AP_thickness', 'volume']
-        }
         for struc in ['discs']:
             # Create a subplot for each subject and overlay a red line corresponding to their value
             struc_names = np.array(list(subject_data[struc].keys()))
