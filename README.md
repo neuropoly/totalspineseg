@@ -255,6 +255,8 @@ The examples shown above include segmentation results on various contrasts (T1w,
 
 ## List of Classes
 
+> The mapping is also available in the file `totalspineseg/resources/labels_maps/tss_map.json` 
+
 | Label | Name |
 |:------|:-----|
 | 1 | spinal_cord |
