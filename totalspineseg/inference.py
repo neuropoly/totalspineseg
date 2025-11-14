@@ -417,7 +417,7 @@ def inference(
     nnUNetTrainer, nnUNetPlans, configuration = next((nnUNet_results / step1_dataset).glob('*/fold_*')).parent.name.split('__')
     # Check if the best checkpoint exists, if not use the final checkpoint
     checkpoint = 'checkpoint_best.pth' if (nnUNet_results / step1_dataset / f'{nnUNetTrainer}__{nnUNetPlans}__{configuration}' / f'fold_{fold}' / 'checkpoint_best.pth').is_file() else 'checkpoint_final.pth'
-    print(f"Using checkpoint: {checkpoint}")
+    if not quiet: print(f"Using checkpoint step1: {checkpoint}")
     # Construct step 1 model folder
     model_folder_step1 = nnUNet_results / step1_dataset / f'{nnUNetTrainer}__{nnUNetPlans}__{configuration}'
 
@@ -682,6 +682,7 @@ def inference(
         nnUNetTrainer, nnUNetPlans, configuration = next((nnUNet_results / step2_dataset).glob('*/fold_*')).parent.name.split('__')
         # Check if the final checkpoint exists, if not use the latest checkpoint
         checkpoint = 'checkpoint_best.pth' if (nnUNet_results / step2_dataset / f'{nnUNetTrainer}__{nnUNetPlans}__{configuration}' / f'fold_{fold}' / 'checkpoint_best.pth').is_file() else 'checkpoint_final.pth'
+        if not quiet: print(f"Using checkpoint step2: {checkpoint}")
         # Construct step 2 model folder
         model_folder_step2 = nnUNet_results / step2_dataset / f'{nnUNetTrainer}__{nnUNetPlans}__{configuration}'
 
