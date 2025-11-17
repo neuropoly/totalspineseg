@@ -44,6 +44,7 @@ dependencies = [
     "SimpleITK",
     "nnunetv2",
     "psutil",
+    "auglab"
 ]
 
 [project.urls]
