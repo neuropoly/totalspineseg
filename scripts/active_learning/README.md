@@ -7,9 +7,9 @@ This README explains the steps that were performed to improve the quality of the
 
 Due to the time-consuming nature of manually segmenting the anatomical structures identified by TotalSpineSeg namely the spinal cord, spinal canal, vertebrae, and intervertebral discs, the [PAM50 atlas](https://pubmed.ncbi.nlm.nih.gov/29061527/) was registered to the native space of each scan that included the cervical and/or thoracic regions to serve as ground truth segmentation. However, because of inter-subject anatomical variability, the atlas did not perfectly align with every subject anatomy. These subtle misalignments introduced inconsistencies that propagated into the model’s predictions, often resulting in over- or under-segmentation of certain structures. This issue affects models trained up to and including release `r20250224`.
 
-## Refinement of the existing ground truth (T2w)
+## Recreation of the existing ground truth (T2w)
 
-These ground truth refinements will be done using existing contrasts specific deep learning models and manual corrections of the predictions.
+These ground truth will be recreated using existing contrasts specific deep learning models and manual corrections of the predictions.
 
 ### Canal segmentations
 
@@ -53,10 +53,11 @@ python spineps_refine -spineps spineps_folder -totalspineseg step2_output -canal
 At this step TotalSpineSeg was retrained with the ground truth generated in the last section. The purpose of this step is to run TotalSpineSeg on:
 - the training images to improve slight imperfections in the ground truths
 - new images to incorporate more contrasts in the training
+> And manually correct wrong predictions
 
 ### Generating ground truth for new contrasts (T1w, MT-on, MT-off, T2star)
 
-Thanks to the new nnUNetTrainerDAext (available under totalspineseg/trainer/nnUNetTrainerDAExt.py), TotalSpineSeg demonstrated strong performance in semantically segmenting structures (spinal cord, canal, vertebrae, discs) on contrasts that were unseen during initial training. However, since the training data mainly included sacral scans (due to the availability of manual segmentations), the model showed limitations in accurately detecting cervical landmarks, reducing its direct applicability. To overcome this limitation and generate reliable ground truths on new contrasts, we adopted the already implemented `localizer-based strategy` (see README).
+Thanks to the new nnUNetTrainerDAext (available under in the [AugLab repository](https://github.com/neuropoly/AugLab/blob/main/auglab/trainers/nnUNetTrainerDAExt.py)), TotalSpineSeg demonstrated strong performance in semantically segmenting structures (spinal cord, canal, vertebrae, discs) on contrasts that were unseen during initial training. However, since the training data mainly included sacral scans (due to the availability of manual segmentations), the model showed limitations in accurately detecting cervical landmarks, reducing its direct applicability. To overcome this limitation and generate reliable ground truths on new contrasts, we adopted the already implemented `localizer-based strategy` (see README).
 
 Because the `spinegeneric` and `whole-spine` datasets contain multiple contrasts acquired during the same session, we could leverage the fact that these contrasts are generally well aligned:
 
@@ -73,7 +74,6 @@ CUDA_VISIBLE_DEVICES=1 totalspineseg t1w out-t1w --loc out-t2w/step2_output/ --s
 ```
 
 > Note: The localizer-based approach enabled us to combine the reliable semantic segmentations on T1w scans with the accurate cervical landmarks from T2w scans. Final predictions were then quality-controlled to ensure the robustness of the process.
-
 
 
 
