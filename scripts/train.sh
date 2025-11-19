@@ -108,7 +108,7 @@ for d in ${DATASETS[@]}; do
     fi
 
     echo "Training dataset $d_name fold $FOLD"
-    nnUNetv2_train $d $configuration $FOLD -tr $nnUNetTrainer -p $nnUNetPlans --c -device $DEVICE
+    AUGLAB_PARAMS_GPU_JSON=$TOTALSPINESEG/totalspineseg/models/transforms_gpu.json nnUNetv2_train $d $configuration $FOLD -tr $nnUNetTrainer -p $nnUNetPlans --c -device $DEVICE
 
     echo "Export the model for dataset $d_name in "$nnUNet_exports""
     mkdir -p "$nnUNet_exports"
