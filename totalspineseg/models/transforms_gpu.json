@@ -54,6 +54,11 @@
         "same_on_batch": false,
         "probability": 0.65
     },
+    "BiasFieldTransform": {
+        "retain_stats": false,
+        "coefficients": 1,
+        "probability": 0.4
+    },
     "FlipTransform": {
         "flip_axis": [0],
         "same_on_batch": false,
