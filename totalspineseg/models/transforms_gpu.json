@@ -52,7 +52,7 @@
         "scale": [0.01, 1.0],
         "crop": [1.0, 1.0],
         "same_on_batch": false,
-        "probability": 0.30
+        "probability": 0.65
     },
     "FlipTransform": {
         "flip_axis": [0],
