@@ -28,7 +28,7 @@ trap "echo Caught Keyboard Interrupt within script. Exiting now.; exit" INT
 
 # Set the datasets to work with - default is 101 102
 DATASETS=${1:-101 102}
-if [ "$DATASETS" == all ]; then DATASETS=(101 102 103); fi
+if [ "$DATASETS" == all ]; then DATASETS=(101 102); fi
 
 # Set the fold to work with - default is 0
 FOLD=${2:-0}
@@ -62,13 +62,12 @@ export nnUNet_preprocessed="$TOTALSPINESEG_DATA"/nnUNet/preprocessed
 export nnUNet_results="$TOTALSPINESEG_DATA"/nnUNet/results
 export nnUNet_exports="$TOTALSPINESEG_DATA"/nnUNet/exports
 
-nnUNetTrainer=${3:-nnUNetTrainer_DASegOrd0_NoMirroring}
-nnUNetPlanner=${4:-ExperimentPlanner}
-# Note on nnUNetPlans_small configuration:
-# To train with a small patch size, verify that the nnUNetPlans_small.json file 
-# in $nnUNet_preprocessed/Dataset10[1,2]_TotalSpineSeg_step[1,2] matches the version provided in the release.
-# Make any necessary updates to this file before starting the training process.
-nnUNetPlans=${5:-nnUNetPlans_small}
+# Copy auglab trainer to nnunet folder
+auglab_add_nnunettrainer -t nnUNetTrainerDAExt
+
+nnUNetTrainer=${3:-nnUNetTrainerDAExtGPU}
+nnUNetPlanner=${4:-nnUNetPlannerResEncL}
+nnUNetPlans=${5:-nnUNetPlans}
 configuration=3d_fullres
 data_identifier=nnUNetPlans_3d_fullres
 
@@ -95,11 +94,7 @@ for d in ${DATASETS[@]}; do
 
     if [ ! -f "$nnUNet_preprocessed"/$d_name/dataset_fingerprint.json ]; then
         echo "Extracting fingerprint dataset $d_name"
-        # --verify_dataset_integrity not working in nnunetv2==2.4.2
-        # https://github.com/MIC-DKFZ/nnUNet/issues/2144
-        # But nnUNetTrainer_DASegOrd0_NoMirroring not working in nnunetv2==2.5.1
-        # https://github.com/MIC-DKFZ/nnUNet/issues/2480
-        nnUNetv2_extract_fingerprint -d $d -np $JOBSNN #--verify_dataset_integrity
+        nnUNetv2_extract_fingerprint -d $d -np $JOBSNN --verify_dataset_integrity
     fi
 
     if [ ! -f "$nnUNet_preprocessed"/$d_name/${nnUNetPlans}.json ]; then
@@ -113,9 +108,7 @@ for d in ${DATASETS[@]}; do
     fi
 
     echo "Training dataset $d_name fold $FOLD"
-    # if already decompressed do not decompress again
-    if [ $(find "$nnUNet_preprocessed"/$d_name/$data_identifier -name "*.npy" | wc -l) -eq $(( 2 * $(find "$nnUNet_preprocessed"/$d_name/$data_identifier -name "*.npz" | wc -l))) ]; then DECOMPRESSED="--use_compressed"; else DECOMPRESSED=""; fi
-    nnUNetv2_train $d $configuration $FOLD -tr $nnUNetTrainer -p $nnUNetPlans --c -device $DEVICE $DECOMPRESSED
+    AUGLAB_PARAMS_GPU_JSON=$TOTALSPINESEG/totalspineseg/models/transforms_gpu.json nnUNetv2_train $d $configuration $FOLD -tr $nnUNetTrainer -p $nnUNetPlans --c -device $DEVICE
 
     echo "Export the model for dataset $d_name in "$nnUNet_exports""
     mkdir -p "$nnUNet_exports"

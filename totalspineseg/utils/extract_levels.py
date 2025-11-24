@@ -6,6 +6,8 @@ import multiprocessing as mp
 from functools import partial
 from tqdm.contrib.concurrent import process_map
 import warnings
+from scipy import interpolate
+from totalspineseg.utils.image import Image, zeros_like
 
 warnings.filterwarnings("ignore")
 
@@ -186,11 +188,12 @@ def _extract_levels(
         return
 
     # Load segmentation
-    seg = nib.load(seg_path)
+    seg = Image(str(seg_path))
+    ori_orientation = seg.orientation
 
     try:
         output_seg = extract_levels(
-            seg,
+            seg.change_orientation('LPI'),
             canal_labels=canal_labels,
             disc_labels=disc_labels,
             c1_label=c1_label,
@@ -201,18 +204,13 @@ def _extract_levels(
         print(f'Error: {seg_path}, {e}')
         return
 
-    # Ensure correct segmentation dtype, affine and header
-    output_seg = nib.Nifti1Image(
-        np.asanyarray(output_seg.dataobj).round().astype(np.uint8),
-        output_seg.affine, output_seg.header
-    )
-    output_seg.set_data_dtype(np.uint8)
-    output_seg.set_qform(output_seg.affine)
-    output_seg.set_sform(output_seg.affine)
+    # Ensure correct orientation and dtype
+    output_seg.change_orientation(ori_orientation)
+    output_seg.change_type(np.uint8)
 
     # Make sure output directory exists and save the segmentation
     output_seg_path.parent.mkdir(parents=True, exist_ok=True)
-    nib.save(output_seg, output_seg_path)
+    output_seg.save(str(output_seg_path))
 
 def extract_levels(
         seg,
@@ -230,7 +228,7 @@ def extract_levels(
 
     Parameters
     ----------
-    seg : nibabel.Nifti1Image
+    seg : Image class
         The input segmentation.
     canal_labels : list
         The canal labels.
@@ -244,33 +242,23 @@ def extract_levels(
     nibabel.Nifti1Image
         The output segmentation with the vertebrae levels.
     '''
-    seg_data = np.asanyarray(seg.dataobj).round().astype(np.uint8)
 
-    output_seg_data = np.zeros_like(seg_data)
-
-    # Get array of indices for x, y, and z axes
-    indices = np.indices(seg_data.shape)
+    output_seg = zeros_like(seg)
 
     # Create a mask of the canal
-    mask_canal = np.isin(seg_data, canal_labels)
+    mask_canal = np.isin(seg.data, canal_labels)
 
-    # If cancl is empty raise an error
+    # If canal is empty raise an error
     if not np.any(mask_canal):
         raise ValueError(f"No canal labels found in the segmentation.")
-
-    # Create a canal anteriorline shifted toward the posterior tip by finding the middle voxels in x and the maximum voxels in y for each z index
-    mask_min_x_indices = np.min(indices[0], where=mask_canal, initial=np.iinfo(indices.dtype).max, keepdims=True, axis=(0, 1))
-    mask_max_x_indices = np.max(indices[0], where=mask_canal, initial=np.iinfo(indices.dtype).min, keepdims=True, axis=(0, 1))
-    mask_mid_x = indices[0] == ((mask_min_x_indices + mask_max_x_indices) // 2)
-    mask_max_y_indices = np.max(indices[1], where=mask_canal, initial=np.iinfo(indices.dtype).min, keepdims=True, axis=(0, 1))
-    mask_max_y = indices[1] == mask_max_y_indices
-    mask_canal_anteriorline = mask_canal * mask_mid_x * mask_max_y
-
-    # Get the indices of the canal anteriorline
-    canal_anteriorline_indices = np.array(np.nonzero(mask_canal_anteriorline)).T
+    
+    # Create canal centerline
+    canal_seg = zeros_like(seg)
+    canal_seg.data[mask_canal] = 1
+    canal_centerline = get_centerline(canal_seg)
 
     # Get the labels of the discs in the segmentation
-    disc_labels_in_seg = np.array(disc_labels)[np.isin(disc_labels, seg_data)]
+    disc_labels_in_seg = np.array(disc_labels)[np.isin(disc_labels, seg.data)]
 
     # If no disc labels found in the segmentation raise an error
     if len(disc_labels_in_seg) == 0:
@@ -284,44 +272,53 @@ def extract_levels(
     map_labels = dict(zip(disc_labels_in_seg, out_labels))
 
     # Create mask of the discs
-    mask_discs = np.isin(seg_data, disc_labels_in_seg)
+    mask_discs = np.isin(seg.data, disc_labels_in_seg)
 
     # Get list of indices for all the discs voxels
     discs_indices = np.nonzero(mask_discs)
     
     # Get the matching labels for the discs indices
-    discs_indices_labels = seg_data[discs_indices]
+    discs_indices_labels = seg.data[discs_indices]
 
     # Make the discs_indices 2D array
     discs_indices = np.array(discs_indices).T
 
-    # Calculate the distance of each disc voxel to each canal anteriorline voxel
-    discs_distances_from_all_anteriorline = np.linalg.norm(discs_indices[:, None, :] - canal_anteriorline_indices[None, ...], axis=2)
+    # Calculate the distance of each disc voxel to each canal centerline voxel
+    discs_distances_from_all_centerline = np.linalg.norm(discs_indices[:, None, :] - canal_centerline['position'].T[None, ...], axis=2)
 
-    # Find the minimum distance for each disc voxel and the corresponding canal anteriorline index
-    discs_distance_from_anteriorline = np.min(discs_distances_from_all_anteriorline, axis=1)
-    discs_anteriorline_indices = canal_anteriorline_indices[np.argmin(discs_distances_from_all_anteriorline, axis=1)]
+    # Find the minimum distance for each disc voxel and the corresponding canal centerline index
+    discs_distance_from_centerline = np.min(discs_distances_from_all_centerline, axis=1)
+    
+    # Find the closest voxel to the canal centerline for each disc label (posterior tip)
+    disc_labels_centerline_indices = [discs_indices[discs_indices_labels == label][np.argmin(discs_distance_from_centerline[discs_indices_labels == label])] for label in disc_labels_in_seg]
 
-    # Find the closest voxel to the canal anteriorline for each disc label (posterior tip)
-    disc_labels_anteriorline_indices = [discs_anteriorline_indices[discs_indices_labels == label][np.argmin(discs_distance_from_anteriorline[discs_indices_labels == label])] for label in disc_labels_in_seg]
-
-    # Set the output labels to the closest voxel to the canal anteriorline for each disc
-    for idx, label in zip(disc_labels_anteriorline_indices, disc_labels_in_seg):
-        output_seg_data[tuple(idx)] = map_labels[label]
-
+    # Set the output labels to the closest voxel to the canal centerline for each disc
+    for idx, label in zip(disc_labels_centerline_indices, disc_labels_in_seg):
+        output_seg.data[tuple(idx)] = map_labels[label]
+    
     # If C2-C3 and C1 are in the segmentation, set 1 and 2
-    if 3 in output_seg_data and c2_label != 0 and c1_label != 0 and all(np.isin([c1_label, c2_label], seg_data)):
+    if 3 in output_seg.data and c2_label != 0 and c1_label != 0 and all(np.isin([c1_label, c2_label], seg.data)):
         # Place 1 at the top of C2 if C1 is visible in the image
         # Find the location of the C2-C3 disc
-        c2c3_index = np.unravel_index(np.argmax(output_seg_data == 3), seg_data.shape)
+        c2c3_index = np.unravel_index(np.argmax(output_seg.data == 3), seg.data.shape)
 
         # Find the maximum coordinate of the vertebra C1
-        c1_coords = np.where(seg_data == c1_label)
+        c1_coords = np.where(seg.data == c1_label)
         c1_z_max_index = np.max(c1_coords[2])
 
         # Extract coordinate of the vertebrae
         # The coordinate of 1 needs to be in the same slice as 3 but below the max index of C1
-        vert_coords = np.where(seg_data[c2c3_index[0],:,:c1_z_max_index] == c2_label)
+        vert_coords = np.where(seg.data[c2c3_index[0],:,:c1_z_max_index] == c2_label)
+        
+        # Init the anterior line
+        anteriorline_pos = canal_centerline['position'].T[:]
+        dist = np.linalg.norm(np.array(c2c3_index)-anteriorline_pos, axis=1)
+        canal_proj_c2c3_proj = anteriorline_pos[np.argmin(dist)]
+
+        # Shift the anterior line towards C2C3 disc position
+        anteriorline_pos[:, 0] += (c2c3_index[0] - canal_proj_c2c3_proj[0])
+        anteriorline_pos[:, 1] += (c2c3_index[1] - canal_proj_c2c3_proj[1])
+        canal_anteriorline_indices = np.round(anteriorline_pos).astype(int)
 
         # Check if not empty
         if len(vert_coords[1]) > 0:
@@ -332,7 +329,7 @@ def extract_levels(
             # Set 1 to the superior voxels and project onto the anterior line
             top_vert_distances_from_all_anteriorline = np.linalg.norm(top_vert_voxel - canal_anteriorline_indices[None, ...], axis=2)
             top_vert_index_anteriorline = canal_anteriorline_indices[np.argmin(top_vert_distances_from_all_anteriorline, axis=1)]
-            output_seg_data[tuple(top_vert_index_anteriorline[0])] = 1
+            output_seg.data[tuple(top_vert_index_anteriorline[0])] = 1
 
             # Set 2 to the middle voxels between C2-C3 and the superior voxels
             c1c2_index = tuple([(top_vert_voxel[i] + c2c3_index[i]) // 2 for i in range(3)])
@@ -340,11 +337,74 @@ def extract_levels(
             # Project 2 on the anterior line
             c1c2_distances_from_all_anteriorline = np.linalg.norm(c1c2_index - canal_anteriorline_indices[None, ...], axis=2)
             c1c2_index_anteriorline = canal_anteriorline_indices[np.argmin(c1c2_distances_from_all_anteriorline, axis=1)]
-            output_seg_data[tuple(c1c2_index_anteriorline[0])] = 2
-
-    output_seg = nib.Nifti1Image(output_seg_data, seg.affine, seg.header)
+            output_seg.data[tuple(c1c2_index_anteriorline[0])] = 2
 
     return output_seg
 
+def get_centerline(seg):
+    '''
+    Based on https://github.com/spinalcordtoolbox/spinalcordtoolbox/blob/master/spinalcordtoolbox/centerline/core.py
+
+    Extract centerline from canal segmentation using center of mass and interpolate with bspline
+    Expect orientation RPI
+    '''
+    arr = np.array(np.where(seg.data))
+    # Loop across SI axis and average coordinates within duplicate SI values
+    sorted_avg = []
+    for i_si in np.unique(arr[2]):
+        sorted_avg.append(arr[:, arr[2] == i_si].mean(axis=1))
+    x_mean, y_mean, z_mean = np.array(sorted_avg).T
+    z_ref = np.array(range(z_mean.min().astype(int), z_mean.max().astype(int) + 1))
+
+    # Interpolate centerline
+    px, py, pz = seg.dim[4:7]
+    x_centerline_fit, x_centerline_deriv = bspline(z_mean, x_mean, z_ref, smooth=8000, pz=pz) # Increase smoothing...
+    y_centerline_fit, y_centerline_deriv = bspline(z_mean, y_mean, z_ref, smooth=8000, pz=pz) # ...a lot
+
+    # Construct output
+    arr_ctl = np.array([x_centerline_fit, y_centerline_fit, z_ref])
+    arr_ctl_der = np.array([x_centerline_deriv, y_centerline_deriv, np.ones_like(z_ref)])
+
+    # Create centerline dictionary
+    centerline = {"position": arr_ctl, "derivative": arr_ctl_der}
+    return centerline
+
+def bspline(x, y, xref, smooth, deg_bspline=3, pz=1):
+    """
+    Copied from https://github.com/spinalcordtoolbox/spinalcordtoolbox/blob/master/spinalcordtoolbox/centerline/curve_fitting.py
+    Bspline interpolation.
+
+    The smoothing factor (s) is calculated based on an empirical formula (made by JCA, based on
+    preliminary results) and is a function of pz, density of points and an input smoothing parameter (smooth). The
+    formula is adjusted such that the parameter (smooth) produces similar smoothing results than a Hanning window with
+    length smooth, as implemented in linear().
+
+    :param x:
+    :param y:
+    :param xref:
+    :param smooth: float: Smoothing factor. 0: no smoothing, 5: moderate smoothing, 50: large smoothing
+    :param deg_bspline: int: Degree of spline
+    :param pz: float: dimension of pixel along superior-inferior direction (z, assuming RPI orientation)
+    :return:
+    """
+    if len(x) <= deg_bspline:
+        deg_bspline -= 2
+    density = (float(len(x)) / len(xref)) ** 2
+    s = density * smooth * pz / float(3)
+    # Then, run bspline interpolation
+    tck = interpolate.splrep(x, y, s=s, k=deg_bspline)
+    y_fit = interpolate.splev(xref, tck, der=0)
+    y_fit_der = interpolate.splev(xref, tck, der=1)
+    return y_fit, y_fit_der
+
 if __name__ == '__main__':
-    main()
+    _extract_levels(
+        seg_path='/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/sexy/test/canproco_sub-cal083_ses-M12_STIR.nii.gz',
+        output_seg_path='/home/GRAMES.POLYMTL.CA/p118739/data_nvme_p118739/data/datasets/test-tss/sexy/canproco_sub-cal083_ses-M12_STIR_levels.nii.gz',
+        canal_labels=[1, 2],
+        disc_labels=list(range(63, 68)) + list(range(71, 83)) + list(range(91, 96)) + [100],
+        c1_label=11,
+        c2_label=50,
+        overwrite=True,
+    )
+    #main()

@@ -1,0 +1,76 @@
+{
+    "ScharrTransform": {
+        "kernel_type": "Scharr",
+        "absolute": true,
+        "retain_stats": true,
+        "probability": 0.10
+    },
+    "GaussianBlurTransform": {
+        "kernel_type": "GaussianBlur",
+        "sigma": 2.0,
+        "probability": 0.10
+    },
+    "UnsharpMaskTransform": {
+        "kernel_type": "UnsharpMask",
+        "sigma": 1.0,
+        "unsharp_amount": 1.5,
+        "probability": 0.10
+    },
+    "GaussianNoiseTransform": {
+        "mean": 0.0,
+        "std": 2.0,
+        "probability": 0.20
+    },
+    "BrightnessTransform": {
+        "brightness_range": [0.5, 1.5],
+        "probability": 0.10
+    },
+    "GammaTransform": {
+        "gamma_range": [0.7, 1.5],
+        "retain_stats": false,
+        "probability": 0.15
+    },
+    "FunctionTransform": {
+        "retain_stats": true,
+        "probability": 0.05
+    },
+    "InverseTransform": {
+        "retain_stats": true,
+        "probability": 0.3
+    },
+    "HistogramEqualizationTransform": {
+        "retain_stats": true,
+        "probability": 0.10
+    },
+    "ShapeTransform": {
+        "scale": [0.7, 1.0],
+        "crop": [0.6, 1.0],
+        "same_on_batch": false,
+        "probability": 0.10
+    },
+    "AcqTransform": {
+        "scale": [0.01, 1.0],
+        "crop": [1.0, 1.0],
+        "same_on_batch": false,
+        "probability": 0.65
+    },
+    "BiasFieldTransform": {
+        "retain_stats": false,
+        "coefficients": 1,
+        "probability": 0.4
+    },
+    "FlipTransform": {
+        "flip_axis": [0],
+        "same_on_batch": false,
+        "keepdim": true,
+        "probability": 0
+    },
+    "AffineTransform": {
+        "degrees": 10,
+        "translate": [0.1, 0.1, 0.1],
+        "scale": [0.9, 1.1],
+        "shear": [-10, 10, -10, 10, -10, 10],
+        "resample": "bilinear",
+        "probability": 0.4
+    }
+}

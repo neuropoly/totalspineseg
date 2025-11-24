@@ -2,11 +2,14 @@ import os, argparse, warnings, textwrap, torch, psutil, shutil
 from fnmatch import fnmatch
 import multiprocessing as mp
 import nibabel as nib
+import importlib
 from pathlib import Path
 import importlib.resources
 from tqdm import tqdm
 from totalspineseg import *
 from totalspineseg.init_inference import init_inference
+
+from auglab.add_trainer import add_trainer
 
 warnings.filterwarnings("ignore")
 
@@ -433,18 +436,22 @@ def inference(
 
     # Get the nnUNet parameters from the results folder
     nnUNetTrainer, nnUNetPlans, configuration = next((nnUNet_results / step1_dataset).glob('*/fold_*')).parent.name.split('__')
-    # Check if the final checkpoint exists, if not use the latest checkpoint
-    checkpoint = 'checkpoint_final.pth' if (nnUNet_results / step1_dataset / f'{nnUNetTrainer}__{nnUNetPlans}__{configuration}' / f'fold_{fold}' / 'checkpoint_final.pth').is_file() else 'checkpoint_best.pth'
-
+    # Check if the best checkpoint exists, if not use the final checkpoint
+    checkpoint = 'checkpoint_best.pth' if (nnUNet_results / step1_dataset / f'{nnUNetTrainer}__{nnUNetPlans}__{configuration}' / f'fold_{fold}' / 'checkpoint_best.pth').is_file() else 'checkpoint_final.pth'
+    if not quiet: print(f"Using checkpoint step1: {checkpoint}")
     # Construct step 1 model folder
     model_folder_step1 = nnUNet_results / step1_dataset / f'{nnUNetTrainer}__{nnUNetPlans}__{configuration}'
     
+    # Add nnUNetTrainerDAExt trainer
+    add_trainer("nnUNetTrainerDAExt")
+
     if not quiet: print('\n' 'Running step 1 model:')
     predict_nnunet(
         model_folder=model_folder_step1,
         images_dir=output_path / 'input',
         output_dir=output_path / 'step1_raw',
         folds = str(fold),
+        disable_tta = True,
         save_probabilities = True,
         checkpoint = checkpoint,
         npp = max_workers_nnunet,
@@ -707,8 +714,10 @@ def inference(
 
             # Get the nnUNet parameters from the results folder
             nnUNetTrainer, nnUNetPlans, configuration = next((nnUNet_results / step2_dataset).glob('*/fold_*')).parent.name.split('__')
+            
             # Check if the final checkpoint exists, if not use the latest checkpoint
-            checkpoint = 'checkpoint_final.pth' if (nnUNet_results / step2_dataset / f'{nnUNetTrainer}__{nnUNetPlans}__{configuration}' / f'fold_{fold}' / 'checkpoint_final.pth').is_file() else 'checkpoint_best.pth'
+            checkpoint = 'checkpoint_best.pth' if (nnUNet_results / step2_dataset / f'{nnUNetTrainer}__{nnUNetPlans}__{configuration}' / f'fold_{fold}' / 'checkpoint_best.pth').is_file() else 'checkpoint_final.pth'
+            if not quiet: print(f"Using checkpoint step2: {checkpoint}")
 
             # Construct step 2 model folder
             model_folder_step2 = nnUNet_results / step2_dataset / f'{nnUNetTrainer}__{nnUNetPlans}__{configuration}'
@@ -719,6 +728,7 @@ def inference(
                 images_dir=output_path / 'step2_input',
                 output_dir=output_path / 'step2_raw',
                 folds = str(fold),
+                disable_tta = True,
                 checkpoint = checkpoint,
                 npp = max_workers_nnunet,
                 nps = max_workers_nnunet,
