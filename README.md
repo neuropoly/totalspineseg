@@ -40,7 +40,7 @@ For comparison, we also trained a single model (`Dataset103`) that outputs indiv
 ## Datasets
 
 The totalspineseg model was trained on these 3 main datasets:
-- Private whole-spine dataset (Internal access: `git@data.neuro.polymtl.ca:datasets/whole-spine.git`).
+- [whole-spine](https://openneuro.org/datasets/ds005616/versions/1.0.0) dataset (Internal access: `git@data.neuro.polymtl.ca:datasets/whole-spine.git`).
 - [SPIDER](https://doi.org/10.5281/zenodo.10159290) project dataset (Internal access: `git@data.neuro.polymtl.ca:datasets/spider-challenge-2023.git`)
 - [Spine Generic Project](https://github.com/spine-generic), including single and multi subject datasets (Public access: `git@github.com:spine-generic/data-single-subject.git` and `git@github.com:spine-generic/data-multi-subject.git`).
 
@@ -56,7 +56,7 @@ When not available, sacrum segmentations were generated using the [totalsegmenta
 ## Dependencies
 
 - `bash` terminal
-- [Python](https://www.python.org/) >= 3.9, with pip >= 23 and setuptools >= 67
+- [Python](https://www.python.org/) >= 3.10, with pip >= 23 and setuptools >= 67
 
 ## Installation
 
@@ -76,7 +76,7 @@ cd TotalSpineSeg
    ```
    - conda env
    ```
-   conda create -n myenv python=3.9
+   conda create -n myenv python=3.10
    conda activate myenv
    ```
 
@@ -85,17 +85,22 @@ cd TotalSpineSeg
    > **Note:** If you pull a new version from GitHub, make sure to rerun this command with the flag `--upgrade`
    ```bash
    git clone https://github.com/neuropoly/totalspineseg.git
-   python3 -m pip install -e totalspineseg
+   python3 -m pip install -e totalspineseg[nnunetv2]
    ```
    - PyPI installation (for inference only)
    ```
-   python3 -m pip install totalspineseg
+   python3 -m pip install totalspineseg[nnunetv2]
+   ```
+   - PyPI installation (with specific nnU-Net version)
+   ```bash
+   # Note: Use "[nnunetv2]" to stick to tested versions of nnunetv2
+   python3 -m pip install totalspineseg nnunetv2==2.6.2
    ```
 
-5. For CUDA GPU support, install **PyTorch** following the instructions on their [website](https://pytorch.org/). Be sure to add the `--upgrade` flag to your installation command to replace any existing PyTorch installation.
+5. For CUDA GPU support, install **PyTorch<2.6** following the instructions on their [website](https://pytorch.org/). Be sure to add the `--upgrade` flag to your installation command to replace any existing PyTorch installation.
    Example:
 ```bash
-python3 -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 --upgrade
+python3 -m pip install torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu118 --upgrade
 ```
 
 6. **OPTIONAL STEP:** Define a folder where weights will be stored:
@@ -250,6 +255,8 @@ The examples shown above include segmentation results on various contrasts (T1w,
 
 ## List of Classes
 
+> The mapping is also available in the file `totalspineseg/resources/labels_maps/tss_map.json` 
+
 | Label | Name |
 |:------|:-----|
 | 1 | spinal_cord |
@@ -302,3 +309,17 @@ The examples shown above include segmentation results on various contrasts (T1w,
 | 94 | disc_L3_L4 |
 | 95 | disc_L4_L5 |
 | 100 | disc_L5_S |
+
+## How to cite us
+
+If you find this work and/or code useful for your research, please cite our paper:
+
+```
+@article{warszawer2025totalspineseg,
+   title={TotalSpineSeg: Robust Spine Segmentation with Landmark-Based Labeling in MRI},
+   author={Warszawer, Yehuda and Molinier, Nathan and Valosek, Jan and Benveniste, Pierre-Louis and Bédard, Sandrine and Shirbint, Emanuel and Mohamed, Feroze and Tsagkas, Charidimos and Kolind, Shannon and Lynd, Larry and Oh, Jiwon and Prat, Alexandre and Tam, Roger and Traboulsee, Anthony and Patten, Scott and Lee, Lisa Eunyoung and Achiron, Anat and Cohen-Adad, Julien},
+   year={2025},
+   journal={ResearchGate preprint},
+   url={https://www.researchgate.net/publication/389881289_TotalSpineSeg_Robust_Spine_Segmentation_with_Landmark-Based_Labeling_in_MRI}
+}
+```
