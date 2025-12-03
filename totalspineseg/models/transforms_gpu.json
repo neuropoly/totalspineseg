@@ -13,7 +13,7 @@
     "UnsharpMaskTransform": {
         "kernel_type": "UnsharpMask",
         "sigma": 1.5,
-        "unsharp_amount": 1.5,
+        "unsharp_amount": 1,
         "probability": 0.20
     },
     "RandomConvTransform": {
@@ -24,7 +24,7 @@
         "probability": 0.20
     },
     "RedistributeSegTransform": {
-        "in_seg": 0.5,
+        "in_seg": 0.2,
         "retain_stats": true,
         "probability": 0.5
     },
