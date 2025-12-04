@@ -7,21 +7,21 @@
     },
     "GaussianBlurTransform": {
         "kernel_type": "GaussianBlur",
-        "sigma": 1.5,
-        "probability": 0.20
+        "sigma": 1.0,
+        "probability": 0.10
     },
     "UnsharpMaskTransform": {
         "kernel_type": "UnsharpMask",
-        "sigma": 1.5,
+        "sigma": 1.0,
         "unsharp_amount": 1,
-        "probability": 0.20
+        "probability": 0.10
     },
     "RandomConvTransform": {
         "kernel_type": "RandConv",
         "kernel_sizes": [1,3,5,7],
         "retain_stats": true,
         "mix_prob": 0.20,
-        "probability": 0.20
+        "probability": 0.10
     },
     "RedistributeSegTransform": {
         "in_seg": 0.2,
@@ -39,12 +39,12 @@
     },
     "GammaTransform": {
         "gamma_range": [0.7, 1.5],
-        "retain_stats": false,
+        "retain_stats": true,
         "probability": 0.30
     },
     "InvGammaTransform": {
         "gamma_range": [0.7, 1.5],
-        "retain_stats": false,
+        "retain_stats": true,
         "probability": 0.10
     },
     "ContrastTransform": {
@@ -58,7 +58,7 @@
     },
     "InverseTransform": {
         "retain_stats": true,
-        "probability": 0.3
+        "probability": 0.30
     },
     "HistogramEqualizationTransform": {
         "retain_stats": true,
@@ -66,20 +66,20 @@
     },
     "SimulateLowResTransform": {
         "scale": [0.5, 1.0],
-        "crop": [0.5, 1.0],
+        "crop": [0.8, 1.0],
         "same_on_batch": false,
         "probability": 0.25
     },
     "AcqTransform": {
-        "scale": [0.01, 1.0],
+        "scale": [0.05, 1.0],
         "crop": [1.0, 1.0],
         "same_on_batch": false,
         "probability": 0.60
     },
     "BiasFieldTransform": {
-        "retain_stats": false,
-        "coefficients": 1,
-        "probability": 0.70
+        "retain_stats": true,
+        "coefficients": 0.5,
+        "probability": 0.20
     },
     "FlipTransform": {
         "flip_axis": [0],
@@ -88,7 +88,7 @@
         "probability": 0
     },
     "AffineTransform": {
-        "degrees": 30,
+        "degrees": 10,
         "translate": [0.1, 0.1, 0.1],
         "scale": [0.7, 1.4],
         "shear": [-10, 10, -10, 10, -10, 10],
