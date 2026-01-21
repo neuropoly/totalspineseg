@@ -1,3 +1,4 @@
+#corresponds to version of 5ad6bb30cf9d40b8dd18dba7dc4cdef3e85864fe - add auglab trainer (2025-11-14 15:26:16 -0500)
 import sys, argparse, textwrap
 from pathlib import Path
 import numpy as np
