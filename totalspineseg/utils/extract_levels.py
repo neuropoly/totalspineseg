@@ -298,46 +298,47 @@ def extract_levels(
     
     # If C2-C3 and C1 are in the segmentation, set 1 and 2
     if 3 in output_seg.data and c2_label != 0 and c1_label != 0 and all(np.isin([c1_label, c2_label], seg.data)):
-        # Place 1 at the top of C2 if C1 is visible in the image
-        # Find the location of the C2-C3 disc
-        c2c3_index = np.unravel_index(np.argmax(output_seg.data == 3), seg.data.shape)
+        if np.where(seg.data == c1_label)[0].shape[0] > 500: # Heuristic to make sure C1 is visible enough
+            # Place 1 at the top of C2 if C1 is visible in the image
+            # Find the location of the C2-C3 disc
+            c2c3_index = np.unravel_index(np.argmax(output_seg.data == 3), seg.data.shape)
 
-        # Find the maximum coordinate of the vertebra C1
-        c1_coords = np.where(seg.data == c1_label)
-        c1_z_max_index = np.max(c1_coords[2])
+            # Find the maximum coordinate of the vertebra C1
+            c1_coords = np.where(seg.data == c1_label)
+            c1_z_max_index = np.max(c1_coords[2])
 
-        # Extract coordinate of the vertebrae
-        # The coordinate of 1 needs to be in the same slice as 3 but below the max index of C1
-        vert_coords = np.where(seg.data[c2c3_index[0],:,:c1_z_max_index] == c2_label)
-        
-        # Init the anterior line
-        anteriorline_pos = canal_centerline['position'].T[:]
-        dist = np.linalg.norm(np.array(c2c3_index)-anteriorline_pos, axis=1)
-        canal_proj_c2c3_proj = anteriorline_pos[np.argmin(dist)]
+            # Extract coordinate of the vertebrae
+            # The coordinate of 1 needs to be in the same slice as 3 but below the max index of C1
+            vert_coords = np.where(seg.data[c2c3_index[0],:,:c1_z_max_index] == c2_label)
+            
+            # Init the anterior line
+            anteriorline_pos = canal_centerline['position'].T[:]
+            dist = np.linalg.norm(np.array(c2c3_index)-anteriorline_pos, axis=1)
+            canal_proj_c2c3_proj = anteriorline_pos[np.argmin(dist)]
 
-        # Shift the anterior line towards C2C3 disc position
-        anteriorline_pos[:, 0] += (c2c3_index[0] - canal_proj_c2c3_proj[0])
-        anteriorline_pos[:, 1] += (c2c3_index[1] - canal_proj_c2c3_proj[1])
-        canal_anteriorline_indices = np.round(anteriorline_pos).astype(int)
+            # Shift the anterior line towards C2C3 disc position
+            anteriorline_pos[:, 0] += (c2c3_index[0] - canal_proj_c2c3_proj[0])
+            anteriorline_pos[:, 1] += (c2c3_index[1] - canal_proj_c2c3_proj[1])
+            canal_anteriorline_indices = np.round(anteriorline_pos).astype(int)
 
-        # Check if not empty
-        if len(vert_coords[1]) > 0:
-            # Find top pixel of the vertebrae
-            argmax_z = np.argmax(vert_coords[1])
-            top_vert_voxel = tuple([c2c3_index[0]]+[vert_coords[i][argmax_z] for i in range(2)])
+            # Check if not empty
+            if len(vert_coords[1]) > 0:
+                # Find top pixel of the vertebrae
+                argmax_z = np.argmax(vert_coords[1])
+                top_vert_voxel = tuple([c2c3_index[0]]+[vert_coords[i][argmax_z] for i in range(2)])
 
-            # Set 1 to the superior voxels and project onto the anterior line
-            top_vert_distances_from_all_anteriorline = np.linalg.norm(top_vert_voxel - canal_anteriorline_indices[None, ...], axis=2)
-            top_vert_index_anteriorline = canal_anteriorline_indices[np.argmin(top_vert_distances_from_all_anteriorline, axis=1)]
-            output_seg.data[tuple(top_vert_index_anteriorline[0])] = 1
+                # Set 1 to the superior voxels and project onto the anterior line
+                top_vert_distances_from_all_anteriorline = np.linalg.norm(top_vert_voxel - canal_anteriorline_indices[None, ...], axis=2)
+                top_vert_index_anteriorline = canal_anteriorline_indices[np.argmin(top_vert_distances_from_all_anteriorline, axis=1)]
+                output_seg.data[tuple(top_vert_index_anteriorline[0])] = 1
 
-            # Set 2 to the middle voxels between C2-C3 and the superior voxels
-            c1c2_index = tuple([(top_vert_voxel[i] + c2c3_index[i]) // 2 for i in range(3)])
+                # Set 2 to the middle voxels between C2-C3 and the superior voxels
+                c1c2_index = tuple([(top_vert_voxel[i] + c2c3_index[i]) // 2 for i in range(3)])
 
-            # Project 2 on the anterior line
-            c1c2_distances_from_all_anteriorline = np.linalg.norm(c1c2_index - canal_anteriorline_indices[None, ...], axis=2)
-            c1c2_index_anteriorline = canal_anteriorline_indices[np.argmin(c1c2_distances_from_all_anteriorline, axis=1)]
-            output_seg.data[tuple(c1c2_index_anteriorline[0])] = 2
+                # Project 2 on the anterior line
+                c1c2_distances_from_all_anteriorline = np.linalg.norm(c1c2_index - canal_anteriorline_indices[None, ...], axis=2)
+                c1c2_index_anteriorline = canal_anteriorline_indices[np.argmin(c1c2_distances_from_all_anteriorline, axis=1)]
+                output_seg.data[tuple(c1c2_index_anteriorline[0])] = 2
 
     return output_seg
 
