@@ -889,6 +889,18 @@ def _get_si_sorted_components(
         # Undo dilation
         tmp_mask_labeled *= mask
 
+        # Remove really small components (less than 10 voxels)
+        tmp_mask_labeled_filtered = np.zeros_like(tmp_mask_labeled)
+        relabel_counter = 1
+        for tmp_label in range(1, tmp_num_labels + 1):
+            component_size = np.sum(tmp_mask_labeled == tmp_label)
+            if component_size >= 10:
+                tmp_mask_labeled_filtered[tmp_mask_labeled == tmp_label] = relabel_counter
+                relabel_counter += 1
+        
+        tmp_mask_labeled = tmp_mask_labeled_filtered
+        tmp_num_labels = relabel_counter - 1
+
         # Add current labels to the labeled segmentation
         if tmp_num_labels > 0:
             mask_labeled[tmp_mask_labeled != 0] = tmp_mask_labeled[tmp_mask_labeled != 0] + num_labels
