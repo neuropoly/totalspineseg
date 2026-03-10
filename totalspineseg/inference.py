@@ -767,6 +767,18 @@ def inference(
                 quiet=quiet,
             )
 
+            filter_bad_sacrum(
+                output_path / 'step2_output',
+                output_path / 'step2_output',
+                ivd_label=1,
+                vertebra_extra_label=6,
+                l5_s1_label=5,
+                sacrum_label=9,
+                min_component_size=100,
+                max_inferior_ivd_voxels=1000,
+                overwrite=True
+            )
+
             if not quiet: print('\n' 'Using an iterative algorithm to label vertebrae and IVDs:')
             if loc_path is None:
                 iterative_label_mp(
