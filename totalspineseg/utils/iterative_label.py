@@ -1045,6 +1045,7 @@ def _get_landmark_output_labels(
         landmark_output_labels,
         loc_labels,
         default_superior_output,
+        min_component_size=500,
     ):
     '''
     Get dict mapping labels from sorted_labels to the output labels based on the landmarks in the segmentation or localizer.
@@ -1092,15 +1093,17 @@ def _get_landmark_output_labels(
     if len(map_landmark_outputs) == 0:
         for l in selected_landmarks:
             ############################################################################################################
-            # TODO Remove this reake when we trust all the landmarks to get all landmarks instead of the first 2
+            # TODO Remove this break when we trust all the landmarks to get all landmarks instead of the first 2
             if len(map_landmark_outputs) > 0 and selected_landmarks.index(l) > 1:
                 break
             ############################################################################################################
             if l in map_landmark_labels and l in seg_data:
-                mask_labeled_l = np.argmax(np.bincount(mask_labeled[seg_data == l].flat))
-                # We map only if the landmark cover the majority of the voxels in the mask_labeled label
-                if np.argmax(np.bincount(seg_data[mask_seg_data_landmarks & (mask_labeled == mask_labeled_l)].flat)) == l:
-                    map_landmark_outputs[mask_labeled_l] = map_landmark_labels[l]
+                # Check size of the landmark to discard small landmarks that are unlikely to be correct
+                if np.sum(seg_data == l) > min_component_size:
+                    mask_labeled_l = np.argmax(np.bincount(mask_labeled[seg_data == l].flat))
+                    # We map only if the landmark cover the majority of the voxels in the mask_labeled label
+                    if np.argmax(np.bincount(seg_data[mask_seg_data_landmarks & (mask_labeled == mask_labeled_l)].flat)) == l:
+                        map_landmark_outputs[mask_labeled_l] = map_landmark_labels[l]
 
     # If no init label found, set the default superior label
     if len(map_landmark_outputs) == 0 and default_superior_output > 0:
