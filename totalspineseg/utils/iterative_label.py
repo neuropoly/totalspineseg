@@ -589,6 +589,16 @@ def iterative_label(
         mask_aterior_to_canal,
     )
 
+    # Discard C2-C3 and L5-S1 discs if innacurate (e.g. C2-C3 in the middle of the spine or L5-S1 at the top of the spine)
+    top_disc_mask = disc_mask_labeled == disc_sorted_labels[0]
+    c2_c3_mask = seg_data == 2 # C2-C3
+    if not np.sum(top_disc_mask*c2_c3_mask) > 0 : # First disc is C2-C3
+        del selected_disc_landmarks[selected_disc_landmarks.index(2)] # Remove C2-C3 from selected landmarks if it is not the first disc
+    bottom_disc_mask = disc_mask_labeled == disc_sorted_labels[-1]
+    l5_s1_mask = seg_data == 5 # L5-S1
+    if not np.sum(bottom_disc_mask*l5_s1_mask) > 0 : # Last disc is L5-S1
+        del selected_disc_landmarks[selected_disc_landmarks.index(5)] # Remove L5-S1 from selected landmarks if it is not the last disc
+
     # Get the landmark disc labels and output labels - {label in sorted labels: output label}
     # TODO Currently only the first 2 landmark from selected_disc_landmarks is used, to get all landmarks see TODO in the function
     map_disc_sorted_labels_landmark2output = _get_landmark_output_labels(
@@ -1150,4 +1160,29 @@ def _fill(mask):
         ((mask_min_z <= indices[2]) & (indices[2] <= mask_max_z))
 
 if __name__ == '__main__':
+    # iterative_label(
+    #     seg,
+    #     loc=None,
+    #     selected_disc_landmarks=[2,5,3,4],
+    #     disc_labels=[1, 2, 3, 4, 5],
+    #     disc_landmark_labels=[2,3,4,5],
+    #     disc_landmark_output_labels=[63, 71, 91, 100],
+    #     disc_output_step=1,
+    #     vertebrae_labels=[7,8,9],
+    #     vertebrae_landmark_output_labels=[13, 21, 41, 50],
+    #     vertebrae_output_step=1,
+    #     vertebrae_extra_labels=[6],
+    #     region_max_sizes=[5, 12, 6, 1],
+    #     region_default_sizes=[5, 12, 5, 1],
+    #     loc_disc_labels=[],
+    #     canal_labels=[10],
+    #     canal_output_label=2,
+    #     cord_labels=[11],
+    #     cord_output_label=1,
+    #     sacrum_labels=[9],
+    #     sacrum_output_label=50,
+    #     map_input_dict={},
+    #     dilation_size=1,
+    #     disc_default_superior_output=0,
+    # )
     main()
