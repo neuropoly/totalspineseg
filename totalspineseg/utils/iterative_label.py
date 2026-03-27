@@ -593,7 +593,7 @@ def iterative_label(
     for landmark in selected_disc_landmarks:
         landmark_mask = seg_data == landmark
         # Dilate the mask to combine small disconnected regions
-        binary_dilation_structure = ndi.iterate_structure(ndi.generate_binary_structure(3, 1), dilation_size)
+        binary_dilation_structure = ndi.iterate_structure(ndi.generate_binary_structure(3, 1), 5)
         landmark_mask_dilated = ndi.binary_dilation(landmark_mask, binary_dilation_structure)
 
         # Label the connected voxels in the dilated mask into separate labels
