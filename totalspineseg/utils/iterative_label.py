@@ -589,19 +589,6 @@ def iterative_label(
         mask_aterior_to_canal,
     )
 
-    # Check if every landmark is only one component
-    for landmark in selected_disc_landmarks:
-        landmark_mask = seg_data == landmark
-        # Dilate the mask to combine small disconnected regions
-        binary_dilation_structure = ndi.iterate_structure(ndi.generate_binary_structure(3, 1), 5)
-        landmark_mask_dilated = ndi.binary_dilation(landmark_mask, binary_dilation_structure)
-
-        # Label the connected voxels in the dilated mask into separate labels
-        tmp_mask_labeled, tmp_num_labels = ndi.label(landmark_mask_dilated.astype(np.uint32), np.ones((3, 3, 3)))
-        if tmp_num_labels > 1:
-            # Delete landmarks if detected multiple times
-            del selected_disc_landmarks[selected_disc_landmarks.index(landmark)]
-
     # Discard C2-C3 and L5-S1 discs if innacurate (e.g. C2-C3 in the middle of the spine or L5-S1 at the top of the spine)
     top_disc_mask = disc_mask_labeled == disc_sorted_labels[0]
     c2_c3_mask = seg_data == 2 # C2-C3
