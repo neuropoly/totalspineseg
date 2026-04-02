@@ -593,11 +593,17 @@ def iterative_label(
     top_disc_mask = disc_mask_labeled == disc_sorted_labels[0]
     c2_c3_mask = seg_data == 2 # C2-C3
     if not np.any(top_disc_mask & c2_c3_mask): # First disc is C2-C3
-        del selected_disc_landmarks[selected_disc_landmarks.index(2)] # Remove C2-C3 from selected landmarks if it is not the first disc
+        try:
+            selected_disc_landmarks.remove(2) # Remove C2-C3 from selected landmarks if it is not the first disc
+        except ValueError:
+            pass
     bottom_disc_mask = disc_mask_labeled == disc_sorted_labels[-1]
     l5_s1_mask = seg_data == 5 # L5-S1
-    if not np.sum(bottom_disc_mask*l5_s1_mask) > 0 : # Last disc is L5-S1
-        del selected_disc_landmarks[selected_disc_landmarks.index(5)] # Remove L5-S1 from selected landmarks if it is not the last disc
+    if not np.any(bottom_disc_mask & l5_s1_mask): # Last disc is L5-S1
+        try:
+            selected_disc_landmarks.remove(5) # Remove L5-S1 from selected landmarks if it is not the last disc
+        except ValueError:
+            pass
 
     # Get the landmark disc labels and output labels - {label in sorted labels: output label}
     # TODO Currently only the first 2 landmark from selected_disc_landmarks is used, to get all landmarks see TODO in the function
