@@ -592,7 +592,7 @@ def iterative_label(
     # Discard C2-C3 and L5-S1 discs if innacurate (e.g. C2-C3 in the middle of the spine or L5-S1 at the top of the spine)
     top_disc_mask = disc_mask_labeled == disc_sorted_labels[0]
     c2_c3_mask = seg_data == 2 # C2-C3
-    if not np.sum(top_disc_mask*c2_c3_mask) > 0 : # First disc is C2-C3
+    if not np.any(top_disc_mask & c2_c3_mask): # First disc is C2-C3
         del selected_disc_landmarks[selected_disc_landmarks.index(2)] # Remove C2-C3 from selected landmarks if it is not the first disc
     bottom_disc_mask = disc_mask_labeled == disc_sorted_labels[-1]
     l5_s1_mask = seg_data == 5 # L5-S1
