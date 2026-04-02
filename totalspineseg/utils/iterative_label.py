@@ -589,6 +589,22 @@ def iterative_label(
         mask_aterior_to_canal,
     )
 
+    # Discard C2-C3 and L5-S1 discs if innacurate (e.g. C2-C3 in the middle of the spine or L5-S1 at the top of the spine)
+    top_disc_mask = disc_mask_labeled == disc_sorted_labels[0]
+    c2_c3_mask = seg_data == 2 # C2-C3
+    if not np.any(top_disc_mask & c2_c3_mask): # First disc is C2-C3
+        try:
+            selected_disc_landmarks.remove(2) # Remove C2-C3 from selected landmarks if it is not the first disc
+        except ValueError:
+            pass
+    bottom_disc_mask = disc_mask_labeled == disc_sorted_labels[-1]
+    l5_s1_mask = seg_data == 5 # L5-S1
+    if not np.any(bottom_disc_mask & l5_s1_mask): # Last disc is L5-S1
+        try:
+            selected_disc_landmarks.remove(5) # Remove L5-S1 from selected landmarks if it is not the last disc
+        except ValueError:
+            pass
+
     # Get the landmark disc labels and output labels - {label in sorted labels: output label}
     # TODO Currently only the first 2 landmark from selected_disc_landmarks is used, to get all landmarks see TODO in the function
     map_disc_sorted_labels_landmark2output = _get_landmark_output_labels(
@@ -1045,6 +1061,7 @@ def _get_landmark_output_labels(
         landmark_output_labels,
         loc_labels,
         default_superior_output,
+        min_component_size=500,
     ):
     '''
     Get dict mapping labels from sorted_labels to the output labels based on the landmarks in the segmentation or localizer.
@@ -1092,15 +1109,17 @@ def _get_landmark_output_labels(
     if len(map_landmark_outputs) == 0:
         for l in selected_landmarks:
             ############################################################################################################
-            # TODO Remove this reake when we trust all the landmarks to get all landmarks instead of the first 2
+            # TODO Remove this break when we trust all the landmarks to get all landmarks instead of the first 2
             if len(map_landmark_outputs) > 0 and selected_landmarks.index(l) > 1:
                 break
             ############################################################################################################
             if l in map_landmark_labels and l in seg_data:
-                mask_labeled_l = np.argmax(np.bincount(mask_labeled[seg_data == l].flat))
-                # We map only if the landmark cover the majority of the voxels in the mask_labeled label
-                if np.argmax(np.bincount(seg_data[mask_seg_data_landmarks & (mask_labeled == mask_labeled_l)].flat)) == l:
-                    map_landmark_outputs[mask_labeled_l] = map_landmark_labels[l]
+                # Check size of the landmark to discard small landmarks that are unlikely to be correct
+                if np.sum(seg_data == l) > min_component_size:
+                    mask_labeled_l = np.argmax(np.bincount(mask_labeled[seg_data == l].flat))
+                    # We map only if the landmark cover the majority of the voxels in the mask_labeled label
+                    if np.argmax(np.bincount(seg_data[mask_seg_data_landmarks & (mask_labeled == mask_labeled_l)].flat)) == l:
+                        map_landmark_outputs[mask_labeled_l] = map_landmark_labels[l]
 
     # If no init label found, set the default superior label
     if len(map_landmark_outputs) == 0 and default_superior_output > 0:
@@ -1147,4 +1166,29 @@ def _fill(mask):
         ((mask_min_z <= indices[2]) & (indices[2] <= mask_max_z))
 
 if __name__ == '__main__':
+    # iterative_label(
+    #     seg,
+    #     loc=None,
+    #     selected_disc_landmarks=[2,5,3,4],
+    #     disc_labels=[1, 2, 3, 4, 5],
+    #     disc_landmark_labels=[2,3,4,5],
+    #     disc_landmark_output_labels=[63, 71, 91, 100],
+    #     disc_output_step=1,
+    #     vertebrae_labels=[7,8,9],
+    #     vertebrae_landmark_output_labels=[13, 21, 41, 50],
+    #     vertebrae_output_step=1,
+    #     vertebrae_extra_labels=[6],
+    #     region_max_sizes=[5, 12, 6, 1],
+    #     region_default_sizes=[5, 12, 5, 1],
+    #     loc_disc_labels=[],
+    #     canal_labels=[10],
+    #     canal_output_label=2,
+    #     cord_labels=[11],
+    #     cord_output_label=1,
+    #     sacrum_labels=[9],
+    #     sacrum_output_label=50,
+    #     map_input_dict={},
+    #     dilation_size=1,
+    #     disc_default_superior_output=0,
+    # )
     main()
