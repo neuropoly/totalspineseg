@@ -1061,7 +1061,7 @@ def _get_landmark_output_labels(
         landmark_output_labels,
         loc_labels,
         default_superior_output,
-        min_component_size=500,
+        min_component_size=200,
     ):
     '''
     Get dict mapping labels from sorted_labels to the output labels based on the landmarks in the segmentation or localizer.
