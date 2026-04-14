@@ -1,5 +1,22 @@
 # TotalSpineSeg
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.13894354.svg)](https://doi.org/10.5281/zenodo.13894354)
+[![preprint](https://img.shields.io/badge/preprint_DOI-10.13140/RG.2.2.31318.56649-orange)](https://doi.org/10.13140/RG.2.2.31318.56649)
+[![conference](https://img.shields.io/badge/conference_DOI-10.5281/zenodo.13894354-blue)](https://doi.org/10.5281/zenodo.13894354) 
+
+## How to cite us ?
+
+If you find this work and/or code useful for your research, please cite our paper:
+
+```
+@article{warszawer2025totalspineseg,
+   title={TotalSpineSeg: Robust Spine Segmentation with Landmark-Based Labeling in MRI},
+   author={Warszawer, Yehuda and Molinier, Nathan and Valosek, Jan and Benveniste, Pierre-Louis and Bédard, Sandrine and Shirbint, Emanuel and Mohamed, Feroze and Tsagkas, Charidimos and Kolind, Shannon and Lynd, Larry and Oh, Jiwon and Prat, Alexandre and Tam, Roger and Traboulsee, Anthony and Patten, Scott and Lee, Lisa Eunyoung and Achiron, Anat and Cohen-Adad, Julien},
+   year={2025},
+   journal={ResearchGate preprint},
+   url={https://www.researchgate.net/publication/389881289_TotalSpineSeg_Robust_Spine_Segmentation_with_Landmark-Based_Labeling_in_MRI}
+}
+```
+
+## What is it ?
 
 TotalSpineSeg is a tool for automatic instance segmentation of all vertebrae, intervertebral discs (IVDs), spinal cord, and spinal canal in MRI images. It is robust to various MRI contrasts, acquisition orientations, and resolutions. The model used in TotalSpineSeg is based on [nnU-Net](https://github.com/MIC-DKFZ/nnUNet) as the backbone for training and inference.
 
@@ -310,16 +327,3 @@ The examples shown above include segmentation results on various contrasts (T1w,
 | 95 | disc_L4_L5 |
 | 100 | disc_L5_S |
 
-## How to cite us
-
-If you find this work and/or code useful for your research, please cite our paper:
-
-```
-@article{warszawer2025totalspineseg,
-   title={TotalSpineSeg: Robust Spine Segmentation with Landmark-Based Labeling in MRI},
-   author={Warszawer, Yehuda and Molinier, Nathan and Valosek, Jan and Benveniste, Pierre-Louis and Bédard, Sandrine and Shirbint, Emanuel and Mohamed, Feroze and Tsagkas, Charidimos and Kolind, Shannon and Lynd, Larry and Oh, Jiwon and Prat, Alexandre and Tam, Roger and Traboulsee, Anthony and Patten, Scott and Lee, Lisa Eunyoung and Achiron, Anat and Cohen-Adad, Julien},
-   year={2025},
-   journal={ResearchGate preprint},
-   url={https://www.researchgate.net/publication/389881289_TotalSpineSeg_Robust_Spine_Segmentation_with_Landmark-Based_Labeling_in_MRI}
-}
-```
