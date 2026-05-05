@@ -534,7 +534,7 @@ def inference(
 
     # Stop execution if step1_output is empty
     if not any((output_path / 'step1_output').glob('*.nii.gz')):
-        raise ValueError('\n' 'Error: TotalSpineSeg step 1 failed to produce a valid segmentation resulting in an empty prediction.' \
+        raise ValueError('TotalSpineSeg step 1 failed to produce a valid segmentation resulting in an empty prediction.' \
                             ' The input data is likely too different from the training data, and the model failed to detect the anatomy.' \
                             ' Feel free to open an issue on the GitHub repository for assistance.\n') 
 
