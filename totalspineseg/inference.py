@@ -532,6 +532,12 @@ def inference(
             quiet=quiet,
         )
 
+    # Stop execution if step1_output is empty
+    if not any((output_path / 'step1_output').glob('*.nii.gz')):
+        raise ValueError('TotalSpineSeg step 1 failed to produce a valid segmentation resulting in an empty prediction.' \
+                            ' The input data is likely too different from the training data, and the model failed to detect the anatomy.' \
+                            ' Feel free to open an issue on the GitHub repository for assistance.\n') 
+
     if not quiet: print('\n' 'Filling spinal canal label to include all non cord spinal canal:')
     # This will put the spinal canal label in all the voxels between the canal and the cord.
     fill_canal_mp(
