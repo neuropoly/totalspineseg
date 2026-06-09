@@ -10,6 +10,7 @@ import gryds
 import scipy.ndimage as ndi
 from scipy.stats import norm
 import warnings
+import gc
 
 warnings.filterwarnings("ignore")
 
@@ -392,7 +393,7 @@ def augment(
         if rs.rand() < 0.7:
             augs.append(rs.choice([
                 aug_bspline,
-                aug_aff,
+                aug_affine,
                 aug_elastic,
             ]))
 
@@ -565,31 +566,43 @@ def aug_bspline(img, seg):
 
 def aug_flip(img, seg):
     subject = tio.RandomFlip(axes=('LR',))(tio.Subject(
-        image=tio.ScalarImage(tensor=np.expand_dims(img, axis=0)),
-        seg=tio.LabelMap(tensor=np.expand_dims(seg, axis=0))
+        image=tio.ScalarImage(tensor=img),
+        seg=tio.LabelMap(tensor=seg)
     ))
-    return subject.image.data.squeeze().numpy().astype(np.float64), subject.seg.data.squeeze().numpy().astype(np.uint8)
+    img_out, seg_out = subject.image.data, subject.seg.data
+    del subject
+    gc.collect()  # Force garbage collection
+    return img_out, seg_out
 
-def aug_aff(img, seg):
+def aug_affine(img, seg):
     subject = tio.RandomAffine()(tio.Subject(
-        image=tio.ScalarImage(tensor=np.expand_dims(img, axis=0)),
-        seg=tio.LabelMap(tensor=np.expand_dims(seg, axis=0))
+        image=tio.ScalarImage(tensor=img),
+        seg=tio.LabelMap(tensor=seg)
     ))
-    return subject.image.data.squeeze().numpy().astype(np.float64), subject.seg.data.squeeze().numpy().astype(np.uint8)
+    img_out, seg_out = subject.image.data, subject.seg.data
+    del subject
+    gc.collect()  # Force garbage collection
+    return img_out, seg_out
 
 def aug_elastic(img, seg):
     subject = tio.RandomElasticDeformation(max_displacement=40)(tio.Subject(
-        image=tio.ScalarImage(tensor=np.expand_dims(img, axis=0)),
-        seg=tio.LabelMap(tensor=np.expand_dims(seg, axis=0))
+        image=tio.ScalarImage(tensor=img),
+        seg=tio.LabelMap(tensor=seg)
     ))
-    return subject.image.data.squeeze().numpy().astype(np.float64), subject.seg.data.squeeze().numpy().astype(np.uint8)
+    img_out, seg_out = subject.image.data, subject.seg.data
+    del subject
+    gc.collect()  # Force garbage collection
+    return img_out, seg_out
 
 def aug_anisotropy(img, seg, downsampling=7):
     subject = tio.RandomAnisotropy(downsampling=downsampling)(tio.Subject(
-        image=tio.ScalarImage(tensor=np.expand_dims(img, axis=0)),
-        seg=tio.LabelMap(tensor=np.expand_dims(seg, axis=0))
+        image=tio.ScalarImage(tensor=img),
+        seg=tio.LabelMap(tensor=seg, axis=0)
     ))
-    return subject.image.data.squeeze().numpy().astype(np.float64), subject.seg.data.squeeze().numpy().astype(np.uint8)
+    img_out, seg_out = subject.image.data, subject.seg.data
+    del subject
+    gc.collect()  # Force garbage collection
+    return img_out, seg_out
 
 def aug_motion(img, seg):
     subject = tio.RandomMotion()(tio.Subject(
