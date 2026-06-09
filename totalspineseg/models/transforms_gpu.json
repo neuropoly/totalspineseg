@@ -3,74 +3,167 @@
         "kernel_type": "Scharr",
         "absolute": true,
         "retain_stats": true,
-        "probability": 0.10
+        "mix_prob": 0.50,
+        "in_seg": 0.0,
+        "out_seg": 0.0,
+        "mix_in_out": true,
+        "probability": 0.25
     },
     "GaussianBlurTransform": {
         "kernel_type": "GaussianBlur",
-        "sigma": 2.0,
-        "probability": 0.10
+        "sigma": 1.0,
+        "retain_stats": false,
+        "mix_prob": 0.00,
+        "in_seg": 0.0,
+        "out_seg": 0.0,
+        "mix_in_out": true,
+        "probability": 0.20
     },
     "UnsharpMaskTransform": {
         "kernel_type": "UnsharpMask",
         "sigma": 1.0,
         "unsharp_amount": 1.5,
-        "probability": 0.10
+        "retain_stats": false,
+        "in_seg": 0.0,
+        "out_seg": 0.0,
+        "mix_in_out": true,
+        "mix_prob": 0.50,
+        "probability": 0.25
+    },
+    "RandomConvTransform": {
+        "kernel_type": "RandConv",
+        "kernel_sizes": [3,5,7],
+        "retain_stats": true,
+        "in_seg": 0.0,
+        "out_seg": 0.0,
+        "mix_in_out": true,
+        "mix_prob": 0.50,
+        "probability": 0.20
+    },
+    "RedistributeSegTransform": {
+        "in_seg": 0.25,
+        "retain_stats": true,
+        "probability": 0.4
     },
     "GaussianNoiseTransform": {
         "mean": 0.0,
-        "std": 2.0,
-        "probability": 0.20
+        "std": 1.0,
+        "in_seg": 0.0,
+        "out_seg": 0.0,
+        "mix_in_out": true,
+        "probability": 0.1
+    },
+    "ClampTransform": {
+        "max_clamp_amount": 0.2,
+        "retain_stats": true,
+        "in_seg": 0.0,
+        "out_seg": 0.0,
+        "mix_in_out": true,
+        "probability": 0.00
     },
     "BrightnessTransform": {
-        "brightness_range": [0.5, 1.5],
-        "probability": 0.10
+        "brightness_range": [0.75, 1.25],
+        "in_seg": 0.0,
+        "out_seg": 0.0,
+        "mix_in_out": true,
+        "probability": 0.15
     },
     "GammaTransform": {
         "gamma_range": [0.7, 1.5],
+        "retain_stats": true,
+        "in_seg": 0.0,
+        "out_seg": 0.0,
+        "mix_in_out": true,
+        "probability": 0.30
+    },
+    "InvGammaTransform": {
+        "gamma_range": [0.7, 1.5],
+        "retain_stats": true,
+        "in_seg": 0.0,
+        "out_seg": 0.0,
+        "mix_in_out": true,
+        "probability": 0.10
+    },
+    "ContrastTransform": {
+        "contrast_range": [0.75, 1.25],
         "retain_stats": false,
+        "in_seg": 0.0,
+        "out_seg": 0.0,
+        "mix_in_out": true,
         "probability": 0.15
     },
     "FunctionTransform": {
         "retain_stats": true,
-        "probability": 0.05
+        "in_seg": 0,
+        "out_seg": 0,
+        "mix_in_out": false,
+        "probability": 0.1
     },
     "InverseTransform": {
         "retain_stats": true,
-        "probability": 0.3
+        "in_seg": 0.0,
+        "out_seg": 0.0,
+        "mix_in_out": true,
+        "mix_prob": 0.00,
+        "probability": 0.25
     },
     "HistogramEqualizationTransform": {
         "retain_stats": true,
-        "probability": 0.10
+        "in_seg": 0,
+        "out_seg": 0,
+        "mix_in_out": true,
+        "mix_prob": 0.60,
+        "probability": 0.25
     },
-    "ShapeTransform": {
-        "scale": [0.7, 1.0],
-        "crop": [0.6, 1.0],
+    "SimulateLowResTransform": {
+        "scale": [0.5, 1.0],
         "same_on_batch": false,
-        "probability": 0.10
+        "probability": 0.25
     },
     "AcqTransform": {
-        "scale": [0.01, 1.0],
-        "crop": [1.0, 1.0],
+        "scale": [0.1, 1.0],
         "same_on_batch": false,
-        "probability": 0.65
+        "probability": 0.2
+    },
+    "CropTransform": {
+        "crop": [0.8, 1.0],
+        "pos": [0.0, 1.0],
+        "same_on_batch": false,
+        "probability": 0.25
     },
     "BiasFieldTransform": {
-        "retain_stats": false,
-        "coefficients": 1,
-        "probability": 0.4
+        "retain_stats": true,
+        "coefficients": 0.2,
+        "in_seg": 0.0,
+        "out_seg": 0.0,
+        "mix_in_out": true,
+        "probability": 0.15
     },
     "FlipTransform": {
         "flip_axis": [0],
         "same_on_batch": false,
         "keepdim": true,
-        "probability": 0
+        "probability": 0.5
     },
     "AffineTransform": {
-        "degrees": 10,
+        "degrees": 5,
         "translate": [0.1, 0.1, 0.1],
-        "scale": [0.9, 1.1],
-        "shear": [-10, 10, -10, 10, -10, 10],
+        "scale": [0.7, 1.4],
+        "shear": [-5, 5, -5, 5, -5, 5],
         "resample": "bilinear",
-        "probability": 0.4
+        "probability": 0.0
+    },
+    "nnUNetSpatialTransform": {
+        "patch_center_dist_from_border": 80,
+        "random_crop": false,
+        "p_elastic_deform": 0.0,
+        "p_rotation": 0.2,
+        "p_scaling": 0.2,
+        "scaling": [0.7, 1.4],
+        "p_synchronize_scaling_across_axes": 1,
+        "bg_style_seg_sampling": false
+    },
+    "ZscoreNormalizationTransform": {
+        "probability": 0.00
     }
 }
