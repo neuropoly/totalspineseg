@@ -63,7 +63,8 @@ export nnUNet_results="$TOTALSPINESEG_DATA"/nnUNet/results
 export nnUNet_exports="$TOTALSPINESEG_DATA"/nnUNet/exports
 
 # Copy auglab trainer to nnunet folder
-auglab_add_nnunettrainer -t nnUNetTrainerDAExt
+nnUNet_path = $(python -c "import nnunetv2; print(nnunetv2.__path__[0])")
+cp $TOTALSPINESEG/totalspineseg/models/nnUNetTrainerDAExt.py $nnUNet_path/training/nnUNetTrainer/
 
 nnUNetTrainer=${3:-nnUNetTrainerDAExtGPU}
 nnUNetPlanner=${4:-nnUNetPlannerResEncL}
