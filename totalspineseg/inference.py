@@ -262,7 +262,12 @@ def inference(
         elif device == 'cuda':
             # multithreading in torch doesn't help nnU-Net if run on GPU
             torch.set_num_threads(1)
-            torch.set_num_interop_threads(1)
+            try:
+                torch.set_num_interop_threads(1)
+            except RuntimeError as e:
+                # It's only possible to set the number of threads for interop parallelism once.
+                if "cannot set number of interop threads" not in str(e):
+                    raise
             device = torch.device('cuda')
         else:
             device = torch.device('mps')
