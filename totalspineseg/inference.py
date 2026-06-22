@@ -137,6 +137,21 @@ def main():
         dict_urls=ZIP_URLS,
         quiet=quiet
         )
+
+    # Load device
+    assert device in ['cpu', 'cuda', 'mps'], f'-device must be either cpu, mps or cuda. Other devices are not tested/supported. Got: {device}.'
+    if device == 'cpu':
+        # let's allow torch to use hella threads
+        import multiprocessing
+        torch.set_num_threads(multiprocessing.cpu_count())
+        device = torch.device('cpu')
+    elif device == 'cuda':
+        # multithreading in torch doesn't help nnU-Net if run on GPU
+        torch.set_num_threads(1)
+        torch.set_num_interop_threads(1)
+        device = torch.device('cuda')
+    else:
+        device = torch.device('mps')
     
     # Run inference
     inference(
@@ -162,6 +177,7 @@ def inference(
         output_path,
         data_path,
         default_release,
+        device,
         output_iso=False,
         loc_path=None,
         suffix=[''],
@@ -170,7 +186,6 @@ def inference(
         keep_only=[''],
         max_workers=os.cpu_count(),
         max_workers_nnunet=int(max(min(os.cpu_count(), psutil.virtual_memory().total / 2**30 // 8), 1)),
-        device='cuda',
         quiet=False
     ):
     '''
@@ -202,7 +217,7 @@ def inference(
         Max worker to run in parallel proccess, defaults to numer of available cores
     max_workers_nnunet : int
         Max worker to run in parallel proccess for nnUNet
-    device : 'cuda' or 'cpu'
+    device : torch.device
         Device to run the nnUNet model on
     quiet : bool
         If True, will reduce the amount of displayed information
@@ -251,23 +266,9 @@ def inference(
         if not (nnUNet_results / step1_dataset).is_dir() or not (nnUNet_results / step2_dataset).is_dir():
             raise FileNotFoundError('Model weights are missing.')
 
-    # Load device
-    if isinstance(device, str):
-        assert device in ['cpu', 'cuda', 'mps'], f'-device must be either cpu, mps or cuda. Other devices are not tested/supported. Got: {device}.'
-        if device == 'cpu':
-            # let's allow torch to use hella threads
-            import multiprocessing
-            torch.set_num_threads(multiprocessing.cpu_count())
-            device = torch.device('cpu')
-        elif device == 'cuda':
-            # multithreading in torch doesn't help nnU-Net if run on GPU
-            torch.set_num_threads(1)
-            torch.set_num_interop_threads(1)
-            device = torch.device('cuda')
-        else:
-            device = torch.device('mps')
-    else:
-        assert isinstance(device, torch.device)
+    # Check device
+    if not isinstance(device, torch.device):
+        raise ValueError('device should be a torch.device object, not a string. Use torch.device("cuda") or torch.device("cpu")')
 
     # Print the argument values if not quiet
     if not quiet:
