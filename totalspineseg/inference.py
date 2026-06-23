@@ -139,7 +139,6 @@ def main():
         )
 
     # Load device
-    assert device in ['cpu', 'cuda', 'mps'], f'-device must be either cpu, mps or cuda. Other devices are not tested/supported. Got: {device}.'
     if device == 'cpu':
         # let's allow torch to use hella threads
         import multiprocessing
@@ -151,7 +150,7 @@ def main():
         torch.set_num_interop_threads(1)
         device = torch.device('cuda')
     else:
-        device = torch.device('mps')
+        raise ValueError(f"Invalid device: {device}. Please use 'cuda' or 'cpu'.")
     
     # Run inference
     inference(
