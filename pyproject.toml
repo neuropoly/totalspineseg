@@ -1,6 +1,6 @@
 [project]
 name = "totalspineseg"
-version = "20260429"
+version = "20260730"
 requires-python = ">=3.10"
 description = "TotalSpineSeg is a tool for automatic instance segmentation and labeling of all vertebrae, intervertebral discs (IVDs), spinal cord, and spinal canal in MRI images."
 readme = "README.md"
@@ -58,8 +58,8 @@ neuropoly = ["nnunetv2-neuropoly"]
 [project.urls]
 homepage = "https://github.com/neuropoly/totalspineseg"
 repository = "https://github.com/neuropoly/totalspineseg"
-Dataset101_TotalSpineSeg_step1 = "https://github.com/neuropoly/totalspineseg/releases/download/r20251124/Dataset101_TotalSpineSeg_step1_r20251124.zip"
-Dataset102_TotalSpineSeg_step2 = "https://github.com/neuropoly/totalspineseg/releases/download/r20251124/Dataset102_TotalSpineSeg_step2_r20251124.zip"
+Dataset101_TotalSpineSeg_step1 = "https://github.com/neuropoly/totalspineseg/releases/download/r20260730/Dataset101_TotalSpineSeg_step1_r20260730.zip"
+Dataset102_TotalSpineSeg_step2 = "https://github.com/neuropoly/totalspineseg/releases/download/r20260730/Dataset102_TotalSpineSeg_step2_r20260730.zip"
 
 [project.scripts]
 totalspineseg = "totalspineseg.inference:main"
