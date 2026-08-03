@@ -259,8 +259,10 @@ def inference(
     nnUNet_results = data_path / 'nnUNet' / 'results'
 
     # If not both steps models are installed, use the default release subfolder
+    weights = "custom"
     if not (nnUNet_results / step1_dataset).is_dir() or not (nnUNet_results / step2_dataset).is_dir():
         nnUNet_results = nnUNet_results / default_release
+        weights = default_release
         # Check if weights are available
         if not (nnUNet_results / step1_dataset).is_dir() or not (nnUNet_results / step2_dataset).is_dir():
             raise FileNotFoundError('Model weights are missing.')
@@ -282,6 +284,7 @@ def inference(
             step1_only = {step1_only}
             keep_only = {keep_only}
             data_dir = "{data_path}"
+            weights = "{weights}"
             max_workers = {max_workers}
             max_workers_nnunet = {max_workers_nnunet}
             device = "{device.type}"
