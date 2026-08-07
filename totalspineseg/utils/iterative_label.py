@@ -594,7 +594,7 @@ def iterative_label(
         mask_aterior_to_canal,
     )
 
-    # Discard C2-C3 and L5-S1 discs if innacurate (e.g. C2-C3 in the middle of the spine or L5-S1 at the top of the spine)
+    # Discard C2-C3 if not the top most disc (e.g. C2-C3 in the middle of the spine)
     top_disc_mask = disc_mask_labeled == disc_sorted_labels[0]
     c2_c3_mask = seg_data == 2 # C2-C3
     if not np.any(top_disc_mask & c2_c3_mask): # First disc is C2-C3
@@ -602,13 +602,23 @@ def iterative_label(
             selected_disc_landmarks.remove(2) # Remove C2-C3 from selected landmarks if it is not the first disc
         except ValueError:
             pass
-    bottom_disc_mask = disc_mask_labeled == disc_sorted_labels[-1]
+
+    # Discard L5-S1 if not the bottom most disc (e.g. L5-S1 in the middle of the spine)
     l5_s1_mask = seg_data == 5 # L5-S1
-    if not np.any(bottom_disc_mask & l5_s1_mask): # Last disc is L5-S1
-        try:
-            selected_disc_landmarks.remove(5) # Remove L5-S1 from selected landmarks if it is not the last disc
-        except ValueError:
-            pass
+    l5_s1_disc_mask = l5_s1_mask & (disc_mask_labeled > 0)
+    if np.any(l5_s1_disc_mask):
+        l5_s1_label = disc_mask_labeled[l5_s1_disc_mask][0]
+        l5_s1_index = disc_sorted_labels.index(l5_s1_label)
+
+        if len(disc_sorted_labels)-1 > l5_s1_index: # L5-S1 is not the last disc
+            # Check if following discs can be sacrum discs, if so, we can keep L5-S1 as a landmark
+            following_discs_labels = disc_sorted_labels[l5_s1_index+1:]
+            following_discs_size = [np.sum(disc_mask_labeled == l) for l in following_discs_labels]
+            if any(10*s > np.sum(l5_s1_mask) for s in following_discs_size): # Check if discs is bigger than 10% of L5-S1
+                try:
+                    selected_disc_landmarks.remove(5) # Remove L5-S1 from selected landmarks if it is not the last disc
+                except ValueError:
+                    pass
 
     # Get the landmark disc labels and output labels - {label in sorted labels: output label}
     # TODO Currently only the first 2 landmark from selected_disc_landmarks is used, to get all landmarks see TODO in the function
@@ -622,6 +632,7 @@ def iterative_label(
         disc_landmark_output_labels,
         loc_disc_labels,
         disc_default_superior_output,
+        min_component_size,
     )
 
     # Build a list containing all possible labels for the disc ordered superio-inferior
