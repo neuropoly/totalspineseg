@@ -468,6 +468,7 @@ def iterative_label(
         map_input_dict={},
         dilation_size=1,
         disc_default_superior_output=0,
+        min_component_size=200
     ):
     '''
     Label Vertebrae, IVDs, Spinal Cord and canal from init segmentation.
@@ -530,6 +531,8 @@ def iterative_label(
         Number of voxels to dilate before finding connected voxels to label
     default_superior_disc : int
         Default superior disc label if no init label found
+    min_component_size : int
+        Minimum size of a component to be considered
 
     Returns
     -------
@@ -554,6 +557,7 @@ def iterative_label(
         mask_aterior_to_canal,
         dilation_size,
         combine_labels=True,
+        min_component_size=min_component_size
     )
 
     # Get sorted connected components superio-inferior (SI) for the vertebrae labels
@@ -563,6 +567,7 @@ def iterative_label(
         canal_centerline_indices,
         mask_aterior_to_canal,
         dilation_size,
+        min_component_size=min_component_size
     )
 
     # Combine sequential vertebrae labels if they have the same value in the original segmentation
@@ -871,6 +876,7 @@ def _get_si_sorted_components(
         mask_aterior_to_canal=None,
         dilation_size=1,
         combine_labels=False,
+        min_component_size=200,
     ):
     '''
     Get sorted connected components superio-inferior (SI) for the given labels in the segmentation.
@@ -905,12 +911,12 @@ def _get_si_sorted_components(
         # Undo dilation
         tmp_mask_labeled *= mask
 
-        # Remove really small components (less than 10 voxels)
+        # Remove really small components (less than min_component_size voxels)
         tmp_mask_labeled_filtered = np.zeros_like(tmp_mask_labeled)
         relabel_counter = 1
         for tmp_label in range(1, tmp_num_labels + 1):
             component_size = np.sum(tmp_mask_labeled == tmp_label)
-            if component_size >= 10:
+            if component_size >= min_component_size:
                 tmp_mask_labeled_filtered[tmp_mask_labeled == tmp_label] = relabel_counter
                 relabel_counter += 1
         
