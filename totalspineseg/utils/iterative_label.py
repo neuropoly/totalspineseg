@@ -468,6 +468,7 @@ def iterative_label(
         map_input_dict={},
         dilation_size=1,
         disc_default_superior_output=0,
+        min_component_size=200
     ):
     '''
     Label Vertebrae, IVDs, Spinal Cord and canal from init segmentation.
@@ -530,6 +531,8 @@ def iterative_label(
         Number of voxels to dilate before finding connected voxels to label
     default_superior_disc : int
         Default superior disc label if no init label found
+    min_component_size : int
+        Minimum size of a component to be considered
 
     Returns
     -------
@@ -554,6 +557,7 @@ def iterative_label(
         mask_aterior_to_canal,
         dilation_size,
         combine_labels=True,
+        min_component_size=min_component_size
     )
 
     # Get sorted connected components superio-inferior (SI) for the vertebrae labels
@@ -563,6 +567,7 @@ def iterative_label(
         canal_centerline_indices,
         mask_aterior_to_canal,
         dilation_size,
+        min_component_size=min_component_size
     )
 
     # Combine sequential vertebrae labels if they have the same value in the original segmentation
@@ -589,7 +594,7 @@ def iterative_label(
         mask_aterior_to_canal,
     )
 
-    # Discard C2-C3 and L5-S1 discs if innacurate (e.g. C2-C3 in the middle of the spine or L5-S1 at the top of the spine)
+    # Discard C2-C3 if not the top most disc (e.g. C2-C3 in the middle of the spine)
     top_disc_mask = disc_mask_labeled == disc_sorted_labels[0]
     c2_c3_mask = seg_data == 2 # C2-C3
     if not np.any(top_disc_mask & c2_c3_mask): # First disc is C2-C3
@@ -597,13 +602,23 @@ def iterative_label(
             selected_disc_landmarks.remove(2) # Remove C2-C3 from selected landmarks if it is not the first disc
         except ValueError:
             pass
-    bottom_disc_mask = disc_mask_labeled == disc_sorted_labels[-1]
+
+    # Discard L5-S1 if not the bottom most disc (e.g. L5-S1 in the middle of the spine)
     l5_s1_mask = seg_data == 5 # L5-S1
-    if not np.any(bottom_disc_mask & l5_s1_mask): # Last disc is L5-S1
-        try:
-            selected_disc_landmarks.remove(5) # Remove L5-S1 from selected landmarks if it is not the last disc
-        except ValueError:
-            pass
+    l5_s1_disc_mask = l5_s1_mask & (disc_mask_labeled > 0)
+    if np.any(l5_s1_disc_mask):
+        l5_s1_label = disc_mask_labeled[l5_s1_disc_mask][0]
+        l5_s1_index = disc_sorted_labels.index(l5_s1_label)
+
+        if len(disc_sorted_labels)-1 > l5_s1_index: # L5-S1 is not the last disc
+            # Check if following discs can be sacrum discs, if so, we can keep L5-S1 as a landmark
+            following_discs_labels = disc_sorted_labels[l5_s1_index+1:]
+            following_discs_size = [np.sum(disc_mask_labeled == l) for l in following_discs_labels]
+            if any(10*s > np.sum(l5_s1_mask) for s in following_discs_size): # Check if discs is bigger than 10% of L5-S1
+                try:
+                    selected_disc_landmarks.remove(5) # Remove L5-S1 from selected landmarks if it is not the last disc
+                except ValueError:
+                    pass
 
     # Get the landmark disc labels and output labels - {label in sorted labels: output label}
     # TODO Currently only the first 2 landmark from selected_disc_landmarks is used, to get all landmarks see TODO in the function
@@ -617,6 +632,7 @@ def iterative_label(
         disc_landmark_output_labels,
         loc_disc_labels,
         disc_default_superior_output,
+        min_component_size,
     )
 
     # Build a list containing all possible labels for the disc ordered superio-inferior
@@ -871,6 +887,7 @@ def _get_si_sorted_components(
         mask_aterior_to_canal=None,
         dilation_size=1,
         combine_labels=False,
+        min_component_size=200,
     ):
     '''
     Get sorted connected components superio-inferior (SI) for the given labels in the segmentation.
@@ -905,12 +922,12 @@ def _get_si_sorted_components(
         # Undo dilation
         tmp_mask_labeled *= mask
 
-        # Remove really small components (less than 10 voxels)
+        # Remove really small components (less than min_component_size voxels)
         tmp_mask_labeled_filtered = np.zeros_like(tmp_mask_labeled)
         relabel_counter = 1
         for tmp_label in range(1, tmp_num_labels + 1):
             component_size = np.sum(tmp_mask_labeled == tmp_label)
-            if component_size >= 10:
+            if component_size >= min_component_size:
                 tmp_mask_labeled_filtered[tmp_mask_labeled == tmp_label] = relabel_counter
                 relabel_counter += 1
         
