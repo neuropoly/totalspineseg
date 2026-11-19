@@ -42,18 +42,16 @@ dependencies = [
     "pillow",
     "nilearn",
     "SimpleITK",
-    "psutil",
-    "auglab",
+    "psutil"
 ]
 
 # Allow users to choose whichever version of `nnunetv2` they prefer
-#   - `pip install totalspineseg[nnunetv2]`       (tested, safe versions of `nnunetv2`)
-#   - `pip install totalspineseg nnunetv2==2.6.2` (specific version)
+#   - `pip install totalspineseg nnunetv2==2.6.2` (tested version)
 #   - `pip install totalspineseg[neuropoly]`      (internal fork of `nnunetv2`)
 
 [project.optional-dependencies]
-nnunetv2 = ["nnunetv2"]
 neuropoly = ["nnunetv2-neuropoly"]
+training = ["auglab"]
 
 [project.urls]
 homepage = "https://github.com/neuropoly/totalspineseg"
