@@ -1,5 +1,5 @@
 # TotalSpineSeg
-[![paper](https://img.shields.io/badge/paper-European Radiology-orange)](https://doi.org/10.1007/s00330-026-13008-2)
+[![paper](https://img.shields.io/badge/paper-European_Radiology-orange)](https://doi.org/10.1007/s00330-026-13008-2)
 
 ## How to cite us ?
 
