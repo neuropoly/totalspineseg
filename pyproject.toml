@@ -51,7 +51,8 @@ dependencies = [
 
 [project.optional-dependencies]
 neuropoly = ["nnunetv2-neuropoly"]
-training = ["auglab"]
+nnunetv2 = ["nnunetv2"]
+training = ["auglab","nnunetv2"]
 
 [project.urls]
 homepage = "https://github.com/neuropoly/totalspineseg"
