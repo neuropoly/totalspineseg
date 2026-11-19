@@ -46,8 +46,9 @@ dependencies = [
 ]
 
 # Allow users to choose whichever version of `nnunetv2` they prefer
-#   - `pip install totalspineseg nnunetv2==2.6.2` (tested version)
+#   - `pip install totalspineseg nnunetv2==2.6.2` (training version)
 #   - `pip install totalspineseg[neuropoly]`      (internal fork of `nnunetv2`)
+#   - `pip install totalspineseg[nnunetv2]`      (inference)
 
 [project.optional-dependencies]
 neuropoly = ["nnunetv2-neuropoly"]
