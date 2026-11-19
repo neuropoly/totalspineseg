@@ -104,11 +104,6 @@ cd TotalSpineSeg
    ```
    python3 -m pip install totalspineseg[nnunetv2]
    ```
-   - PyPI installation (with specific nnU-Net version)
-   ```bash
-   # Note: Use "[nnunetv2]" to stick to tested versions of nnunetv2
-   python3 -m pip install totalspineseg nnunetv2==2.6.2
-   ```
 
 5. For CUDA GPU support, install **PyTorch<2.6** following the instructions on their [website](https://pytorch.org/). Be sure to add the `--upgrade` flag to your installation command to replace any existing PyTorch installation.
    Example:
