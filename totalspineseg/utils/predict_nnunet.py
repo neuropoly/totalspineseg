@@ -12,6 +12,14 @@ os.environ['nnUNet_results'] = "./nnUNet_results"
 
 from nnunetv2.utilities.file_path_utilities import get_output_folder
 from nnunetv2.inference.predict_from_raw_data import nnUNetPredictor
+import nnunetv2.inference.predict_from_raw_data as predict_from_raw_data
+from nnunetv2.training.nnUNetTrainer.nnUNetTrainer import nnUNetTrainer
+
+# Custom trainers (e.g. nnUNetTrainerDAExt) only change training (data augmentation), not the network
+# architecture. At inference, nnUNet only uses the trainer class to build the network, so we always use
+# the default nnUNetTrainer instead of looking up the trainer name stored in the checkpoint. This avoids
+# having to install the custom trainer inside the nnunetv2 package for inference.
+predict_from_raw_data.recursive_find_python_class = lambda *args, **kwargs: nnUNetTrainer
 
 def main():
     # Description and arguments
