@@ -20,6 +20,7 @@ from nnunetv2.training.nnUNetTrainer.nnUNetTrainer import nnUNetTrainer
 # the default nnUNetTrainer instead of looking up the trainer name stored in the checkpoint. This avoids
 # having to install the custom trainer inside the nnunetv2 package for inference.
 # Older nnunetv2 (e.g. 2.6.2) uses recursive_find_python_class, newer (e.g. 2.8.1) uses recursive_find_trainer_class_by_name.
+#FIXME: we don't use nnunet's recommended workaround (variable `nnunetv2_extTrainer`) to find the trainer file because currently it will cause an unwanted auglab import
 for _fn_name in ('recursive_find_python_class', 'recursive_find_trainer_class_by_name'):
     if hasattr(predict_from_raw_data, _fn_name):
         setattr(predict_from_raw_data, _fn_name, lambda *args, **kwargs: nnUNetTrainer)
