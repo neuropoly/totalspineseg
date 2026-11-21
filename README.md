@@ -24,8 +24,17 @@ Please also cite nnU-Net since our work is heavily based on it:
 
 ![Thumbnail](https://github.com/user-attachments/assets/2c1b1ff9-daaa-479f-8d21-01a66b9c9cb4)
 
+## 3D Slicer extension
+
+Prefer a graphical interface? TotalSpineSeg is available as a [3D Slicer](https://www.slicer.org/) extension: **[SlicerTotalSpineSeg](https://github.com/neuropoly/SlicerTotalSpineSeg)**. Load an MRI or CT volume, click **Apply**, and get the vertebrae, intervertebral discs, spinal cord and spinal canal segmentations directly as Slicer segmentations, with no command line needed.
+
+[![SlicerTotalSpineSeg screenshot](https://raw.githubusercontent.com/neuropoly/SlicerTotalSpineSeg/main/Screenshot01.jpg)](https://github.com/neuropoly/SlicerTotalSpineSeg)
+
+For installation and usage instructions, see the [SlicerTotalSpineSeg repository](https://github.com/neuropoly/SlicerTotalSpineSeg#setup).
+
 ## Table of Contents
 
+- [3D Slicer extension](#3d-slicer-extension)
 - [Model Description](#model-description)
 - [Datasets](#datasets)
 - [Dependencies](#dependencies)
