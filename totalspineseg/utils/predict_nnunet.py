@@ -15,15 +15,34 @@ from nnunetv2.inference.predict_from_raw_data import nnUNetPredictor
 import nnunetv2.inference.predict_from_raw_data as predict_from_raw_data
 from nnunetv2.training.nnUNetTrainer.nnUNetTrainer import nnUNetTrainer
 
-# Custom trainers (e.g. nnUNetTrainerDAExt) only change training (data augmentation), not the network
-# architecture. At inference, nnUNet only uses the trainer class to build the network, so we always use
-# the default nnUNetTrainer instead of looking up the trainer name stored in the checkpoint. This avoids
-# having to install the custom trainer inside the nnunetv2 package for inference.
-# Older nnunetv2 (e.g. 2.6.2) uses recursive_find_python_class, newer (e.g. 2.8.1) uses recursive_find_trainer_class_by_name.
-#FIXME: we don't use nnunet's recommended workaround (variable `nnunetv2_extTrainer`) to find the trainer file because currently it will cause an unwanted auglab import
-for _fn_name in ('recursive_find_python_class', 'recursive_find_trainer_class_by_name'):
-    if hasattr(predict_from_raw_data, _fn_name):
-        setattr(predict_from_raw_data, _fn_name, lambda *args, **kwargs: nnUNetTrainer)
+from contextlib import contextmanager, ExitStack
+from unittest import mock
+
+@contextmanager
+def use_default_trainer():
+    """
+    Temporarily patch nnunet's class-finder function to avoid needing to install the custom model on disk.
+
+    Custom trainers (e.g. nnUNetTrainerDAExt) only change training (data augmentation), not the network
+    architecture. At inference, nnUNet only uses the trainer class to build the network, so we always use
+    the default nnUNetTrainer instead of looking up the trainer name stored in the checkpoint. This avoids
+    having to install the custom trainer inside the nnunetv2 package for inference.
+    
+    Older nnunetv2 (e.g. 2.6.2) uses recursive_find_python_class, newer (e.g. 2.8.1) uses recursive_find_trainer_class_by_name.
+    FIXME: we don't use nnunet's recommended workaround (variable `nnunetv2_extTrainer`) to find the trainer file because currently it will cause an unwanted auglab import
+    """
+    # NB: Older nnunetv2 (e.g. 2.6.2) uses recursive_find_python_class, newer (e.g. 2.8.1) uses recursive_find_trainer_class_by_name.
+    names = [n for n in ('recursive_find_python_class',
+                         'recursive_find_trainer_class_by_name')
+             if hasattr(predict_from_raw_data, n)]
+    if not names:
+        raise RuntimeError("nnunetv2 trainer lookup function not found; patch needs updating")
+    # Only patch the object while applying this context manager
+    with ExitStack() as stack:
+        for n in names:
+            stack.enter_context(
+                mock.patch.object(predict_from_raw_data, n, lambda *a, **kw: nnUNetTrainer))
+        yield
 
 def main():
     # Description and arguments
@@ -244,12 +263,14 @@ def predict_nnunet(
                                 verbose=verbose,
                                 verbose_preprocessing=verbose,
                                 allow_tqdm=not disable_progress_bar)
-    
-    predictor.initialize_from_trained_model_folder(
-        model_folder,
-        folds,
-        checkpoint_name=checkpoint
-    )
+
+    with use_default_trainer():
+        predictor.initialize_from_trained_model_folder(
+            model_folder,
+            folds,
+            checkpoint_name=checkpoint
+        )
+
     predictor.predict_from_files(str(images_dir), str(output_dir), save_probabilities=save_probabilities,
                                  overwrite=not continue_prediction,
                                  num_processes_preprocessing=npp,
