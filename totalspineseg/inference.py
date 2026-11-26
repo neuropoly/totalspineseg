@@ -9,8 +9,6 @@ from tqdm import tqdm
 from totalspineseg import *
 from totalspineseg.init_inference import init_inference
 
-from auglab.add_trainer import add_trainer
-
 warnings.filterwarnings("ignore")
 
 def main():
@@ -444,9 +442,6 @@ def inference(
     if not quiet: print(f"Using checkpoint step1: {checkpoint}")
     # Construct step 1 model folder
     model_folder_step1 = nnUNet_results / step1_dataset / f'{nnUNetTrainer}__{nnUNetPlans}__{configuration}'
-    
-    # Add nnUNetTrainerDAExt trainer
-    add_trainer("nnUNetTrainerDAExt")
 
     if not quiet: print('\n' 'Running step 1 model:')
     predict_nnunet(

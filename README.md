@@ -113,11 +113,6 @@ cd TotalSpineSeg
    ```
    python3 -m pip install totalspineseg[nnunetv2]
    ```
-   - PyPI installation (with specific nnU-Net version)
-   ```bash
-   # Note: Use "[nnunetv2]" to stick to tested versions of nnunetv2
-   python3 -m pip install totalspineseg nnunetv2==2.6.2
-   ```
 
 5. For CUDA GPU support, install **PyTorch<2.6** following the instructions on their [website](https://pytorch.org/). Be sure to add the `--upgrade` flag to your installation command to replace any existing PyTorch installation.
    Example:
@@ -134,58 +129,7 @@ python3 -m pip install torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --inde
 
 ## Training
 
-To train the TotalSpineSeg model, you will need the following hardware specifications:
-- Approximately 3.5TB of available disk space (for training with data augmentation)
-- RAM capacity of at least 32GB
-- CUDA GPU with at least 8GB of VRAM
-
-Please ensure that your system meets these requirements before proceeding with the training process.
-
-1. Make sure that the `bash` terminal is opened with the virtual environment activated (see [Installation](#installation)).
-
-2. Ensure training dependencies are installed:
-```bash
-apt-get install git git-annex jq -y
-```
-
-3. Set the path to TotalSpineSeg and data folders in the virtual environment:
-```bash
-mkdir data
-export TOTALSPINESEG="$(realpath totalspineseg)"
-export TOTALSPINESEG_DATA="$(realpath data)"
-echo "export TOTALSPINESEG=\"$TOTALSPINESEG\"" >> venv/bin/activate
-echo "export TOTALSPINESEG_DATA=\"$TOTALSPINESEG_DATA\"" >> venv/bin/activate
-```
-
-4. Download the required datasets into `$TOTALSPINESEG_DATA/bids` (make sure you have access to the specified repositories):
-```bash
-bash "$TOTALSPINESEG"/scripts/download_datasets.sh
-```
-
-5. Temporary step (until all labels are pushed into the repositories) - Download labels into `$TOTALSPINESEG_DATA/bids`:
-```bash
-curl -L -O https://github.com/neuropoly/totalspineseg/releases/download/labels/labels_iso_bids_0924.zip
-unzip -qo labels_iso_bids_0924.zip -d "$TOTALSPINESEG_DATA"
-rm labels_iso_bids_0924.zip
-```
-
-6. Prepare datasets in nnUNetv2 structure into `$TOTALSPINESEG_DATA/nnUnet`:
-```bash
-bash "$TOTALSPINESEG"/scripts/prepare_datasets.sh [DATASET_ID] [-noaug]
-```
-
-   The script optionally accepts `DATASET_ID` as the first positional argument to specify the dataset to prepare. It can be either 101, 102, 103, or all. If `all` is specified, it will prepare all datasets (101, 102, 103). By default, it will prepare datasets 101 and 102.
-
-   Additionally, you can use the `-noaug` parameter to prepare the datasets without data augmentations.
-
-7. Train the model:
-```bash
-bash "$TOTALSPINESEG"/scripts/train.sh [DATASET_ID [FOLD]]
-```
-
-   The script optionally accepts `DATASET_ID` as the first positional argument to specify the dataset to train. It can be either 101, 102, 103, or all. If `all` is specified, it will train all datasets (101, 102, 103). By default, it will train datasets 101 and 102.
-
-   Additionally, you can specify `FOLD` as the second positional argument to specify the fold. It can be either 0, 1, 2, 3, 4, 5 or all. By default, it will train with fold 0.
+To train TotalSpineSeg, please refer to the [Training](scripts/README.md#training) section in the scripts folder.
 
 ## Inference
 
