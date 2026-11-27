@@ -594,6 +594,9 @@ def iterative_label(
         mask_aterior_to_canal,
     )
 
+    # Copy caller-provided list so per-image landmark filtering does not mutate it
+    selected_disc_landmarks = list(selected_disc_landmarks)
+
     # Discard C2-C3 if not the top most disc (e.g. C2-C3 in the middle of the spine)
     top_disc_mask = disc_mask_labeled == disc_sorted_labels[0]
     c2_c3_mask = seg_data == 2 # C2-C3
